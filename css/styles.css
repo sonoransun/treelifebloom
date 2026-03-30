@@ -1,0 +1,488 @@
+/* Life's Tree Blooms — Main Stylesheet */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: #0a0e1a;
+  color: #e0e0e0;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ===== Layout Grid ===== */
+
+#app {
+  display: grid;
+  grid-template-rows: 48px 1fr 96px;
+  grid-template-columns: 1fr 280px;
+  grid-template-areas:
+    "toolbar  toolbar"
+    "viz      sidebar"
+    "controls controls";
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ===== Toolbar ===== */
+
+#toolbar {
+  grid-area: toolbar;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  background: #111628;
+  border-bottom: 1px solid #1e2540;
+  z-index: 10;
+}
+
+#app-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #b8c4e0;
+  white-space: nowrap;
+}
+
+#era-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #333;
+  transition: background-color 0.5s ease;
+}
+
+#era-name {
+  color: #fff;
+}
+
+.view-toggle {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  background: #1a1e30;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.toggle-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #2a3050;
+  color: #e0e0e0;
+}
+
+.toggle-btn:hover:not(.active) {
+  color: #bbb;
+}
+
+/* ===== Visualization Container ===== */
+
+#viz-container {
+  grid-area: viz;
+  position: relative;
+  overflow: hidden;
+  background: #061e38;
+}
+
+#canvas2d {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#globe-container {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+#globe-container canvas {
+  display: block;
+}
+
+/* Time overlay */
+#time-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  pointer-events: none;
+}
+
+#time-period-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+#time-ma-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Extinction overlay */
+#extinction-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.3s ease;
+}
+
+#extinction-overlay.hidden {
+  opacity: 0;
+}
+
+#extinction-overlay.active {
+  opacity: 1;
+  background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.15) 0%, rgba(100, 0, 0, 0.3) 100%);
+}
+
+#extinction-text {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ff4444;
+  text-shadow: 0 0 20px rgba(255, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.8);
+  text-align: center;
+  padding: 0 20px;
+}
+
+#extinction-subtext {
+  font-size: 16px;
+  color: rgba(255, 150, 150, 0.9);
+  margin-top: 8px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+/* ===== Sidebar ===== */
+
+#sidebar {
+  grid-area: sidebar;
+  background: #0d1220;
+  border-left: 1px solid #1e2540;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #1e2540;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.sidebar-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #b8c4e0;
+}
+
+#species-count {
+  font-size: 11px;
+  color: #666;
+}
+
+#species-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+#species-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#species-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#species-list::-webkit-scrollbar-thumb {
+  background: #2a3050;
+  border-radius: 3px;
+}
+
+/* Species list items */
+.species-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  transition: all 0.4s ease;
+  border-left: 3px solid transparent;
+}
+
+.species-item.entering {
+  animation: slideIn 0.4s ease forwards;
+}
+
+.species-item.exiting {
+  animation: slideOut 0.4s ease forwards;
+}
+
+.species-item.highlight {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.species-item.extinction-exit {
+  animation: extinctionFade 0.6s ease forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideOut {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(-30px); max-height: 0; padding: 0 16px; }
+}
+
+@keyframes extinctionFade {
+  0% { opacity: 1; background: transparent; }
+  30% { background: rgba(255, 50, 50, 0.2); }
+  100% { opacity: 0; transform: translateX(-20px); max-height: 0; padding: 0 16px; }
+}
+
+.species-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.species-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.species-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #d0d0d0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.species-desc {
+  display: block;
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.abundance-bar-container {
+  width: 40px;
+  height: 4px;
+  background: #1a1e30;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.abundance-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ===== Timeline Controls ===== */
+
+#timeline-controls {
+  grid-area: controls;
+  background: #111628;
+  border-top: 1px solid #1e2540;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#era-strip {
+  height: 8px;
+  border-radius: 4px;
+  display: flex;
+  overflow: hidden;
+}
+
+.era-segment {
+  height: 100%;
+  transition: opacity 0.3s;
+}
+
+.era-segment:hover {
+  opacity: 0.8;
+}
+
+.scrubber-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-label-end {
+  font-size: 10px;
+  color: #666;
+  white-space: nowrap;
+}
+
+#scrubber {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a2040;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+#scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #5588cc;
+  cursor: pointer;
+  border: 2px solid #0a0e1a;
+}
+
+#scrubber::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #5588cc;
+  cursor: pointer;
+  border: 2px solid #0a0e1a;
+}
+
+.transport-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.transport-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #1a2040;
+  color: #b8c4e0;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.transport-btn:hover {
+  background: #2a3060;
+}
+
+.transport-btn.playing {
+  background: #2a4060;
+  color: #66aaff;
+}
+
+#speed-select {
+  padding: 4px 8px;
+  background: #1a2040;
+  border: 1px solid #2a3050;
+  border-radius: 4px;
+  color: #b8c4e0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#current-time-display {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b8c4e0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 900px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "toolbar"
+      "viz"
+      "controls";
+  }
+
+  #sidebar {
+    position: fixed;
+    right: -280px;
+    top: 48px;
+    bottom: 96px;
+    width: 280px;
+    z-index: 20;
+    transition: right 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  #sidebar.open {
+    right: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  #toolbar {
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  #app-title {
+    font-size: 13px;
+  }
+
+  .toggle-btn {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  #extinction-text {
+    font-size: 20px;
+  }
+
+  #extinction-subtext {
+    font-size: 13px;
+  }
+}

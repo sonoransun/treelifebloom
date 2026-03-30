@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life's Tree Blooms!</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <!-- Toolbar -->
+    <header id="toolbar">
+      <h1 id="app-title">Life's Tree Blooms!</h1>
+      <div id="era-badge">
+        <span id="era-name">Hadean</span>
+      </div>
+      <div class="view-toggle">
+        <button id="btn-2d" class="toggle-btn active" title="2D Map View">2D Map</button>
+        <button id="btn-3d" class="toggle-btn" title="3D Globe View">3D Globe</button>
+      </div>
+    </header>
+
+    <!-- Main visualization area -->
+    <main id="viz-container">
+      <canvas id="canvas2d"></canvas>
+      <div id="globe-container"></div>
+
+      <!-- Extinction overlay (DOM element over both views) -->
+      <div id="extinction-overlay" class="hidden">
+        <div id="extinction-text"></div>
+        <div id="extinction-subtext"></div>
+      </div>
+
+      <!-- Time label overlay -->
+      <div id="time-overlay">
+        <span id="time-period-label">Hadean</span>
+        <span id="time-ma-label">4,000 Ma</span>
+      </div>
+    </main>
+
+    <!-- Species sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <h2>Dominant Life</h2>
+        <span id="species-count">0 species</span>
+      </div>
+      <ul id="species-list"></ul>
+    </aside>
+
+    <!-- Timeline controls -->
+    <footer id="timeline-controls">
+      <div id="era-strip"></div>
+      <div class="scrubber-row">
+        <span class="time-label-end">4 Ga</span>
+        <input type="range" id="scrubber" min="0" max="4000" step="0.1" value="4000">
+        <span class="time-label-end">Now</span>
+      </div>
+      <div class="transport-row">
+        <button id="btn-play" class="transport-btn" title="Play/Pause">&#9654;</button>
+        <button id="btn-restart" class="transport-btn" title="Restart">&#8634;</button>
+        <select id="speed-select" title="Playback Speed">
+          <option value="0.25">0.25x</option>
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="4">4x</option>
+        </select>
+        <span id="current-time-display">4,000 Ma</span>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
