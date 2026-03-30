@@ -2,11 +2,15 @@
 
 import { COLORS } from '../config.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { getTemperatureAtTime, getOxygenAtTime, getCO2AtTime } from '../data/atmosphere.js';
 
 export class Sidebar {
   constructor() {
     this.listEl = document.getElementById('species-list');
     this.countEl = document.getElementById('species-count');
+    this._tempEl = document.getElementById('atmo-temp');
+    this._o2El = document.getElementById('atmo-o2');
+    this._co2El = document.getElementById('atmo-co2');
     this._currentIds = new Set();
     this._elements = new Map(); // id -> li element
     this._lastUpdateTime = 0;
@@ -17,6 +21,14 @@ export class Sidebar {
     const now = performance.now();
     if (now - this._lastUpdateTime < 80) return;
     this._lastUpdateTime = now;
+
+    // Update atmosphere readouts
+    const temp = getTemperatureAtTime(timeMa);
+    const o2 = getOxygenAtTime(timeMa);
+    const co2 = getCO2AtTime(timeMa);
+    this._tempEl.textContent = `${temp >= 0 ? '' : ''}${temp.toFixed(1)}°C`;
+    this._o2El.textContent = `${o2.toFixed(1)}%`;
+    this._co2El.textContent = co2 >= 1000 ? `${(co2 / 1000).toFixed(1)}k ppm` : `${Math.round(co2)} ppm`;
 
     const alive = getSpeciesAtTime(timeMa);
     const top = alive.slice(0, 15);

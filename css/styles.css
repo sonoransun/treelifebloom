@@ -192,6 +192,40 @@ body {
   overflow: hidden;
 }
 
+/* Atmosphere panel */
+#atmosphere-panel {
+  padding: 10px 16px;
+  border-bottom: 1px solid #1e2540;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  background: #0f1628;
+}
+
+.atmo-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.atmo-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #667;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.atmo-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c8d4e8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .sidebar-header {
   padding: 12px 16px 8px;
   border-bottom: 1px solid #1e2540;
