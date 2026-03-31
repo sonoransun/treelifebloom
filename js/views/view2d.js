@@ -4,6 +4,7 @@ import { COLORS, RENDER } from '../config.js';
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { fractalSubdivide } from '../engine/fractal.js';
 
 export class View2D {
   constructor(container) {
@@ -84,11 +85,17 @@ export class View2D {
     const period = getPeriodAtTime(timeMa);
     const extinction = getActiveExtinction(timeMa);
 
-    // 1. Ocean background
-    const oceanColor = extinction
+    // 1. Ocean background with depth gradient
+    const oceanBase = extinction
       ? this._mixColors(COLORS.ocean, '#3a1010', extinction.progress * 0.4)
       : COLORS.ocean;
-    ctx.fillStyle = oceanColor;
+    const oceanEdge = extinction
+      ? this._mixColors(COLORS.oceanDeep, '#2a0808', extinction.progress * 0.4)
+      : COLORS.oceanDeep;
+    const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
+    gradient.addColorStop(0, oceanBase);
+    gradient.addColorStop(1, oceanEdge);
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
 
     // 2. Grid lines
@@ -113,11 +120,13 @@ export class View2D {
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
+      const fractalVerts = fractalSubdivide(continent.vertices);
+
       ctx.beginPath();
-      const [x0, y0] = this._lonLatToXY(continent.vertices[0][0], continent.vertices[0][1]);
+      const [x0, y0] = this._lonLatToXY(fractalVerts[0][0], fractalVerts[0][1]);
       ctx.moveTo(x0, y0);
-      for (let i = 1; i < continent.vertices.length; i++) {
-        const [x, y] = this._lonLatToXY(continent.vertices[i][0], continent.vertices[i][1]);
+      for (let i = 1; i < fractalVerts.length; i++) {
+        const [x, y] = this._lonLatToXY(fractalVerts[i][0], fractalVerts[i][1]);
         ctx.lineTo(x, y);
       }
       ctx.closePath();
@@ -130,9 +139,16 @@ export class View2D {
       ctx.fill();
       ctx.globalAlpha = 1;
 
+      // Outer glow
+      ctx.strokeStyle = COLORS.landStroke;
+      ctx.globalAlpha = 0.25;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
       // Stroke
       ctx.strokeStyle = COLORS.landStroke;
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = RENDER.landStrokeWidth;
       ctx.stroke();
 
       // Label (only at sufficient zoom)

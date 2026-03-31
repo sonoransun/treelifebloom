@@ -6,6 +6,7 @@ import { COLORS, RENDER } from '../config.js';
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { fractalSubdivide } from '../engine/fractal.js';
 
 export class View3D {
   constructor(container) {
@@ -50,7 +51,7 @@ export class View3D {
     this.controls.autoRotateSpeed = RENDER.autoRotateSpeed;
 
     // Lighting
-    const ambient = new THREE.AmbientLight(0x334466, 0.6);
+    const ambient = new THREE.AmbientLight(0x445577, 0.5);
     this.scene.add(ambient);
 
     const directional = new THREE.DirectionalLight(0xffeedd, 1.2);
@@ -61,7 +62,8 @@ export class View3D {
     const globeGeometry = new THREE.SphereGeometry(RENDER.globeRadius, 64, 64);
     const globeMaterial = new THREE.MeshPhongMaterial({
       color: new THREE.Color(COLORS.ocean),
-      shininess: 20,
+      shininess: 40,
+      specular: new THREE.Color(0x446688),
     });
     this.globe = new THREE.Mesh(globeGeometry, globeMaterial);
     this.scene.add(this.globe);
@@ -142,49 +144,80 @@ export class View3D {
   }
 
   _createContinentMesh(continent, extinction) {
-    // Convert lon/lat vertices to 3D positions on the sphere
-    const positions = [];
-    const indices = [];
+    const fractalVerts = fractalSubdivide(continent.vertices);
+    const n = fractalVerts.length;
 
-    // Create vertices on the sphere surface
-    const vertices3D = continent.vertices.map(([lon, lat]) =>
+    // Top face vertices at elevated radius
+    const topVerts = fractalVerts.map(([lon, lat]) =>
       this._lonLatToVector3(lon, lat, RENDER.continentElevation)
     );
 
-    // Triangulate using a fan from the centroid
-    // First compute centroid
+    // Bottom edge vertices at ocean radius (for side walls)
+    const botVerts = fractalVerts.map(([lon, lat]) =>
+      this._lonLatToVector3(lon, lat, RENDER.globeRadius)
+    );
+
+    // Centroid for fan triangulation
     const centroid = new THREE.Vector3();
-    for (const v of vertices3D) centroid.add(v);
-    centroid.divideScalar(vertices3D.length);
+    for (const v of topVerts) centroid.add(v);
+    centroid.divideScalar(n);
     centroid.normalize().multiplyScalar(RENDER.continentElevation);
 
-    // Build geometry: centroid + perimeter vertices
+    // Colors
+    const topColor = new THREE.Color(continent.color);
+    if (extinction) topColor.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
+    const sideColor = new THREE.Color(RENDER.continentSideColor);
+    if (extinction) sideColor.lerp(new THREE.Color(0x2a1010), extinction.progress * 0.3);
+
+    // Build arrays
+    const positions = [];
+    const colors = [];
+    const indices = [];
+
+    // --- Top face: centroid (index 0) + perimeter (indices 1..n) ---
     positions.push(centroid.x, centroid.y, centroid.z);
-    for (const v of vertices3D) {
+    colors.push(topColor.r, topColor.g, topColor.b);
+
+    for (const v of topVerts) {
       positions.push(v.x, v.y, v.z);
+      colors.push(topColor.r, topColor.g, topColor.b);
     }
 
-    // Fan triangulation from centroid (index 0)
-    for (let i = 1; i <= vertices3D.length; i++) {
-      const next = (i % vertices3D.length) + 1;
-      indices.push(0, i, next);
+    for (let i = 1; i <= n; i++) {
+      indices.push(0, i, (i % n) + 1);
+    }
+
+    // --- Side walls: quads from top edge down to ocean level ---
+    const sideOffset = n + 1;
+    for (let i = 0; i < n; i++) {
+      const t = topVerts[i];
+      const b = botVerts[i];
+      positions.push(t.x, t.y, t.z);
+      colors.push(sideColor.r, sideColor.g, sideColor.b);
+      positions.push(b.x, b.y, b.z);
+      colors.push(sideColor.r, sideColor.g, sideColor.b);
+    }
+
+    for (let i = 0; i < n; i++) {
+      const next = (i + 1) % n;
+      const topI = sideOffset + i * 2;
+      const botI = sideOffset + i * 2 + 1;
+      const topN = sideOffset + next * 2;
+      const botN = sideOffset + next * 2 + 1;
+      indices.push(topI, botI, topN);
+      indices.push(topN, botI, botN);
     }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    let color = new THREE.Color(continent.color);
-    if (extinction) {
-      color.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
-    }
-
     const material = new THREE.MeshPhongMaterial({
-      color: color,
+      vertexColors: true,
       side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.9,
+      shininess: 5,
     });
 
     return new THREE.Mesh(geometry, material);

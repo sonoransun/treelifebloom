@@ -1,10 +1,10 @@
 // Application-wide constants
 
 export const COLORS = {
-  ocean: '#0a3d6b',
-  oceanDeep: '#061e38',
+  ocean: '#062a4a',
+  oceanDeep: '#041628',
   land: '#8B7355',
-  landStroke: '#6B5335',
+  landStroke: '#c9a86c',
   background: '#0a0e1a',
   text: '#e0e0e0',
   textMuted: '#888',
@@ -45,12 +45,16 @@ export const RENDER = {
   gridSpacingDeg: 30,
   speciesMarkerRadius: 4,
   speciesMarkerPulseAmplitude: 1.5,
-  continentFillAlpha: 0.85,
+  continentFillAlpha: 1.0,
+  fractalDepth: 3,
+  fractalAmplitude: 0.15,
+  landStrokeWidth: 1.8,
 
   // 3D specific
   globeRadius: 1,
-  continentElevation: 1.003,
-  markerElevation: 1.01,
+  continentElevation: 1.025,
+  continentSideColor: '#3d2e1a',
+  markerElevation: 1.035,
   starCount: 2000,
   autoRotateSpeed: 0.3,
 };
