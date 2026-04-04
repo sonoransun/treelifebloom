@@ -62,8 +62,16 @@ body {
   color: #fff;
 }
 
-.view-toggle {
+.layer-toggle {
   margin-left: auto;
+  display: flex;
+  gap: 2px;
+  background: #1a1e30;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.view-toggle {
   display: flex;
   gap: 2px;
   background: #1a1e30;

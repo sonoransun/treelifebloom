@@ -152,7 +152,7 @@ const co2Curve = [
  * Interpolate a value from a curve at a given time.
  * Curve is an array of [timeMa, value] sorted descending by time.
  */
-function interpolateFromCurve(curve, timeMa) {
+export function interpolateFromCurve(curve, timeMa) {
   if (timeMa >= curve[0][0]) return curve[0][1];
   if (timeMa <= curve[curve.length - 1][0]) return curve[curve.length - 1][1];
 

@@ -1,6 +1,12 @@
 // 2D Canvas equirectangular map renderer.
 
 import { COLORS, RENDER } from '../config.js';
+
+const BOUNDARY_STYLES = {
+  divergent:  { color: COLORS.boundary.divergent, lineWidth: 1.5, dash: [8, 6] },
+  convergent: { color: COLORS.boundary.convergent, lineWidth: 2.0, dash: [] },
+  transform:  { color: COLORS.boundary.transform, lineWidth: 1.2, dash: [3, 4] },
+};
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
@@ -70,7 +76,7 @@ export class View2D {
     return [x, y];
   }
 
-  render(polygons, timeMa) {
+  render(polygons, timeMa, boundaries = null) {
     const ctx = this.ctx;
     const w = this.width;
     const h = this.height;
@@ -114,6 +120,11 @@ export class View2D {
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
       ctx.stroke();
+    }
+
+    // 2.5. Tectonic plate boundaries
+    if (boundaries) {
+      this._renderBoundaries(ctx, boundaries);
     }
 
     // 3. Continental polygons
@@ -195,6 +206,78 @@ export class View2D {
     }
 
     ctx.restore();
+  }
+
+  _renderBoundaries(ctx, boundaries) {
+    for (const boundary of boundaries) {
+      if (boundary.vertices.length < 2) continue;
+
+      const style = BOUNDARY_STYLES[boundary.type] || BOUNDARY_STYLES.divergent;
+      ctx.strokeStyle = style.color;
+      ctx.lineWidth = style.lineWidth;
+      ctx.setLineDash(style.dash);
+      ctx.globalAlpha = 0.7;
+
+      ctx.beginPath();
+      const [x0, y0] = this._lonLatToXY(boundary.vertices[0][0], boundary.vertices[0][1]);
+      ctx.moveTo(x0, y0);
+
+      for (let i = 1; i < boundary.vertices.length; i++) {
+        const prevLon = boundary.vertices[i - 1][0];
+        const curLon = boundary.vertices[i][0];
+        const [x, y] = this._lonLatToXY(curLon, boundary.vertices[i][1]);
+
+        // Break path at antimeridian crossing
+        if (Math.abs(curLon - prevLon) > 180) {
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+
+      // Draw convergent teeth
+      if (boundary.type === 'convergent') {
+        this._drawConvergentTeeth(ctx, boundary.vertices, style.color);
+      }
+    }
+
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
+  _drawConvergentTeeth(ctx, vertices, color) {
+    const toothSize = 5 / this.zoom;
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.6;
+
+    for (let i = 0; i < vertices.length - 1; i++) {
+      const [x1, y1] = this._lonLatToXY(vertices[i][0], vertices[i][1]);
+      const [x2, y2] = this._lonLatToXY(vertices[i + 1][0], vertices[i + 1][1]);
+
+      // Skip antimeridian-crossing segments
+      if (Math.abs(vertices[i + 1][0] - vertices[i][0]) > 180) continue;
+
+      const mx = (x1 + x2) / 2;
+      const my = (y1 + y2) / 2;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < 1) continue;
+
+      // Perpendicular direction for tooth point
+      const px = -dy / len;
+      const py = dx / len;
+
+      ctx.beginPath();
+      ctx.moveTo(mx - dx * 0.15, my - dy * 0.15);
+      ctx.lineTo(mx + px * toothSize, my + py * toothSize);
+      ctx.lineTo(mx + dx * 0.15, my + dy * 0.15);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   _polygonCentroid(vertices) {

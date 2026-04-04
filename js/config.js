@@ -11,6 +11,13 @@ export const COLORS = {
   extinctionFlash: '#ff2222',
   gridLine: 'rgba(255, 255, 255, 0.08)',
 
+  // Plate boundary colors by type
+  boundary: {
+    divergent: '#ff6644',
+    convergent: '#4488ff',
+    transform: '#aacc44',
+  },
+
   // Kingdom colors for species markers/sidebar
   kingdom: {
     prokaryote: '#00cccc',
@@ -49,6 +56,9 @@ export const RENDER = {
   fractalDepth: 3,
   fractalAmplitude: 0.15,
   landStrokeWidth: 1.8,
+
+  // Plate boundaries
+  boundaryElevation: 1.003,
 
   // 3D specific
   globeRadius: 1,

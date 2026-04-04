@@ -3,6 +3,7 @@
 import { COLORS } from '../config.js';
 import { getSpeciesAtTime } from '../data/species.js';
 import { getTemperatureAtTime, getOxygenAtTime, getCO2AtTime } from '../data/atmosphere.js';
+import { getSeismicActivityAtTime } from '../data/seismicActivity.js';
 
 export class Sidebar {
   constructor() {
@@ -11,6 +12,7 @@ export class Sidebar {
     this._tempEl = document.getElementById('atmo-temp');
     this._o2El = document.getElementById('atmo-o2');
     this._co2El = document.getElementById('atmo-co2');
+    this._seismicEl = document.getElementById('atmo-seismic');
     this._currentIds = new Set();
     this._elements = new Map(); // id -> li element
     this._lastUpdateTime = 0;
@@ -29,6 +31,12 @@ export class Sidebar {
     this._tempEl.textContent = `${temp >= 0 ? '' : ''}${temp.toFixed(1)}°C`;
     this._o2El.textContent = `${o2.toFixed(1)}%`;
     this._co2El.textContent = co2 >= 1000 ? `${(co2 / 1000).toFixed(1)}k ppm` : `${Math.round(co2)} ppm`;
+
+    const seismic = getSeismicActivityAtTime(timeMa);
+    const seismicLabel = seismic >= 0.8 ? 'Extreme' : seismic >= 0.6 ? 'High' : seismic >= 0.4 ? 'Active' : seismic >= 0.2 ? 'Moderate' : 'Low';
+    const seismicColor = seismic >= 0.8 ? '#ff4444' : seismic >= 0.6 ? '#ff8844' : seismic >= 0.4 ? '#ddcc44' : seismic >= 0.2 ? '#88cc44' : '#44cc88';
+    this._seismicEl.textContent = seismicLabel;
+    this._seismicEl.style.color = seismicColor;
 
     const alive = getSpeciesAtTime(timeMa);
     const top = alive.slice(0, 15);

@@ -18,6 +18,7 @@ export class View3D {
     this.globe = null;
     this.continentMeshes = [];
     this.speciesMarkers = [];
+    this.boundaryLines = [];
     this.starfield = null;
     this._initialized = false;
   }
@@ -94,7 +95,7 @@ export class View3D {
     this.renderer.setSize(w, h);
   }
 
-  render(polygons, timeMa) {
+  render(polygons, timeMa, boundaries = null) {
     if (!this._initialized) return;
 
     // Update controls
@@ -114,6 +115,9 @@ export class View3D {
 
     // Update continental meshes
     this._updateContinents(polygons, extinction);
+
+    // Update plate boundaries
+    this._updateBoundaries(boundaries);
 
     // Update species markers
     this._updateSpeciesMarkers(timeMa);
@@ -221,6 +225,54 @@ export class View3D {
     });
 
     return new THREE.Mesh(geometry, material);
+  }
+
+  _updateBoundaries(boundaries) {
+    // Remove old boundary lines
+    for (const line of this.boundaryLines) {
+      this.scene.remove(line);
+      line.geometry.dispose();
+      line.material.dispose();
+    }
+    this.boundaryLines = [];
+
+    if (!boundaries) return;
+
+    for (const boundary of boundaries) {
+      if (boundary.vertices.length < 2) continue;
+
+      const points = boundary.vertices.map(([lon, lat]) =>
+        this._lonLatToVector3(lon, lat, RENDER.boundaryElevation)
+      );
+
+      const color = COLORS.boundary[boundary.type] || COLORS.boundary.divergent;
+      const isDashed = boundary.type === 'divergent' || boundary.type === 'transform';
+
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      let material;
+
+      if (isDashed) {
+        material = new THREE.LineDashedMaterial({
+          color: new THREE.Color(color),
+          transparent: true,
+          opacity: 0.8,
+          dashSize: boundary.type === 'divergent' ? 0.03 : 0.015,
+          gapSize: boundary.type === 'divergent' ? 0.02 : 0.015,
+        });
+      } else {
+        material = new THREE.LineBasicMaterial({
+          color: new THREE.Color(color),
+          transparent: true,
+          opacity: 0.8,
+        });
+      }
+
+      const line = new THREE.Line(geometry, material);
+      if (isDashed) line.computeLineDistances();
+
+      this.scene.add(line);
+      this.boundaryLines.push(line);
+    }
   }
 
   _updateSpeciesMarkers(timeMa) {
