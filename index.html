@@ -24,6 +24,7 @@
       </div>
       <div class="layer-toggle">
         <button id="btn-plates" class="toggle-btn" title="Toggle Plate Boundaries">Plates</button>
+        <button id="btn-legend" class="toggle-btn" title="Toggle Legend">Legend</button>
       </div>
       <div class="view-toggle">
         <button id="btn-2d" class="toggle-btn active" title="2D Map View">2D Map</button>
@@ -40,6 +41,23 @@
       <div id="extinction-overlay" class="hidden">
         <div id="extinction-text"></div>
         <div id="extinction-subtext"></div>
+      </div>
+
+      <!-- Milestone callout (top-center, lighter than extinction) -->
+      <div id="milestone-overlay" class="hidden">
+        <div id="milestone-title"></div>
+        <div id="milestone-body"></div>
+      </div>
+
+      <!-- Legend panel (top-left, toggled) -->
+      <div id="legend-panel" class="hidden"></div>
+
+      <!-- Species popup (anchored near cursor) -->
+      <div id="species-popup" class="hidden">
+        <div id="species-popup-title"></div>
+        <div id="species-popup-sci"></div>
+        <div id="species-popup-meta"></div>
+        <div id="species-popup-body"></div>
       </div>
 
       <!-- Time label overlay -->
@@ -67,6 +85,10 @@
         <div class="atmo-row">
           <span class="atmo-label">Seismic</span>
           <span class="atmo-value" id="atmo-seismic">--</span>
+        </div>
+        <div class="atmo-row">
+          <span class="atmo-label">Biodiv</span>
+          <span class="atmo-value" id="atmo-bio">--</span>
         </div>
       </div>
       <div class="sidebar-header">

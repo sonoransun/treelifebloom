@@ -189,6 +189,170 @@ body {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
+/* Milestone overlay — top-center toast */
+#milestone-overlay {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 540px;
+  padding: 12px 18px;
+  background: rgba(15, 22, 40, 0.85);
+  border-left: 3px solid #88aacc;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+#milestone-overlay.hidden {
+  opacity: 0;
+  transform: translate(-50%, -10px);
+}
+
+#milestone-overlay.active {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#milestone-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #88aacc;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+#milestone-body {
+  font-size: 12px;
+  color: #c8d4e8;
+  line-height: 1.45;
+}
+
+/* ===== Legend panel ===== */
+#legend-panel {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 220px;
+  max-height: calc(100% - 36px);
+  overflow-y: auto;
+  padding: 12px 14px;
+  background: rgba(15, 22, 40, 0.92);
+  border: 1px solid #2a3050;
+  border-radius: 6px;
+  z-index: 8;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+#legend-panel.hidden {
+  display: none;
+}
+
+.legend-section {
+  margin-bottom: 10px;
+}
+
+.legend-section:last-child {
+  margin-bottom: 0;
+}
+
+.legend-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #667;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+  color: #c8d4e8;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-line {
+  width: 22px;
+  height: 2px;
+  flex-shrink: 0;
+}
+
+.legend-line-divergent {
+  background-image: repeating-linear-gradient(to right, currentColor 0 6px, transparent 6px 10px);
+}
+
+.legend-line-transform {
+  background-image: repeating-linear-gradient(to right, currentColor 0 3px, transparent 3px 6px);
+}
+
+.legend-tip {
+  font-size: 11px;
+  color: #99a;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+/* ===== Species popup ===== */
+#species-popup {
+  position: fixed;
+  max-width: 280px;
+  padding: 10px 14px;
+  background: rgba(15, 22, 40, 0.95);
+  border-left: 3px solid #88aacc;
+  border-radius: 6px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.15s ease;
+}
+
+#species-popup.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#species-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #88aacc;
+  margin-bottom: 2px;
+}
+
+#species-popup-sci {
+  font-size: 10px;
+  font-style: italic;
+  color: #778;
+  margin-bottom: 4px;
+}
+
+#species-popup-meta {
+  font-size: 10px;
+  color: #99a;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+#species-popup-body {
+  font-size: 12px;
+  color: #c8d4e8;
+  line-height: 1.45;
+}
+
 /* ===== Sidebar ===== */
 
 #sidebar {
@@ -344,6 +508,44 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.species-desc-long {
+  display: none;
+  font-size: 11px;
+  color: #889;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.species-item.expanded {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.species-item.expanded .species-desc {
+  display: none;
+}
+
+.species-item.expanded .species-desc-long {
+  display: block;
+}
+
+.species-item {
+  cursor: pointer;
+}
+
+.sparkline-wrap {
+  margin-top: 2px;
+  line-height: 0;
+}
+
+.sparkline-canvas {
+  display: block;
+  opacity: 0.85;
+}
+
+#atmosphere-panel {
+  flex-wrap: wrap;
 }
 
 .abundance-bar-container {

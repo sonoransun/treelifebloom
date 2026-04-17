@@ -1,9 +1,17 @@
-// Species sidebar — shows currently alive species ranked by abundance.
+// Species sidebar — shows currently alive species ranked by abundance,
+// atmosphere readouts with sparklines, and a biodiversity estimate.
 
 import { COLORS } from '../config.js';
 import { getSpeciesAtTime } from '../data/species.js';
-import { getTemperatureAtTime, getOxygenAtTime, getCO2AtTime } from '../data/atmosphere.js';
+import {
+  getTemperatureAtTime,
+  getOxygenAtTime,
+  getCO2AtTime,
+  ATMOSPHERE_CURVES,
+} from '../data/atmosphere.js';
 import { getSeismicActivityAtTime } from '../data/seismicActivity.js';
+import { estimatedDiversityKilo, formatDiversity } from '../data/biodiversity.js';
+import { Sparkline } from './sparkline.js';
 
 export class Sidebar {
   constructor() {
@@ -13,9 +21,62 @@ export class Sidebar {
     this._o2El = document.getElementById('atmo-o2');
     this._co2El = document.getElementById('atmo-co2');
     this._seismicEl = document.getElementById('atmo-seismic');
+    this._bioEl = document.getElementById('atmo-bio');
     this._currentIds = new Set();
     this._elements = new Map(); // id -> li element
     this._lastUpdateTime = 0;
+
+    this._initSparklines();
+
+    // Click on a species → toggle expanded long description.
+    this.listEl.addEventListener('click', (e) => {
+      const li = e.target.closest('.species-item');
+      if (li) li.classList.toggle('expanded');
+    });
+
+    this._popup = null;
+  }
+
+  /** Wire a SpeciesPopup so hovering a sidebar entry shows the popup card. */
+  attachPopup(popup) {
+    this._popup = popup;
+    this.listEl.addEventListener('mouseover', (e) => {
+      const li = e.target.closest('.species-item');
+      if (!li || !this._popup) return;
+      const id = li.dataset.id;
+      const sp = this._spById(id);
+      if (sp) this._popup.show(sp, e.clientX, e.clientY);
+    });
+    this.listEl.addEventListener('mouseleave', () => {
+      if (this._popup) this._popup.hide();
+    });
+  }
+
+  _spById(id) {
+    // Lookup in latest computed snapshot — cached as map during update().
+    if (this._lastAlive) {
+      for (const s of this._lastAlive) if (s.id === id) return s;
+    }
+    return null;
+  }
+
+  _initSparklines() {
+    const mountUnder = (id, color) => {
+      const valueEl = document.getElementById(id);
+      if (!valueEl) return null;
+      const wrap = document.createElement('div');
+      wrap.className = 'sparkline-wrap';
+      valueEl.parentElement.appendChild(wrap);
+      return new Sparkline(wrap, {
+        curve: id === 'atmo-temp' ? ATMOSPHERE_CURVES.temperature
+             : id === 'atmo-o2'   ? ATMOSPHERE_CURVES.oxygen
+             : ATMOSPHERE_CURVES.co2,
+        width: 64, height: 16, color,
+      });
+    };
+    this._sparkTemp = mountUnder('atmo-temp', '#cc7755');
+    this._sparkO2   = mountUnder('atmo-o2', '#66bbcc');
+    this._sparkCo2  = mountUnder('atmo-co2', '#aa8855');
   }
 
   update(timeMa) {
@@ -28,9 +89,13 @@ export class Sidebar {
     const temp = getTemperatureAtTime(timeMa);
     const o2 = getOxygenAtTime(timeMa);
     const co2 = getCO2AtTime(timeMa);
-    this._tempEl.textContent = `${temp >= 0 ? '' : ''}${temp.toFixed(1)}°C`;
+    this._tempEl.textContent = `${temp.toFixed(1)}°C`;
     this._o2El.textContent = `${o2.toFixed(1)}%`;
     this._co2El.textContent = co2 >= 1000 ? `${(co2 / 1000).toFixed(1)}k ppm` : `${Math.round(co2)} ppm`;
+
+    if (this._sparkTemp) this._sparkTemp.draw(timeMa, temp);
+    if (this._sparkO2) this._sparkO2.draw(timeMa, o2);
+    if (this._sparkCo2) this._sparkCo2.draw(timeMa, co2);
 
     const seismic = getSeismicActivityAtTime(timeMa);
     const seismicLabel = seismic >= 0.8 ? 'Extreme' : seismic >= 0.6 ? 'High' : seismic >= 0.4 ? 'Active' : seismic >= 0.2 ? 'Moderate' : 'Low';
@@ -38,7 +103,14 @@ export class Sidebar {
     this._seismicEl.textContent = seismicLabel;
     this._seismicEl.style.color = seismicColor;
 
+    // Biodiversity estimate
+    if (this._bioEl) {
+      const kilo = estimatedDiversityKilo(timeMa);
+      this._bioEl.textContent = formatDiversity(kilo);
+    }
+
     const alive = getSpeciesAtTime(timeMa);
+    this._lastAlive = alive;
     const top = alive.slice(0, 15);
     const newIds = new Set(top.map(s => s.id));
 
@@ -90,8 +162,8 @@ export class Sidebar {
       }
     }
 
-    // Update count
-    this.countEl.textContent = `${alive.length} species`;
+    // Update count — show "alive" total, not just top-15.
+    this.countEl.textContent = `${alive.length} shown`;
   }
 
   _createSpeciesElement(sp) {
@@ -102,16 +174,40 @@ export class Sidebar {
     const color = COLORS.kingdom[sp.category] || '#aaa';
     li.style.borderLeftColor = color;
 
-    li.innerHTML = `
-      <div class="species-dot" style="background: ${color}"></div>
-      <div class="species-info">
-        <span class="species-name">${sp.name}</span>
-        <span class="species-desc">${sp.description}</span>
-      </div>
-      <div class="abundance-bar-container">
-        <div class="abundance-bar" style="width: ${Math.round(sp.currentAbundance * 100)}%; background: ${color}"></div>
-      </div>
-    `;
+    const dot = document.createElement('div');
+    dot.className = 'species-dot';
+    dot.style.background = color;
+
+    const info = document.createElement('div');
+    info.className = 'species-info';
+
+    const name = document.createElement('span');
+    name.className = 'species-name';
+    name.textContent = sp.name;
+
+    const desc = document.createElement('span');
+    desc.className = 'species-desc';
+    desc.textContent = sp.description;
+
+    const long = document.createElement('span');
+    long.className = 'species-desc-long';
+    long.textContent = sp.descriptionLong || sp.description;
+
+    info.appendChild(name);
+    info.appendChild(desc);
+    info.appendChild(long);
+
+    const barWrap = document.createElement('div');
+    barWrap.className = 'abundance-bar-container';
+    const bar = document.createElement('div');
+    bar.className = 'abundance-bar';
+    bar.style.width = Math.round(sp.currentAbundance * 100) + '%';
+    bar.style.background = color;
+    barWrap.appendChild(bar);
+
+    li.appendChild(dot);
+    li.appendChild(info);
+    li.appendChild(barWrap);
 
     return li;
   }

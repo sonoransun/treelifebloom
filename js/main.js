@@ -7,6 +7,14 @@ import { View2D } from './views/view2d.js';
 import { Sidebar } from './ui/sidebar.js';
 import { Controls } from './ui/controls.js';
 import { ExtinctionOverlay } from './ui/extinctionOverlay.js';
+import { MilestoneOverlay } from './ui/milestoneOverlay.js';
+import { SpeciesPopup } from './ui/speciesPopup.js';
+import { Legend } from './ui/legend.js';
+import {
+  getTemperatureAtTime,
+  getOxygenAtTime,
+  getCO2AtTime,
+} from './data/atmosphere.js';
 
 // --- Initialize ---
 
@@ -21,6 +29,16 @@ let showBoundaries = false;
 const sidebar = new Sidebar();
 const controls = new Controls(clock);
 const extinctionOverlay = new ExtinctionOverlay();
+const milestoneOverlay = new MilestoneOverlay();
+const popup = new SpeciesPopup();
+const legend = new Legend();
+sidebar.attachPopup(popup);
+
+// Wire hover from views into popup. view3d hooks up after lazy load.
+view2d.onSpeciesHover((sp, x, y) => {
+  if (sp) popup.show(sp, x, y);
+  else popup.hide();
+});
 
 // Initialize 2D view
 view2d.init();
@@ -64,6 +82,10 @@ async function switchView(mode) {
       try {
         const { View3D } = await import('./views/view3d.js');
         view3d = new View3D(vizContainer);
+        view3d.onSpeciesHover((sp, x, y) => {
+          if (sp) popup.show(sp, x, y);
+          else popup.hide();
+        });
       } catch (err) {
         console.error('Failed to load 3D view:', err);
         alert('3D Globe requires WebGL support. Please use a modern browser.');
@@ -100,6 +122,17 @@ async function switchView(mode) {
 
 let lastTimestamp = 0;
 
+// Sun longitude rotates once per ~12 real seconds — drives day/night terminator on the 3D globe.
+const SUN_PERIOD_SEC = 12;
+function buildAtmoSnapshot(timeMa, nowMs) {
+  return {
+    tempC: getTemperatureAtTime(timeMa),
+    o2Pct: getOxygenAtTime(timeMa),
+    co2Ppm: getCO2AtTime(timeMa),
+    sunLon: ((nowMs / 1000) % SUN_PERIOD_SEC) / SUN_PERIOD_SEC * 360 - 180,
+  };
+}
+
 function animate(timestamp) {
   const delta = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
   lastTimestamp = timestamp;
@@ -117,13 +150,17 @@ function animate(timestamp) {
   // 2.5. Get plate boundaries if toggled on
   const boundaries = showBoundaries ? getBoundariesAtTime(t) : null;
 
+  // 2.75. Build atmosphere snapshot for visual effects
+  const atmo = buildAtmoSnapshot(t, timestamp);
+
   // 3. Render active view
-  activeView.render(polygons, t, boundaries);
+  activeView.render(polygons, t, boundaries, atmo);
 
   // 4. Update UI
   sidebar.update(t);
   controls.updateDisplay(t);
   extinctionOverlay.update(t);
+  milestoneOverlay.update(t);
 
   requestAnimationFrame(animate);
 }
@@ -131,7 +168,8 @@ function animate(timestamp) {
 // Initial render
 const initialPolygons = getPolygonsAtTime(clock.currentTimeMa);
 const initialBoundaries = showBoundaries ? getBoundariesAtTime(clock.currentTimeMa) : null;
-activeView.render(initialPolygons, clock.currentTimeMa, initialBoundaries);
+const initialAtmo = buildAtmoSnapshot(clock.currentTimeMa, performance.now());
+activeView.render(initialPolygons, clock.currentTimeMa, initialBoundaries, initialAtmo);
 sidebar.update(clock.currentTimeMa);
 controls.updateDisplay(clock.currentTimeMa);
 

@@ -178,3 +178,10 @@ export function getOxygenAtTime(timeMa) {
 export function getCO2AtTime(timeMa) {
   return interpolateFromCurve(co2Curve, timeMa);
 }
+
+// Exported curves for sparkline rendering.
+export const ATMOSPHERE_CURVES = {
+  temperature: temperatureCurve,
+  oxygen: oxygenCurve,
+  co2: co2Curve,
+};

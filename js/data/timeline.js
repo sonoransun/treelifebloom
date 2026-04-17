@@ -31,10 +31,14 @@ export const timeline = [
   { eon: 'Phanerozoic', era: 'Mesozoic', period: 'Jurassic', startMa: 201.4, endMa: 145, color: '#34b2c9', temporalWeight: 2.5, description: 'Dinosaurs dominate, Pangaea splits' },
   { eon: 'Phanerozoic', era: 'Mesozoic', period: 'Cretaceous', startMa: 145, endMa: 66, color: '#7fc64e', temporalWeight: 2.5, description: 'Flowering plants, T. rex, asteroid impact' },
 
-  // PHANEROZOIC - Cenozoic
-  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Paleogene', startMa: 66, endMa: 23, color: '#fd9a52', temporalWeight: 3.0, description: 'Mammals radiate, primates appear' },
-  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Neogene', startMa: 23, endMa: 2.58, color: '#ffe619', temporalWeight: 5.0, description: 'Great apes, grasslands, hominins' },
-  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Quaternary', startMa: 2.58, endMa: 0, color: '#f9f97f', temporalWeight: 12.0, description: 'Ice ages, Homo sapiens, civilization' },
+  // PHANEROZOIC - Cenozoic (epoch-level detail; parentPeriod preserves the coarser name)
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Paleocene',   parentPeriod: 'Paleogene',  startMa: 66,     endMa: 56,     color: '#fdb46c', temporalWeight: 0.7, description: 'Mammals recover from the K-Pg impact' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Eocene',      parentPeriod: 'Paleogene',  startMa: 56,     endMa: 34,     color: '#fd9a52', temporalWeight: 1.5, description: 'Greenhouse peak, early whales and primates' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Oligocene',   parentPeriod: 'Paleogene',  startMa: 34,     endMa: 23,     color: '#fec07b', temporalWeight: 0.8, description: 'Cooling, Antarctic glaciation, first grasses' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Miocene',     parentPeriod: 'Neogene',    startMa: 23,     endMa: 5.333,  color: '#ffe619', temporalWeight: 3.5, description: 'Grassland expansion, great apes diversify' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Pliocene',    parentPeriod: 'Neogene',    startMa: 5.333,  endMa: 2.58,   color: '#fff0a0', temporalWeight: 1.5, description: 'Early hominins, Panama closes, ice caps grow' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Pleistocene', parentPeriod: 'Quaternary', startMa: 2.58,   endMa: 0.0117, color: '#f9f97f', temporalWeight: 8.0, description: 'Ice ages, megafauna, rise of Homo' },
+  { eon: 'Phanerozoic', era: 'Cenozoic', period: 'Holocene',    parentPeriod: 'Quaternary', startMa: 0.0117, endMa: 0,      color: '#feebd0', temporalWeight: 4.0, description: 'Agriculture, civilization, the human epoch' },
 ];
 
 /**

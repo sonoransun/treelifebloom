@@ -74,3 +74,48 @@ export const LAYOUT = {
   toolbarHeight: 48,
   controlsHeight: 96,
 };
+
+// Atmospheric visual response (haze, sky tint).
+// Modern Earth: ~15 °C, ~280 ppm CO₂, ~21% O₂. Deviations drive overlay color.
+export const ATMOSPHERE = {
+  modernTempC: 15,
+  modernCo2Ppm: 280,
+  hazeMaxAlpha: 0.45,
+  hotColor: '#c66020',          // sepia/burnt orange — hot greenhouse
+  coldColor: '#88aaff',         // pale blue — icehouse
+  highCo2Color: '#b08050',      // brown methane-tinged haze
+  lowO2Color: '#445566',        // grey-blue dim, low-O₂ atmosphere
+  // 3D atmosphere shell
+  shellRadiusFactor: 1.04,
+  shellOpacityMin: 0.12,
+  shellOpacityMax: 0.45,
+  // Day/night terminator (3D)
+  ambientLow: 0.22,             // dimmer ambient lets terminator show
+  rimLightStrength: 0.18,
+};
+
+// Polar glaciation rendering.
+export const GLACIATION = {
+  capColor: '#f0f8ff',
+  capEdgeColor: '#dfe8ff',
+  // Latitude (degrees from pole) at which the cap edge sits, given temperature.
+  // tempC = -5 → cap reaches ~equator (lat radius 80); tempC = 25 → no caps.
+  coldThresholdC: 0,
+  warmThresholdC: 22,
+  maxCapLatRadius: 70,
+};
+
+// Continent latitude shading: poles → cool, tropics → warm.
+export const RENDER_EXTRA = {
+  continentColorByLatitude: true,
+  latitudePalette: [
+    { lat: -90, color: '#c8d4dc' },
+    { lat: -60, color: '#9c8e6c' },
+    { lat: -30, color: '#8b7355' },
+    { lat:   0, color: '#6b7c45' },
+    { lat:  30, color: '#8b7355' },
+    { lat:  60, color: '#9c8e6c' },
+    { lat:  90, color: '#c8d4dc' },
+  ],
+  latitudeBlend: 0.55, // how strongly to lean toward latitude palette vs. continent.color
+};

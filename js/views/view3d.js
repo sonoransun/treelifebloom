@@ -2,11 +2,13 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { COLORS, RENDER } from '../config.js';
+import { COLORS, RENDER, ATMOSPHERE, GLACIATION } from '../config.js';
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
+import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
 
 export class View3D {
   constructor(container) {
@@ -21,6 +23,14 @@ export class View3D {
     this.boundaryLines = [];
     this.starfield = null;
     this._initialized = false;
+    this._hoverCb = null;
+    this._raycaster = null;
+    this._pointerNdc = null;
+    this._onPointerMove = null;
+  }
+
+  onSpeciesHover(cb) {
+    this._hoverCb = cb;
   }
 
   init() {
@@ -51,13 +61,18 @@ export class View3D {
     this.controls.autoRotate = true;
     this.controls.autoRotateSpeed = RENDER.autoRotateSpeed;
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0x445577, 0.5);
-    this.scene.add(ambient);
+    // Lighting — lower ambient lets the day/night terminator show on the globe.
+    this.ambientLight = new THREE.AmbientLight(0x445577, ATMOSPHERE.ambientLow);
+    this.scene.add(this.ambientLight);
 
-    const directional = new THREE.DirectionalLight(0xffeedd, 1.2);
-    directional.position.set(3, 2, 5);
-    this.scene.add(directional);
+    this.sunLight = new THREE.DirectionalLight(0xffeedd, 1.4);
+    this.sunLight.position.set(3, 1.5, 5);
+    this.scene.add(this.sunLight);
+
+    // Soft rim/back light so the night side isn't pitch black.
+    this.rimLight = new THREE.DirectionalLight(0x6688aa, ATMOSPHERE.rimLightStrength);
+    this.rimLight.position.set(-3, -0.5, -4);
+    this.scene.add(this.rimLight);
 
     // Globe sphere (ocean)
     const globeGeometry = new THREE.SphereGeometry(RENDER.globeRadius, 64, 64);
@@ -69,15 +84,50 @@ export class View3D {
     this.globe = new THREE.Mesh(globeGeometry, globeMaterial);
     this.scene.add(this.globe);
 
+    // Atmosphere shell — thin translucent sphere that tints by climate.
+    const shellGeometry = new THREE.SphereGeometry(
+      RENDER.globeRadius * ATMOSPHERE.shellRadiusFactor, 48, 48
+    );
+    const shellMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(ATMOSPHERE.hotColor),
+      transparent: true,
+      opacity: ATMOSPHERE.shellOpacityMin,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    this.atmosphereShell = new THREE.Mesh(shellGeometry, shellMaterial);
+    this.scene.add(this.atmosphereShell);
+
+    // Polar ice caps (created once, opacity/geometry rebuilt each frame).
+    this._createIceCaps();
+
     // Starfield
     this._createStarfield();
 
     // Grid lines on globe
     this._createGlobeGrid();
 
+    // Pointer-move handler for hover raycasting.
+    this._raycaster = new THREE.Raycaster();
+    this._pointerNdc = new THREE.Vector2();
+    this._onPointerMove = (e) => this._handlePointerMove(e);
+    this.renderer.domElement.addEventListener('pointermove', this._onPointerMove);
+
     this._initialized = true;
     this.containerEl.style.display = 'block';
     this.resize();
+  }
+
+  _handlePointerMove(e) {
+    if (!this._hoverCb || !this.speciesMarkers.length) return;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this._pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this._pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    this._raycaster.setFromCamera(this._pointerNdc, this.camera);
+    const hits = this._raycaster.intersectObjects(this.speciesMarkers, false);
+    const sp = hits.length ? hits[0].object.userData.species : null;
+    this.renderer.domElement.style.cursor = sp ? 'pointer' : '';
+    this._hoverCb(sp || null, e.clientX, e.clientY);
   }
 
   destroy() {
@@ -95,23 +145,31 @@ export class View3D {
     this.renderer.setSize(w, h);
   }
 
-  render(polygons, timeMa, boundaries = null) {
+  render(polygons, timeMa, boundaries = null, atmo = null) {
     if (!this._initialized) return;
 
     // Update controls
     this.controls.update();
 
-    // Update ocean color during extinctions
+    // Update ocean color during extinctions; layer in climate tint underneath.
     const extinction = getActiveExtinction(timeMa);
-    if (extinction) {
-      const t = extinction.progress * 0.3;
-      const base = new THREE.Color(COLORS.ocean);
-      const red = new THREE.Color(0x3a1010);
-      base.lerp(red, t);
-      this.globe.material.color.copy(base);
-    } else {
-      this.globe.material.color.set(COLORS.ocean);
+    const oceanColor = new THREE.Color(COLORS.ocean);
+    if (atmo) {
+      const haze = computeHaze(atmo);
+      if (haze) {
+        oceanColor.lerp(new THREE.Color(`rgb(${haze.rgb.r},${haze.rgb.g},${haze.rgb.b})`), haze.alpha * 0.4);
+      }
     }
+    if (extinction) {
+      oceanColor.lerp(new THREE.Color(0x3a1010), extinction.progress * 0.4);
+    }
+    this.globe.material.color.copy(oceanColor);
+
+    // Update atmosphere shell & sun position
+    this._updateAtmosphereAndLighting(atmo);
+
+    // Update polar ice caps
+    this._updateIceCaps(timeMa);
 
     // Update continental meshes
     this._updateContinents(polygons, extinction);
@@ -124,6 +182,79 @@ export class View3D {
 
     // Render
     this.renderer.render(this.scene, this.camera);
+  }
+
+  _updateAtmosphereAndLighting(atmo) {
+    if (!atmo) return;
+    // Sun position — terminator drift.
+    const sunRad = (atmo.sunLon * Math.PI) / 180;
+    const sunDist = 5;
+    this.sunLight.position.set(
+      Math.cos(sunRad) * sunDist,
+      1.5,
+      Math.sin(sunRad) * sunDist
+    );
+
+    // Atmosphere shell tint & opacity
+    const haze = computeHaze(atmo);
+    if (haze) {
+      this.atmosphereShell.material.color.setRGB(haze.rgb.r / 255, haze.rgb.g / 255, haze.rgb.b / 255);
+      const opacity = ATMOSPHERE.shellOpacityMin
+        + haze.alpha * (ATMOSPHERE.shellOpacityMax - ATMOSPHERE.shellOpacityMin) / ATMOSPHERE.hazeMaxAlpha;
+      this.atmosphereShell.material.opacity = Math.min(opacity, ATMOSPHERE.shellOpacityMax);
+    } else {
+      this.atmosphereShell.material.opacity = ATMOSPHERE.shellOpacityMin;
+      this.atmosphereShell.material.color.set(0x88aaff);
+    }
+  }
+
+  _createIceCaps() {
+    // Two spherical caps (top + bottom) — geometry recreated when extent changes.
+    const r = RENDER.globeRadius * 1.005;
+    const material = new THREE.MeshPhongMaterial({
+      color: new THREE.Color(GLACIATION.capColor),
+      transparent: true,
+      opacity: 0,
+      shininess: 60,
+      depthWrite: false,
+    });
+    // Initial small cap; will be rebuilt in _updateIceCaps
+    const initialPhi = 0.001;
+    this.northCap = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, initialPhi),
+      material.clone()
+    );
+    this.scene.add(this.northCap);
+    this.southCap = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI - initialPhi, initialPhi),
+      material.clone()
+    );
+    this.scene.add(this.southCap);
+    this._currentCapNorth = -1;
+    this._currentCapSouth = -1;
+  }
+
+  _updateIceCaps(timeMa) {
+    const g = getGlaciation(timeMa);
+    const r = RENDER.globeRadius * 1.005;
+
+    // Rebuild geometry only when cap radius changes meaningfully (≥1° lat shift).
+    const northPhi = Math.max(0.001, (g.northCapLatRadius * Math.PI) / 180);
+    const southPhi = Math.max(0.001, (g.southCapLatRadius * Math.PI) / 180);
+
+    if (Math.abs(g.northCapLatRadius - this._currentCapNorth) > 1) {
+      this.northCap.geometry.dispose();
+      this.northCap.geometry = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, 0, northPhi);
+      this._currentCapNorth = g.northCapLatRadius;
+    }
+    if (Math.abs(g.southCapLatRadius - this._currentCapSouth) > 1) {
+      this.southCap.geometry.dispose();
+      this.southCap.geometry = new THREE.SphereGeometry(r, 32, 16, 0, Math.PI * 2, Math.PI - southPhi, southPhi);
+      this._currentCapSouth = g.southCapLatRadius;
+    }
+
+    this.northCap.material.opacity = g.alpha;
+    this.southCap.material.opacity = g.alpha;
   }
 
   _updateContinents(polygons, extinction) {
@@ -167,8 +298,14 @@ export class View3D {
     centroid.divideScalar(n);
     centroid.normalize().multiplyScalar(RENDER.continentElevation);
 
+    // Centroid latitude — drives latitude-palette blending of the top face.
+    let sumLat = 0;
+    for (const [, lat] of fractalVerts) sumLat += lat;
+    const centroidLat = sumLat / n;
+    const tinted = continentColorAtLatitude(continent.color, centroidLat);
+
     // Colors
-    const topColor = new THREE.Color(continent.color);
+    const topColor = new THREE.Color(tinted);
     if (extinction) topColor.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
     const sideColor = new THREE.Color(RENDER.continentSideColor);
     if (extinction) sideColor.lerp(new THREE.Color(0x2a1010), extinction.progress * 0.3);
@@ -182,9 +319,15 @@ export class View3D {
     positions.push(centroid.x, centroid.y, centroid.z);
     colors.push(topColor.r, topColor.g, topColor.b);
 
-    for (const v of topVerts) {
+    // Per-vertex latitude tinting along the perimeter.
+    for (let i = 0; i < topVerts.length; i++) {
+      const v = topVerts[i];
+      const lat = fractalVerts[i][1];
+      const vTinted = continentColorAtLatitude(continent.color, lat);
+      const vc = new THREE.Color(vTinted);
+      if (extinction) vc.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
       positions.push(v.x, v.y, v.z);
-      colors.push(topColor.r, topColor.g, topColor.b);
+      colors.push(vc.r, vc.g, vc.b);
     }
 
     for (let i = 1; i <= n; i++) {
@@ -304,6 +447,7 @@ export class View3D {
 
       const marker = new THREE.Mesh(geometry, material);
       marker.position.copy(pos);
+      marker.userData.species = sp;
       this.scene.add(marker);
       this.speciesMarkers.push(marker);
     }

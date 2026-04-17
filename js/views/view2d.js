@@ -10,7 +10,11 @@ const BOUNDARY_STYLES = {
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
+import { mixColors, hexToRgb } from '../util/colorMix.js';
+import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
+import { GLACIATION } from '../config.js';
 
 export class View2D {
   constructor(container) {
@@ -28,11 +32,19 @@ export class View2D {
     this._dragging = false;
     this._lastMouse = null;
 
+    // Hover state — recorded per-frame so hit-test can find species under cursor.
+    this._markerHits = []; // [{sp, x, y, r}]
+    this._hoverCb = null;
+
     // Bound handlers for cleanup
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onMouseUp = this._onMouseUp.bind(this);
     this._onWheel = this._onWheel.bind(this);
+  }
+
+  onSpeciesHover(cb) {
+    this._hoverCb = cb;
   }
 
   init() {
@@ -76,7 +88,7 @@ export class View2D {
     return [x, y];
   }
 
-  render(polygons, timeMa, boundaries = null) {
+  render(polygons, timeMa, boundaries = null, atmo = null) {
     const ctx = this.ctx;
     const w = this.width;
     const h = this.height;
@@ -92,17 +104,32 @@ export class View2D {
     const extinction = getActiveExtinction(timeMa);
 
     // 1. Ocean background with depth gradient
-    const oceanBase = extinction
-      ? this._mixColors(COLORS.ocean, '#3a1010', extinction.progress * 0.4)
+    let oceanBase = extinction
+      ? mixColors(COLORS.ocean, '#3a1010', extinction.progress * 0.4)
       : COLORS.ocean;
-    const oceanEdge = extinction
-      ? this._mixColors(COLORS.oceanDeep, '#2a0808', extinction.progress * 0.4)
+    let oceanEdge = extinction
+      ? mixColors(COLORS.oceanDeep, '#2a0808', extinction.progress * 0.4)
       : COLORS.oceanDeep;
+    // Atmospheric tint on the ocean too (subtle: half the haze magnitude)
+    if (atmo) {
+      const haze = computeHaze(atmo);
+      if (haze) {
+        const tintRgb = `rgb(${haze.rgb.r},${haze.rgb.g},${haze.rgb.b})`;
+        oceanBase = mixColors(oceanBase, tintRgb, haze.alpha * 0.5);
+        oceanEdge = mixColors(oceanEdge, tintRgb, haze.alpha * 0.5);
+      }
+    }
     const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
     gradient.addColorStop(0, oceanBase);
     gradient.addColorStop(1, oceanEdge);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, w, h);
+
+    // 1.5. Polar ice caps (drawn over ocean, under land — so coastlines win)
+    const glaciation = getGlaciation(timeMa);
+    if (glaciation.alpha > 0.02) {
+      this._renderIceCaps(ctx, w, h, glaciation);
+    }
 
     // 2. Grid lines
     ctx.strokeStyle = COLORS.gridLine;
@@ -142,10 +169,13 @@ export class View2D {
       }
       ctx.closePath();
 
-      // Fill
-      ctx.fillStyle = extinction
-        ? this._mixColors(continent.color, '#4a2020', extinction.progress * 0.3)
-        : continent.color;
+      // Fill — blend with latitude palette for tropical green / polar grey
+      const center = this._polygonCentroid(continent.vertices);
+      let baseColor = continentColorAtLatitude(continent.color, center[1]);
+      if (extinction) {
+        baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
+      }
+      ctx.fillStyle = baseColor;
       ctx.globalAlpha = RENDER.continentFillAlpha;
       ctx.fill();
       ctx.globalAlpha = 1;
@@ -164,7 +194,6 @@ export class View2D {
 
       // Label (only at sufficient zoom)
       if (this.zoom >= 1) {
-        const center = this._polygonCentroid(continent.vertices);
         const [cx, cy] = this._lonLatToXY(center[0], center[1]);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
         ctx.font = '10px system-ui';
@@ -173,15 +202,26 @@ export class View2D {
       }
     }
 
+    // 3.5. Atmospheric haze overlay (after land, so it tints the whole scene cohesively)
+    if (atmo) {
+      const haze = computeHaze(atmo);
+      if (haze) {
+        ctx.fillStyle = haze.color;
+        ctx.fillRect(0, 0, w, h);
+      }
+    }
+
     // 4. Species markers
     const aliveSpecies = getSpeciesAtTime(timeMa);
     const now = performance.now() / 1000;
+    this._markerHits = [];
     for (const sp of aliveSpecies) {
       if (sp.category === 'event') continue; // Don't draw markers for events
       const [x, y] = this._lonLatToXY(sp.location.lon, sp.location.lat);
       const categoryColor = COLORS.kingdom[sp.category] || '#aaa';
       const pulse = Math.sin(now * 2 + sp.location.lon) * RENDER.speciesMarkerPulseAmplitude;
       const radius = RENDER.speciesMarkerRadius + pulse;
+      this._markerHits.push({ sp, x, y, r: radius + 4 });
 
       // Glow
       ctx.beginPath();
@@ -280,6 +320,31 @@ export class View2D {
     }
   }
 
+  _renderIceCaps(ctx, w, h, glaciation) {
+    const { northCapLatRadius, southCapLatRadius, alpha } = glaciation;
+    const capRgb = hexToRgb(GLACIATION.capColor);
+
+    // North cap: lat 90 down to 90 - northCapLatRadius → y=0 to y at that lat
+    if (northCapLatRadius > 0) {
+      const [, yEdge] = this._lonLatToXY(0, 90 - northCapLatRadius);
+      const grad = ctx.createLinearGradient(0, 0, 0, yEdge);
+      grad.addColorStop(0, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},${alpha.toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, yEdge);
+    }
+
+    // South cap: lat -90 up to -90 + southCapLatRadius
+    if (southCapLatRadius > 0) {
+      const [, yEdge] = this._lonLatToXY(0, -90 + southCapLatRadius);
+      const grad = ctx.createLinearGradient(0, h, 0, yEdge);
+      grad.addColorStop(0, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},${alpha.toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, yEdge, w, h - yEdge);
+    }
+  }
+
   _polygonCentroid(vertices) {
     let sumLon = 0, sumLat = 0;
     for (const [lon, lat] of vertices) {
@@ -289,24 +354,6 @@ export class View2D {
     return [sumLon / vertices.length, sumLat / vertices.length];
   }
 
-  _mixColors(color1, color2, t) {
-    const c1 = this._hexToRgb(color1);
-    const c2 = this._hexToRgb(color2);
-    const r = Math.round(c1.r + (c2.r - c1.r) * t);
-    const g = Math.round(c1.g + (c2.g - c1.g) * t);
-    const b = Math.round(c1.b + (c2.b - c1.b) * t);
-    return `rgb(${r},${g},${b})`;
-  }
-
-  _hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-  }
-
   // Pan/zoom interaction handlers
   _onMouseDown(e) {
     this._dragging = true;
@@ -314,10 +361,37 @@ export class View2D {
   }
 
   _onMouseMove(e) {
-    if (!this._dragging || !this._lastMouse) return;
-    this.panX += (e.clientX - this._lastMouse.x) / this.zoom;
-    this.panY += (e.clientY - this._lastMouse.y) / this.zoom;
-    this._lastMouse = { x: e.clientX, y: e.clientY };
+    if (this._dragging && this._lastMouse) {
+      this.panX += (e.clientX - this._lastMouse.x) / this.zoom;
+      this.panY += (e.clientY - this._lastMouse.y) / this.zoom;
+      this._lastMouse = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    // Hover hit-test in canvas-local coords.
+    if (!this._hoverCb) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const cx = (e.clientX - rect.left);
+    const cy = (e.clientY - rect.top);
+    // Account for pan/zoom — markers are drawn in zoomed space.
+    const halfW = this.width / 2;
+    const halfH = this.height / 2;
+    const localX = (cx - this.panX - halfW * (1 - this.zoom)) / this.zoom;
+    const localY = (cy - this.panY - halfH * (1 - this.zoom)) / this.zoom;
+
+    let best = null;
+    let bestDist = Infinity;
+    for (const hit of this._markerHits) {
+      const dx = hit.x - localX;
+      const dy = hit.y - localY;
+      const d2 = dx * dx + dy * dy;
+      const r = hit.r + 4; // generous hit area
+      if (d2 <= r * r && d2 < bestDist) {
+        bestDist = d2;
+        best = hit;
+      }
+    }
+    this.canvas.style.cursor = best ? 'pointer' : '';
+    this._hoverCb(best ? best.sp : null, e.clientX, e.clientY);
   }
 
   _onMouseUp() {
