@@ -60,6 +60,18 @@
         <div id="species-popup-body"></div>
       </div>
 
+      <!-- Species modal (centered; pauses animation) -->
+      <div id="species-modal-backdrop" class="hidden"></div>
+      <div id="species-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="species-modal-title">
+        <button id="species-modal-close" aria-label="Close">&times;</button>
+        <h3 id="species-modal-title"></h3>
+        <div id="species-modal-sci"></div>
+        <div id="species-modal-meta"></div>
+        <p id="species-modal-body"></p>
+        <h4 class="species-modal-section">Close relatives</h4>
+        <ul id="species-modal-relatives"></ul>
+      </div>
+
       <!-- Time label overlay -->
       <div id="time-overlay">
         <span id="time-period-label">Hadean</span>

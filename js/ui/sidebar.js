@@ -28,13 +28,18 @@ export class Sidebar {
 
     this._initSparklines();
 
-    // Click on a species → toggle expanded long description.
+    this._popup = null;
+    this._modal = null;
+
+    // Click on a species → open modal (pauses the animation).
     this.listEl.addEventListener('click', (e) => {
       const li = e.target.closest('.species-item');
-      if (li) li.classList.toggle('expanded');
+      if (!li) return;
+      const sp = this._spById(li.dataset.id);
+      if (!sp || !this._modal) return;
+      if (this._popup) this._popup.hide();
+      this._modal.open(sp, this._lastAlive || []);
     });
-
-    this._popup = null;
   }
 
   /** Wire a SpeciesPopup so hovering a sidebar entry shows the popup card. */
@@ -50,6 +55,11 @@ export class Sidebar {
     this.listEl.addEventListener('mouseleave', () => {
       if (this._popup) this._popup.hide();
     });
+  }
+
+  /** Wire a SpeciesModal so clicking a sidebar entry opens the detail modal. */
+  attachModal(modal) {
+    this._modal = modal;
   }
 
   _spById(id) {
@@ -189,13 +199,8 @@ export class Sidebar {
     desc.className = 'species-desc';
     desc.textContent = sp.description;
 
-    const long = document.createElement('span');
-    long.className = 'species-desc-long';
-    long.textContent = sp.descriptionLong || sp.description;
-
     info.appendChild(name);
     info.appendChild(desc);
-    info.appendChild(long);
 
     const barWrap = document.createElement('div');
     barWrap.className = 'abundance-bar-container';

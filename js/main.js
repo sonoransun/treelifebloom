@@ -9,6 +9,7 @@ import { Controls } from './ui/controls.js';
 import { ExtinctionOverlay } from './ui/extinctionOverlay.js';
 import { MilestoneOverlay } from './ui/milestoneOverlay.js';
 import { SpeciesPopup } from './ui/speciesPopup.js';
+import { SpeciesModal } from './ui/speciesModal.js';
 import { Legend } from './ui/legend.js';
 import {
   getTemperatureAtTime,
@@ -31,8 +32,10 @@ const controls = new Controls(clock);
 const extinctionOverlay = new ExtinctionOverlay();
 const milestoneOverlay = new MilestoneOverlay();
 const popup = new SpeciesPopup();
+const speciesModal = new SpeciesModal(clock, controls);
 const legend = new Legend();
 sidebar.attachPopup(popup);
+sidebar.attachModal(speciesModal);
 
 // Wire hover from views into popup. view3d hooks up after lazy load.
 view2d.onSpeciesHover((sp, x, y) => {

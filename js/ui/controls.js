@@ -102,6 +102,11 @@ export class Controls {
     }
   }
 
+  /** Re-sync the play button icon after external code changed clock.playing. */
+  syncPlayButton() {
+    this._updatePlayButton();
+  }
+
   updateDisplay(timeMa) {
     // Update scrubber position (unless user is dragging)
     if (!this._scrubbing) {

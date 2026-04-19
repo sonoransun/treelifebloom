@@ -41,7 +41,7 @@ export const COLORS = {
 export const TIMING = {
   startTimeMa: 4000,       // animation starts at 4 billion years ago
   endTimeMa: 0,            // ends at present
-  baseSpeedMaPerSec: 50,   // base rate: 50 million years per real second
+  baseSpeedMaPerSec: 15,   // base rate: 15 million years per real second
   minSpeed: 0.25,
   maxSpeed: 4,
   extinctionSlowdown: 0.3, // speed multiplier during extinction events

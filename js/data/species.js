@@ -860,6 +860,630 @@ export const species = [
     descriptionLong: 'Anatomically modern humans emerged in Africa around 300,000 years ago, distinguished by a globular braincase, slender skeleton, and complex symbolic behavior. By around 70,000 years ago we had spread across Eurasia and interbred with both Neanderthals and Denisovans before replacing them. In the past 10,000 years we have transformed Earth\'s climate, biosphere, and surface more rapidly than any species in geological history.',
     location: { lat: 5, lon: 35 }
   },
+
+  // ===== EXTENDED SET — additions spanning Proterozoic through Pleistocene =====
+
+  // Archean / Proterozoic additions
+  {
+    id: 'methanogens',
+    name: 'Methanogens',
+    scientificName: 'Methanogenic archaea',
+    category: 'prokaryote',
+    appearanceMa: 3500,
+    extinctMa: null,
+    abundanceProfile: [[3500, 0.2], [2800, 0.8], [2400, 0.3], [541, 0.15], [0, 0.1]],
+    description: 'Methane-producing archaea; shaped the early atmosphere',
+    descriptionLong: 'Anaerobic archaea that metabolize simple carbon compounds and exhale methane as waste, making them one of the oldest metabolic lineages on Earth. For nearly a billion years their exhalations gave the sky a hazy orange tint and kept the young Sun warm enough for liquid water. Even today they thrive in cow guts, rice paddies, and ocean-floor sediments — and their activity is a major contributor to atmospheric methane.',
+    location: { lat: 0, lon: 40 }
+  },
+  {
+    id: 'gabonionta',
+    name: 'Gabonionta',
+    scientificName: 'Francevillian biota',
+    category: 'eukaryote',
+    appearanceMa: 2100,
+    extinctMa: 2000,
+    abundanceProfile: [[2100, 0.01], [2080, 0.2], [2020, 0.1], [2000, 0.01]],
+    description: 'Earliest candidate macroscopic multicellular life',
+    descriptionLong: 'Disk-shaped centimeter-scale fossils from black shales in Gabon, forming colonies shortly after the Great Oxygenation Event flooded shallow seas with oxygen. Their biological affinity is unresolved — possibly stem-group eukaryotes experimenting with multicellularity — but they demonstrate that complex body plans were being tried billions of years before the Cambrian explosion. Most went extinct when oceans returned to lower-oxygen conditions.',
+    location: { lat: -1, lon: 14 }
+  },
+  {
+    id: 'first_sponges',
+    name: 'First Sponges',
+    scientificName: 'Porifera (stem)',
+    category: 'invertebrate',
+    appearanceMa: 800,
+    extinctMa: null,
+    abundanceProfile: [[800, 0.01], [600, 0.3], [500, 0.5], [200, 0.4], [0, 0.35]],
+    description: 'Simplest animals; filter-feeding, no true tissues',
+    descriptionLong: 'Sessile filter feeders lacking nerves, muscles, or organs, built from loosely organized cell types that pump seawater through internal chambers. Molecular clocks and biomarkers suggest sponges branched off the animal tree more than 800 million years ago, making them the oldest surviving animal lineage. They built the first biological reefs and remain essential filterers of modern ocean water.',
+    location: { lat: 27, lon: 107 }
+  },
+  {
+    id: 'cloudina',
+    name: 'Cloudina',
+    scientificName: 'Cloudina carinata',
+    category: 'invertebrate',
+    appearanceMa: 550,
+    extinctMa: 538,
+    abundanceProfile: [[550, 0.01], [545, 0.4], [540, 0.3], [538, 0.01]],
+    description: 'Earliest shelly fossil; first predator drill holes appear',
+    descriptionLong: 'A small, tube-shaped organism that secreted stacked calcium carbonate cones — the earliest known biomineralized skeleton. Some Cloudina fossils bear neat drill holes, the oldest direct evidence of predation in the fossil record, suggesting an evolutionary arms race was already underway on the eve of the Cambrian. Their reefs spanned Namibia, Siberia, and China.',
+    location: { lat: -20, lon: 18 }
+  },
+
+  // Cambrian additions
+  {
+    id: 'wiwaxia',
+    name: 'Wiwaxia',
+    scientificName: 'Wiwaxia corrugata',
+    category: 'invertebrate',
+    appearanceMa: 510,
+    extinctMa: 485,
+    abundanceProfile: [[510, 0.01], [505, 0.3], [495, 0.2], [485, 0.01]],
+    description: 'Scaly Cambrian grazer armored in mineralized sclerites',
+    descriptionLong: 'A slug-sized Burgess Shale animal covered in overlapping carbonaceous scales and tall dorsal spines, likely grazing on microbial mats with a radula-like tongue. It has been placed near both annelids and mollusks in different phylogenetic studies, and remains a poster child for the strange experimental body plans of the Cambrian. Its mineralized defenses hint at pressure from early predators.',
+    location: { lat: 51, lon: -116 }
+  },
+  {
+    id: 'marrella',
+    name: 'Marrella',
+    scientificName: 'Marrella splendens',
+    category: 'arthropod',
+    appearanceMa: 510,
+    extinctMa: 500,
+    abundanceProfile: [[510, 0.05], [505, 0.5], [502, 0.4], [500, 0.05]],
+    description: 'Most abundant arthropod of the Burgess Shale',
+    descriptionLong: 'A small, delicate arthropod with two pairs of long sweeping spines projecting backward from its head shield — the single most common fossil in the Burgess Shale, with more than 25,000 specimens collected. It likely fed on sea-floor detritus and swam by beating its many feathery legs. Though bizarre in appearance, it represents a stem lineage close to the common ancestor of all modern arthropod groups.',
+    location: { lat: 51, lon: -116 }
+  },
+  {
+    id: 'aysheaia',
+    name: 'Aysheaia',
+    scientificName: 'Aysheaia pedunculata',
+    category: 'invertebrate',
+    appearanceMa: 510,
+    extinctMa: 495,
+    abundanceProfile: [[510, 0.01], [505, 0.2], [500, 0.15], [495, 0.01]],
+    description: 'Cambrian lobopod — ancestor of velvet worms and arthropods',
+    descriptionLong: 'A soft-bodied worm-like animal with ten pairs of stubby, clawed legs, often found fossilized alongside sponges it probably fed on. As a lobopod, it sits near the common ancestor of velvet worms, water bears, and arthropods, illuminating how the jointed limb of the most diverse animal phylum first arose. Modern velvet worms retain much the same body plan half a billion years later.',
+    location: { lat: 51, lon: -116 }
+  },
+  {
+    id: 'myllokunmingia',
+    name: 'Myllokunmingia',
+    scientificName: 'Myllokunmingia fengjiaoa',
+    category: 'fish',
+    appearanceMa: 525,
+    extinctMa: 515,
+    abundanceProfile: [[525, 0.01], [522, 0.15], [518, 0.1], [515, 0.01]],
+    description: 'Among the oldest known vertebrates',
+    descriptionLong: 'A jawless, finger-sized fish from the Chengjiang biota of Yunnan, possessing a dorsal fin, paired ventral fins, and the unmistakable vertebrate pharyngeal gill arrangement. At more than half a billion years old it is one of the earliest known animals with a notochord and skull, pushing the origin of our own phylum deep into the Cambrian. Every vertebrate alive today traces its ancestry to creatures very much like it.',
+    location: { lat: 25, lon: 103 }
+  },
+  {
+    id: 'archaeocyatha',
+    name: 'Archaeocyaths',
+    scientificName: 'Archaeocyatha',
+    category: 'invertebrate',
+    appearanceMa: 525,
+    extinctMa: 510,
+    abundanceProfile: [[525, 0.05], [520, 0.6], [515, 0.3], [510, 0.01]],
+    description: 'First animal reef-builders; double-walled calcareous cups',
+    descriptionLong: 'Cone-shaped sessile animals with porous, double-walled calcareous skeletons, likely filter-feeding via currents drawn through their walls. For a brief window in the early Cambrian they built the first true animal reefs on Earth, ringing warm shallow seas from Australia to Siberia. Their disappearance 510 million years ago left reef-building to other groups until corals eventually took over.',
+    location: { lat: -30, lon: 138 }
+  },
+  {
+    id: 'ottoia',
+    name: 'Ottoia',
+    scientificName: 'Ottoia prolifica',
+    category: 'invertebrate',
+    appearanceMa: 510,
+    extinctMa: 495,
+    abundanceProfile: [[510, 0.02], [505, 0.35], [500, 0.2], [495, 0.02]],
+    description: 'Cambrian priapulid worm — burrowing ambush predator',
+    descriptionLong: 'A stout, U-shaped priapulid worm that lived in burrows on the Cambrian sea floor and struck passing prey with an eversible spiny proboscis. Gut contents preserved in Burgess Shale specimens include whole hyoliths and even other Ottoia, revealing it as a top-tier burrow predator. Modern priapulids still live much the same way in cold marine sediments.',
+    location: { lat: 51, lon: -116 }
+  },
+
+  // Ordovician / Silurian additions
+  {
+    id: 'graptolites',
+    name: 'Graptolites',
+    scientificName: 'Graptolithina',
+    category: 'invertebrate',
+    appearanceMa: 485,
+    extinctMa: 320,
+    abundanceProfile: [[485, 0.1], [450, 0.6], [420, 0.5], [380, 0.25], [320, 0.01]],
+    description: 'Colonial plankton; the defining index fossils of Paleozoic seas',
+    descriptionLong: 'Colonial, filter-feeding hemichordates that floated in vast numbers through Paleozoic oceans, each colony branching out from a central thread into rows of tiny cups housing individual zooids. Because they evolved rapidly and dispersed globally, they remain geology\'s most reliable index fossils for Ordovician and Silurian rocks. Their sudden disappearance by the late Carboniferous marks the end of an era in the plankton.',
+    location: { lat: 54, lon: -3 }
+  },
+  {
+    id: 'crinoids',
+    name: 'Crinoids',
+    scientificName: 'Crinoidea',
+    category: 'invertebrate',
+    appearanceMa: 485,
+    extinctMa: null,
+    abundanceProfile: [[485, 0.1], [350, 0.7], [250, 0.2], [100, 0.3], [0, 0.2]],
+    description: 'Sea lilies and feather stars; echinoderms on stalks',
+    descriptionLong: 'Flower-shaped echinoderms anchored to the seabed by a stalk, with feathery arms that filter plankton from passing currents. In the Paleozoic they carpeted entire sea floors, leaving limestone beds composed almost entirely of their disarticulated stem plates. More than six hundred species still live today, some having shed the stalk to crawl or swim as feather stars.',
+    location: { lat: 20, lon: -80 }
+  },
+  {
+    id: 'cooksonia',
+    name: 'Cooksonia',
+    scientificName: 'Cooksonia pertoni',
+    category: 'plant',
+    appearanceMa: 433,
+    extinctMa: 393,
+    abundanceProfile: [[433, 0.01], [420, 0.3], [405, 0.25], [393, 0.02]],
+    description: 'Among the earliest vascular plants on land',
+    descriptionLong: 'A tiny, thumbnail-high plant consisting of little more than forking green stems tipped with spore-bearing knobs, with no true leaves or roots. Despite its simplicity, Cooksonia possessed vascular tissue and a waxy cuticle — the toolkit that made life on dry land possible. Its global distribution in Silurian rocks marks the moment plants began to green the continents in earnest.',
+    location: { lat: 52, lon: -2 }
+  },
+  {
+    id: 'astraspis',
+    name: 'Astraspis',
+    scientificName: 'Astraspis desiderata',
+    category: 'fish',
+    appearanceMa: 455,
+    extinctMa: 420,
+    abundanceProfile: [[455, 0.01], [445, 0.2], [430, 0.15], [420, 0.01]],
+    description: 'Armored jawless fish; first vertebrate skeleton with bone',
+    descriptionLong: 'A small armored fish whose head and trunk were sheathed in mosaic plates of dentine and bone — the earliest vertebrate mineralized skeleton yet found. Lacking jaws, it probably vacuumed up sediment and filtered tiny organisms, the ecological role its modern lamprey and hagfish cousins abandoned long ago. Its hard armor likely offered protection from the eurypterids sharing its seas.',
+    location: { lat: 37, lon: -107 }
+  },
+  {
+    id: 'tabulate_corals',
+    name: 'Tabulate Corals',
+    scientificName: 'Tabulata',
+    category: 'invertebrate',
+    appearanceMa: 485,
+    extinctMa: 252,
+    abundanceProfile: [[485, 0.05], [440, 0.5], [380, 0.65], [300, 0.4], [252, 0.01]],
+    description: 'Honeycomb-patterned reef corals of the Paleozoic',
+    descriptionLong: 'Colonial corals with tightly packed polygonal tubes subdivided by horizontal floors, forming massive reef mounds alongside rugose corals and stromatoporoids. For more than two hundred million years they dominated warm shallow shelves until the end-Permian extinction wiped them out entirely. Modern scleractinian corals are not descendants — they evolved independently in the Triassic from sea-anemone-like ancestors.',
+    location: { lat: 44, lon: -79 }
+  },
+
+  // Devonian additions
+  {
+    id: 'archaeopteris',
+    name: 'Archaeopteris',
+    scientificName: 'Archaeopteris hibernica',
+    category: 'plant',
+    appearanceMa: 385,
+    extinctMa: 359,
+    abundanceProfile: [[385, 0.05], [375, 0.5], [365, 0.45], [359, 0.05]],
+    description: 'First modern-looking tree; built the first true forests',
+    descriptionLong: 'A thirty-meter tree with a woody trunk, true bark, and flat fern-like fronds — combining reproductive strategies from ferns with the internal anatomy of modern conifers. Archaeopteris formed the first forests that looked genuinely forest-like, with canopies, understory, and deep root systems that profoundly altered soils and the carbon cycle. Their global spread helped pull enough CO₂ from the atmosphere to cool the planet and set up the late Paleozoic ice age.',
+    location: { lat: 47, lon: -122 }
+  },
+  {
+    id: 'goniatites',
+    name: 'Goniatites',
+    scientificName: 'Goniatitida',
+    category: 'invertebrate',
+    appearanceMa: 390,
+    extinctMa: 252,
+    abundanceProfile: [[390, 0.05], [360, 0.5], [320, 0.55], [280, 0.4], [252, 0.01]],
+    description: 'Early ammonoids; coiled shell predators of Paleozoic seas',
+    descriptionLong: 'An early ammonoid group with tightly coiled shells and zigzag suture patterns where internal walls met the outer shell. Fast swimmers and opportunistic predators, they diversified wildly during the Devonian and survived the Late Devonian and end-Carboniferous extinctions only to vanish with almost everything else at the end of the Permian. Their descendants gave rise to the more famous ammonites of the Mesozoic.',
+    location: { lat: 50, lon: 7 }
+  },
+  {
+    id: 'eusthenopteron',
+    name: 'Eusthenopteron',
+    scientificName: 'Eusthenopteron foordi',
+    category: 'fish',
+    appearanceMa: 385,
+    extinctMa: 374,
+    abundanceProfile: [[385, 0.01], [382, 0.25], [378, 0.2], [374, 0.01]],
+    description: 'Lobe-finned fish with limb-like bones in its fins',
+    descriptionLong: 'A meter-long predatory fish whose paired fins contained humerus, radius, and ulna bones in the same pattern found in the limbs of every tetrapod alive today. Though Eusthenopteron itself was a committed swimmer, its skeletal anatomy reveals the deep transformation that would soon let close relatives walk onto land. It is one of the most important single-species fossils in the whole story of vertebrate evolution.',
+    location: { lat: 49, lon: -65 }
+  },
+
+  // Carboniferous additions
+  {
+    id: 'arthropleura',
+    name: 'Arthropleura',
+    scientificName: 'Arthropleura armata',
+    category: 'arthropod',
+    appearanceMa: 345,
+    extinctMa: 290,
+    abundanceProfile: [[345, 0.01], [320, 0.35], [300, 0.3], [290, 0.01]],
+    description: 'Two-meter millipede — the largest land invertebrate ever',
+    descriptionLong: 'A millipede relative that grew to more than two and a half meters long and half a meter wide, stalking the humid coal-swamp floor on dozens of pairs of legs. High atmospheric oxygen and a shortage of large terrestrial predators let it reach a body size no arthropod has matched before or since. Fossil trackways show it could still move surprisingly quickly through the leaf litter of a world that smelled of peat.',
+    location: { lat: 52, lon: -2 }
+  },
+  {
+    id: 'lepidodendron',
+    name: 'Lepidodendron',
+    scientificName: 'Lepidodendron aculeatum',
+    category: 'plant',
+    appearanceMa: 360,
+    extinctMa: 300,
+    abundanceProfile: [[360, 0.1], [330, 0.8], [310, 0.7], [300, 0.05]],
+    description: 'Giant scale tree; built the world\'s coal deposits',
+    descriptionLong: 'A forty-meter lycopod with a trunk patterned like reptilian skin, reproducing by spores and growing for decades before flowering once, toppling, and dying. Vast forests of Lepidodendron and its relatives filled the Carboniferous tropics, and the peat they produced — buried before fungi could evolve the chemistry to digest their lignin — became most of the coal that fuelled the Industrial Revolution. Every lump of Carboniferous coal is their tomb.',
+    location: { lat: 40, lon: -80 }
+  },
+  {
+    id: 'eryops',
+    name: 'Eryops',
+    scientificName: 'Eryops megacephalus',
+    category: 'amphibian',
+    appearanceMa: 295,
+    extinctMa: 272,
+    abundanceProfile: [[295, 0.02], [285, 0.4], [278, 0.3], [272, 0.02]],
+    description: 'Crocodile-like early tetrapod; top predator of Permian swamps',
+    descriptionLong: 'A two-meter, thick-skulled tetrapod that lurked in Early Permian swamps much like a modern crocodilian, snatching fish and amphibians with a mouth of blade-like teeth. Though often called an amphibian, Eryops sits on the deep stem of the tetrapod tree near the split between modern amphibians and the ancestors of amniotes. It was one of the last large predators of its body plan before synapsids took over terrestrial food webs.',
+    location: { lat: 32, lon: -99 }
+  },
+
+  // Permian additions
+  {
+    id: 'gorgonopsid',
+    name: 'Gorgonopsids',
+    scientificName: 'Gorgonopsia',
+    category: 'synapsid',
+    appearanceMa: 265,
+    extinctMa: 252,
+    abundanceProfile: [[265, 0.01], [258, 0.4], [254, 0.35], [252, 0.01]],
+    description: 'Saber-toothed apex predators of the Permian',
+    descriptionLong: 'Dog-to-bear-sized therapsid predators with elongated canines and powerful jaws, hunting across the Permian supercontinent of Pangaea. They were the top carnivores of their time, preying on pareiasaurs and dicynodonts in the same ecosystems that hosted the first mammalian ancestors. Every single species vanished in the end-Permian extinction, the most severe mass-death in Earth\'s history.',
+    location: { lat: -32, lon: 26 }
+  },
+  {
+    id: 'glossopteris',
+    name: 'Glossopteris',
+    scientificName: 'Glossopteris indica',
+    category: 'plant',
+    appearanceMa: 299,
+    extinctMa: 251,
+    abundanceProfile: [[299, 0.05], [280, 0.55], [265, 0.65], [255, 0.4], [251, 0.02]],
+    description: 'Tongue-leaved tree that blanketed Gondwana',
+    descriptionLong: 'A deciduous seed fern whose broad tongue-shaped leaves carpet Permian rocks from South America to Australia, Antarctica, and India. The matching Glossopteris floras across these continents were among the earliest evidence used by Alfred Wegener to argue that the southern lands were once joined as Gondwana. Like most of the late Permian world, the trees were nearly erased at the end of the Permian.',
+    location: { lat: -75, lon: 0 }
+  },
+  {
+    id: 'scutosaurus',
+    name: 'Scutosaurus',
+    scientificName: 'Scutosaurus karpinskii',
+    category: 'reptile',
+    appearanceMa: 254,
+    extinctMa: 252,
+    abundanceProfile: [[254, 0.05], [253, 0.4], [252.2, 0.2], [252, 0.02]],
+    description: 'Armored pareiasaur; rhinoceros-sized Permian herbivore',
+    descriptionLong: 'A stocky, three-meter herbivorous pareiasaur covered in bony armor plates and boasting outward-flaring cheek bosses, browsing through the drying floodplains of late Permian Siberia. Its massive skull and leaf-shaped teeth indicate a diet of tough vegetation in an increasingly harsh world. Scutosaurus was among the last pareiasaurs standing when the Siberian Traps erupted and ended the Paleozoic.',
+    location: { lat: 66, lon: 63 }
+  },
+
+  // Triassic additions
+  {
+    id: 'coelophysis',
+    name: 'Coelophysis',
+    scientificName: 'Coelophysis bauri',
+    category: 'reptile',
+    appearanceMa: 216,
+    extinctMa: 196,
+    abundanceProfile: [[216, 0.02], [210, 0.35], [202, 0.3], [196, 0.02]],
+    description: 'Slender early theropod; nimble pack hunter',
+    descriptionLong: 'A three-meter, bird-shaped theropod with hollow bones, a long whip-like tail, and blade-toothed jaws, preserved by the thousands in a mass death deposit at Ghost Ranch, New Mexico. Built for speed, it chased small reptiles, early mammals, and juveniles of its own kind — rare cannibalism evidence has been proposed and debated in the same quarry. Coelophysis sits close to the base of the theropod line that would later produce everything from Velociraptor to chickadees.',
+    location: { lat: 36, lon: -107 }
+  },
+  {
+    id: 'plateosaurus',
+    name: 'Plateosaurus',
+    scientificName: 'Plateosaurus trossingensis',
+    category: 'reptile',
+    appearanceMa: 214,
+    extinctMa: 204,
+    abundanceProfile: [[214, 0.05], [210, 0.5], [206, 0.4], [204, 0.02]],
+    description: 'Early long-necked herbivore; ancestor-like to sauropods',
+    descriptionLong: 'An eight-meter bipedal sauropodomorph that browsed high vegetation across late Triassic Europe, preserved in enormous bonebed accumulations that hint at herd behavior. Its elongated neck and bulky gut previewed the anatomy that would later drive its sauropod descendants to become the biggest land animals of all time. Plateosaurus also demonstrates that dinosaurs were already hugely successful before the end-Triassic extinction cleared the stage.',
+    location: { lat: 49, lon: 8 }
+  },
+  {
+    id: 'cynognathus',
+    name: 'Cynognathus',
+    scientificName: 'Cynognathus crateronotus',
+    category: 'synapsid',
+    appearanceMa: 247,
+    extinctMa: 237,
+    abundanceProfile: [[247, 0.02], [243, 0.35], [240, 0.3], [237, 0.02]],
+    description: 'Mammal-like therapsid with a dog-shaped skull',
+    descriptionLong: 'A wolf-sized cynodont with differentiated teeth, a secondary bony palate for chewing and breathing simultaneously, and likely fur and whiskers — unmistakably mammal-like features in a still-reptilian chassis. Its fossils have been recovered on every southern continent, mapping the breakup of Gondwana. Close cousins of Cynognathus would give rise to true mammals within a few tens of millions of years.',
+    location: { lat: -32, lon: 26 }
+  },
+
+  // Jurassic additions
+  {
+    id: 'allosaurus',
+    name: 'Allosaurus',
+    scientificName: 'Allosaurus fragilis',
+    category: 'reptile',
+    appearanceMa: 155,
+    extinctMa: 145,
+    abundanceProfile: [[155, 0.05], [152, 0.55], [148, 0.45], [145, 0.05]],
+    description: 'Jurassic apex predator of the Morrison Formation',
+    descriptionLong: 'A nine-meter theropod with short, powerful arms, hatchet-bladed teeth, and distinctive horn-like crests above the eyes, dominant predator in the Late Jurassic of western North America. Bonebeds of mixed Allosaurus individuals suggest occasional group feeding, and bite-marked sauropod vertebrae reveal it could take down animals twenty times its mass. It was the T. rex of its day, tens of millions of years before T. rex evolved.',
+    location: { lat: 38, lon: -109 }
+  },
+  {
+    id: 'diplodocus',
+    name: 'Diplodocus',
+    scientificName: 'Diplodocus carnegii',
+    category: 'reptile',
+    appearanceMa: 154,
+    extinctMa: 150,
+    abundanceProfile: [[154, 0.05], [152, 0.5], [151, 0.4], [150, 0.05]],
+    description: 'Whip-tailed sauropod; one of the longest animals ever',
+    descriptionLong: 'A twenty-six-meter sauropod built like a suspension bridge, with a long horizontal neck balanced by an even longer tail whose thin tip could probably crack the air like a bullwhip. Peg-like teeth clustered at the front of its muzzle suggest it combed soft vegetation from branches rather than chewing. Diplodocus moved in herds across the Morrison flood basin alongside Allosaurus, Stegosaurus, and Brachiosaurus.',
+    location: { lat: 41, lon: -105 }
+  },
+  {
+    id: 'ichthyosaur',
+    name: 'Ichthyosaurs',
+    scientificName: 'Ichthyosauria',
+    category: 'reptile',
+    appearanceMa: 250,
+    extinctMa: 90,
+    abundanceProfile: [[250, 0.05], [200, 0.55], [160, 0.5], [120, 0.3], [90, 0.02]],
+    description: 'Dolphin-shaped marine reptiles of the Mesozoic seas',
+    descriptionLong: 'Streamlined, fully aquatic reptiles that resembled dolphins in body shape through dramatic convergent evolution, complete with dorsal fin, crescent-moon tail, and large eyes adapted to deep dives. Some species grew to twenty meters, preyed on squid and fish, and gave live birth tail-first to avoid drowning their young. They dominated Mesozoic oceans for 160 million years before disappearing midway through the Cretaceous.',
+    location: { lat: 54, lon: -2 }
+  },
+  {
+    id: 'plesiosaur',
+    name: 'Plesiosaurs',
+    scientificName: 'Plesiosauria',
+    category: 'reptile',
+    appearanceMa: 203,
+    extinctMa: 66,
+    abundanceProfile: [[203, 0.02], [170, 0.4], [120, 0.5], [80, 0.35], [66, 0.02]],
+    description: 'Long-necked marine reptiles; fabled sea monsters',
+    descriptionLong: 'Four-flippered marine reptiles that split into two very different body plans — long-necked, small-headed plesiosauromorphs and short-necked, massive-jawed pliosauromorphs. They stroked through Mesozoic seas like rowing a four-oared boat and hunted everything from schooling fish to other marine reptiles. The last species perished alongside the non-avian dinosaurs at the end of the Cretaceous.',
+    location: { lat: 52, lon: -1 }
+  },
+  {
+    id: 'pterodactylus',
+    name: 'Pterodactylus',
+    scientificName: 'Pterodactylus antiquus',
+    category: 'reptile',
+    appearanceMa: 152,
+    extinctMa: 148,
+    abundanceProfile: [[152, 0.02], [151, 0.3], [149, 0.25], [148, 0.02]],
+    description: 'Crow-sized early pterodactyloid from Solnhofen',
+    descriptionLong: 'A short-tailed pterosaur with a wingspan around a meter, flying over the lagoons that became the famous Solnhofen limestones of Bavaria. Fine-grained preservation reveals skin, wing membranes, and soft tissue, making Pterodactylus one of the best-known pterosaurs. Its genus name — "wing finger" — later gave rise to the entire popular term "pterodactyl" for all members of this flying-reptile order.',
+    location: { lat: 49, lon: 11 }
+  },
+
+  // Cretaceous additions
+  {
+    id: 'velociraptor',
+    name: 'Velociraptor',
+    scientificName: 'Velociraptor mongoliensis',
+    category: 'reptile',
+    appearanceMa: 75,
+    extinctMa: 71,
+    abundanceProfile: [[75, 0.02], [74, 0.35], [72, 0.3], [71, 0.02]],
+    description: 'Feathered dromaeosaur; sickle-clawed pack hunter',
+    descriptionLong: 'A turkey-sized feathered dromaeosaur with a hyperextendable sickle claw on each second toe, a long stiff tail for balance, and feathers confirmed by quill knobs on preserved forearm bones. The famous "fighting dinosaurs" fossil from Mongolia captures a Velociraptor locked in mortal combat with a Protoceratops, buried by a collapsing sand dune. Its popular depiction at human size in films is wildly inflated — the real animal was the size of a coyote.',
+    location: { lat: 45, lon: 107 }
+  },
+  {
+    id: 'ankylosaurus',
+    name: 'Ankylosaurus',
+    scientificName: 'Ankylosaurus magniventris',
+    category: 'reptile',
+    appearanceMa: 68,
+    extinctMa: 66,
+    abundanceProfile: [[68, 0.02], [67, 0.35], [66.5, 0.25], [66, 0.02]],
+    description: 'Armored tank dinosaur with a clubbed tail',
+    descriptionLong: 'A low-slung, eight-meter herbivore sheathed in bony osteoderms and swinging a hammer-like tail club heavy enough to shatter the leg of a tyrannosaur. Its skull was so encased in armor that even the eyelids bore bone plates, and its wide gut processed tough plants via bacterial fermentation. Ankylosaurus lived right up to the Cretaceous-Paleogene boundary and was among the last non-avian dinosaurs on Earth.',
+    location: { lat: 47, lon: -110 }
+  },
+  {
+    id: 'mosasaurus',
+    name: 'Mosasaurus',
+    scientificName: 'Mosasaurus hoffmannii',
+    category: 'reptile',
+    appearanceMa: 82,
+    extinctMa: 66,
+    abundanceProfile: [[82, 0.02], [76, 0.4], [70, 0.45], [66, 0.02]],
+    description: 'Apex marine predator of the late Cretaceous oceans',
+    descriptionLong: 'A seventeen-meter marine lizard, more closely related to modern monitor lizards than to plesiosaurs, patrolling late Cretaceous seas as the top predator after the ichthyosaurs vanished. Powerful flippers, a shark-like tail, and a double-hinged jaw let it swallow ammonites and other mosasaurs whole. The type fossil, unearthed in a chalk mine near Maastricht in 1764, was one of the first great discoveries that hinted at deep time and extinction.',
+    location: { lat: 51, lon: 6 }
+  },
+  {
+    id: 'parasaurolophus',
+    name: 'Parasaurolophus',
+    scientificName: 'Parasaurolophus walkeri',
+    category: 'reptile',
+    appearanceMa: 76,
+    extinctMa: 73,
+    abundanceProfile: [[76, 0.02], [75, 0.35], [74, 0.3], [73, 0.02]],
+    description: 'Hadrosaur with a curving tubular head crest',
+    descriptionLong: 'A duck-billed hadrosaur whose hollow head crest curved back over its neck like a brass horn, almost certainly used to produce resonant low-frequency calls across herds. CT scans of the crest show looping air passages that would have acted as a natural musical instrument. Parasaurolophus grazed the forested floodplains of Late Cretaceous western North America alongside its iconic contemporaries Triceratops and T. rex.',
+    location: { lat: 49, lon: -112 }
+  },
+  {
+    id: 'magnolia',
+    name: 'Early Magnolias',
+    scientificName: 'Magnoliaceae',
+    category: 'plant',
+    appearanceMa: 130,
+    extinctMa: null,
+    abundanceProfile: [[130, 0.02], [100, 0.3], [60, 0.5], [20, 0.45], [0, 0.4]],
+    description: 'Ancient flowering plants older than bees',
+    descriptionLong: 'Large-flowered trees that evolved before true bees existed, so their tough, tepal-like flowers are built to be pollinated by beetles crawling over the reproductive parts. Their lineage shows what very early angiosperm flowers probably looked like — simple, radially symmetric, and many-parted. More than two hundred magnolia species survive today, scattered across eastern Asia and the Americas as living fossils from the age of dinosaurs.',
+    location: { lat: 34, lon: -85 }
+  },
+
+  // Cenozoic additions
+  {
+    id: 'basilosaurus',
+    name: 'Basilosaurus',
+    scientificName: 'Basilosaurus cetoides',
+    category: 'mammal',
+    appearanceMa: 41,
+    extinctMa: 33,
+    abundanceProfile: [[41, 0.02], [38, 0.3], [35, 0.25], [33, 0.02]],
+    description: 'Serpent-shaped early whale with vestigial back legs',
+    descriptionLong: 'A twenty-meter early whale built like an enormous marine serpent, with tiny vestigial hind legs that could not support its weight on land but still had functional knees and ankles. Originally named as a reptile — hence the "saurus" — it is in fact one of the clearest transitional fossils ever found, locking the whale lineage to land-dwelling ancestors. Its entire skeletons have been recovered from the desert of Wadi Al-Hitan in Egypt.',
+    location: { lat: 29, lon: 30 }
+  },
+  {
+    id: 'titanoboa',
+    name: 'Titanoboa',
+    scientificName: 'Titanoboa cerrejonensis',
+    category: 'reptile',
+    appearanceMa: 60,
+    extinctMa: 58,
+    abundanceProfile: [[60, 0.02], [59.5, 0.3], [58.5, 0.2], [58, 0.02]],
+    description: 'Largest snake ever; thirteen-meter Paleocene predator',
+    descriptionLong: 'A thirteen-meter, boa-like constrictor weighing more than a ton, thriving in the steamy rainforests of northern South America just after the dinosaurs vanished. Its gigantic body size implies mean annual temperatures a full ten degrees Celsius warmer than today\'s tropics. Fossilized vertebrae from the Cerrejón coal mine in Colombia were initially mistaken for crocodile bones — the animal was that far off the expected scale for snakes.',
+    location: { lat: 11, lon: -72 }
+  },
+  {
+    id: 'andrewsarchus',
+    name: 'Andrewsarchus',
+    scientificName: 'Andrewsarchus mongoliensis',
+    category: 'mammal',
+    appearanceMa: 45,
+    extinctMa: 36,
+    abundanceProfile: [[45, 0.01], [42, 0.2], [38, 0.15], [36, 0.01]],
+    description: 'Wolf-faced giant; possibly the largest meat-eating land mammal',
+    descriptionLong: 'Known from a single gigantic skull nearly a meter long, Andrewsarchus was an Eocene artiodactyl — related to hippos and whales — with the face of an enormous wolf and the teeth of a bone-crushing carnivore. Estimates put its shoulder height around two meters and its diet somewhere between scavenging and active predation. It remains one of the most mysterious large mammals in the fossil record because no postcranial bones have yet been found.',
+    location: { lat: 42, lon: 96 }
+  },
+  {
+    id: 'woolly_rhino',
+    name: 'Woolly Rhinoceros',
+    scientificName: 'Coelodonta antiquitatis',
+    category: 'mammal',
+    appearanceMa: 3.6,
+    extinctMa: 0.01,
+    abundanceProfile: [[3.6, 0.01], [0.5, 0.35], [0.1, 0.45], [0.02, 0.2], [0.01, 0.01]],
+    description: 'Shaggy cold-steppe grazer with a massive front horn',
+    descriptionLong: 'A heavily furred rhinoceros adapted to the mammoth-steppe ecosystem that stretched from western Europe to Siberia during the last Ice Age, grazing tough grasses with specialized lip and tooth anatomy. Its front horn, long and flattened from side to side, was used to sweep snow aside to reach forage. Neanderthals and early modern humans both hunted them, and entire carcasses have emerged complete with hair from Siberian permafrost.',
+    location: { lat: 60, lon: 100 }
+  },
+  {
+    id: 'dire_wolf',
+    name: 'Dire Wolf',
+    scientificName: 'Aenocyon dirus',
+    category: 'mammal',
+    appearanceMa: 0.25,
+    extinctMa: 0.01,
+    abundanceProfile: [[0.25, 0.02], [0.1, 0.3], [0.02, 0.25], [0.01, 0.02]],
+    description: 'Pleistocene North American pack hunter, larger than gray wolves',
+    descriptionLong: 'A heavy, broad-skulled canid twenty percent larger than a modern gray wolf, specialized for bringing down large Pleistocene mammals like bison and horses. Recent DNA work shows dire wolves diverged from the wolf lineage nearly six million years ago, making them a distinct genus rather than simply giant wolves. They vanished around 10,000 years ago as their large prey disappeared, leaving no living descendants.',
+    location: { lat: 34, lon: -118 }
+  },
+  {
+    id: 'cave_bear',
+    name: 'Cave Bear',
+    scientificName: 'Ursus spelaeus',
+    category: 'mammal',
+    appearanceMa: 0.3,
+    extinctMa: 0.024,
+    abundanceProfile: [[0.3, 0.02], [0.1, 0.3], [0.05, 0.25], [0.024, 0.02]],
+    description: 'Massive European bear of the Ice Age; mostly vegetarian',
+    descriptionLong: 'A brown-bear-sized omnivore that hibernated in deep European caves, producing thousands of skeletons preserved in Alpine and Carpathian sites. Tooth-wear patterns and chemical isotopes suggest most cave bears ate mainly plants despite their formidable size. They were hunted by Neanderthals and early modern humans, and probably went extinct around 24,000 years ago as climate cooled and their forested habitats retreated.',
+    location: { lat: 47, lon: 14 }
+  },
+  {
+    id: 'gomphothere',
+    name: 'Gomphotheres',
+    scientificName: 'Gomphotheriidae',
+    category: 'mammal',
+    appearanceMa: 20,
+    extinctMa: 0.009,
+    abundanceProfile: [[20, 0.05], [10, 0.5], [5, 0.4], [1, 0.3], [0.01, 0.02]],
+    description: 'Four-tusked proboscideans; spread across four continents',
+    descriptionLong: 'Elephant relatives with two pairs of tusks — one jutting from the upper jaw like modern elephants and a second pair projecting forward from a shovel-like lower jaw. They crossed the Bering land bridge from Eurasia into the Americas and were among the earliest proboscideans south of the Isthmus of Panama. They outlasted every other four-tusker on the planet, hanging on in the Americas until the end-Pleistocene extinctions around 9,000 years ago.',
+    location: { lat: 30, lon: -100 }
+  },
+  {
+    id: 'thylacoleo',
+    name: 'Marsupial Lion',
+    scientificName: 'Thylacoleo carnifex',
+    category: 'mammal',
+    appearanceMa: 2,
+    extinctMa: 0.04,
+    abundanceProfile: [[2, 0.02], [0.5, 0.25], [0.1, 0.3], [0.05, 0.15], [0.04, 0.01]],
+    description: 'Australian apex predator with the strongest mammalian bite',
+    descriptionLong: 'A leopard-sized marsupial carnivore with huge blade-like premolars that sheared flesh like scissors and a bite force per body weight higher than any known mammal, living or extinct. Despite deriving from herbivorous wombat-like ancestors, it became Australia\'s top predator for much of the Pleistocene. It disappeared shortly after humans arrived on the continent, like most of Australia\'s megafauna.',
+    location: { lat: -27, lon: 135 }
+  },
+
+  // Cross-period additions
+  {
+    id: 'conodonts',
+    name: 'Conodonts',
+    scientificName: 'Conodonta',
+    category: 'fish',
+    appearanceMa: 540,
+    extinctMa: 201,
+    abundanceProfile: [[540, 0.1], [450, 0.6], [350, 0.55], [250, 0.3], [201, 0.02]],
+    description: 'Eel-shaped chordates identified only by their tooth fossils',
+    descriptionLong: 'For more than a century conodonts were known solely from bizarre, intricate microscopic tooth-like elements scattered through Paleozoic and early Mesozoic rocks, their animal a complete mystery. In 1983 impressions of soft-bodied conodonts were finally identified — slender eel-like chordates with large eyes, muscular bodies, and a cluster of tooth elements working as a feeding apparatus. Today their teeth remain geology\'s sharpest tool for dating rocks across 340 million years of history.',
+    location: { lat: 50, lon: 5 }
+  },
+  {
+    id: 'lingula',
+    name: 'Lingula',
+    scientificName: 'Lingula anatina',
+    category: 'invertebrate',
+    appearanceMa: 540,
+    extinctMa: null,
+    abundanceProfile: [[540, 0.2], [450, 0.4], [250, 0.25], [100, 0.2], [0, 0.15]],
+    description: 'Oldest genus of any living animal; a half-billion-year-old brachiopod',
+    descriptionLong: 'A burrowing, tongue-shaped brachiopod that anchors itself in marine sediments by a long muscular stalk and filters water through fine tentacles. Lingula-type shells have remained essentially unchanged since the early Cambrian, making this one of the most conservative body plans in the entire animal kingdom. Fossilized Cambrian Lingula from 500 million years ago look remarkably like the species living on Japanese mudflats right now.',
+    location: { lat: 35, lon: 139 }
+  },
+  {
+    id: 'cycads',
+    name: 'Cycads',
+    scientificName: 'Cycadophyta',
+    category: 'plant',
+    appearanceMa: 280,
+    extinctMa: null,
+    abundanceProfile: [[280, 0.05], [200, 0.6], [150, 0.65], [80, 0.3], [0, 0.1]],
+    description: 'Palm-like gymnosperms; dinosaur-age survivors',
+    descriptionLong: 'Slow-growing, palm-like gymnosperms bearing enormous cones, with roots that host nitrogen-fixing cyanobacteria. Their heyday was the Mesozoic, when they formed vast "cycad forests" that were a staple food of many herbivorous dinosaurs. More than three hundred species survive today in tropical pockets worldwide, making them one of the oldest seed-plant lineages still alive.',
+    location: { lat: -25, lon: 135 }
+  },
+  {
+    id: 'ammonites',
+    name: 'Ammonites',
+    scientificName: 'Ammonitida',
+    category: 'invertebrate',
+    appearanceMa: 201,
+    extinctMa: 66,
+    abundanceProfile: [[201, 0.1], [150, 0.7], [100, 0.65], [70, 0.5], [66, 0.02]],
+    description: 'Iconic coiled shellfish; defining fossils of the Mesozoic oceans',
+    descriptionLong: 'Highly mobile, squid-like cephalopods housed in spiraled chambered shells whose internal walls met the outer shell along elaborate, frilly suture lines. They diversified into thousands of species of every imaginable size and ornament, and their rapid evolution makes them superb index fossils for Mesozoic rock layers. Every last lineage perished at the Cretaceous-Paleogene boundary alongside the non-avian dinosaurs.',
+    location: { lat: 50, lon: 5 }
+  },
+  {
+    id: 'indohyus',
+    name: 'Indohyus',
+    scientificName: 'Indohyus indirae',
+    category: 'mammal',
+    appearanceMa: 48,
+    extinctMa: 45,
+    abundanceProfile: [[48, 0.01], [47, 0.2], [46, 0.15], [45, 0.01]],
+    description: 'Cat-sized semi-aquatic deer relative; closest non-whale to whales',
+    descriptionLong: 'A small, hoofed mammal the size of a raccoon that waded in shallow Eocene streams of what is now Kashmir, feeding on aquatic plants much like the modern water chevrotain. Its ear bones share a distinctive structure with early whales, identifying it as the closest known non-whale relative of the cetacean lineage. Indohyus is the transitional fossil that bridges the gap between terrestrial artiodactyls and the earliest whales.',
+    location: { lat: 34, lon: 76 }
+  },
 ];
 
 /**
