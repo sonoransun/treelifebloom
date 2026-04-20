@@ -18,7 +18,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sequences, findSequence } from './sequences.js';
+import { sequences, findSequence, modalShowcases, findModalShowcase } from './sequences.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, '..', '..');
@@ -28,14 +28,21 @@ const ASSETS = {
 };
 
 function parseArgs(argv) {
-  const args = { sequences: [], all: false, list: false, baseUrl: 'http://localhost:8080', keepWebmOnly: false };
+  const args = {
+    sequences: [], modals: [],
+    all: false, list: false, allModals: false,
+    baseUrl: 'http://localhost:8080', keepWebmOnly: false,
+  };
+  let collecting = 'sequences';
   for (const a of argv) {
     if (a === '--all') args.all = true;
     else if (a === '--list') args.list = true;
     else if (a === '--keep-webm-only') args.keepWebmOnly = true;
+    else if (a === '--modals') { args.allModals = true; collecting = 'modals'; }
+    else if (a === '--modal') collecting = 'modals';
     else if (a.startsWith('--base-url=')) args.baseUrl = a.slice('--base-url='.length);
     else if (a.startsWith('--')) console.warn(`Unknown flag: ${a}`);
-    else args.sequences.push(a);
+    else args[collecting].push(a);
   }
   return args;
 }
@@ -109,6 +116,7 @@ async function captureSequence(browser, seq, baseUrl, opts) {
     await window.__capture.setView(s.view);
     window.__capture.setSpeed(1);
     window.__capture.setTime(s.startMa);
+    window.__capture.setBoundaries(!!s.plates);
     window.__capture.pause();
   }, seq);
 
@@ -187,26 +195,80 @@ async function captureSequence(browser, seq, baseUrl, opts) {
   }
 }
 
+async function captureModalShowcase(browser, spec, baseUrl) {
+  const out = join(ASSETS.shots, `modal-${spec.id}.png`);
+  console.log(`\n◆ modal — ${spec.speciesId} @ ${spec.atMa} Ma`);
+
+  const context = await browser.newContext({
+    viewport: { width: spec.width || 1280, height: spec.height || 800 },
+    deviceScaleFactor: 2,
+  });
+  const page = await context.newPage();
+
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') console.error('  [page error]', msg.text());
+  });
+  page.on('pageerror', (err) => console.error('  [page exception]', err.message));
+
+  // Keep the UI clean — the modal itself is the focus; sidebar/chrome hidden.
+  const url = `${baseUrl}/?capture=1&panel=clean`;
+  await page.goto(url, { waitUntil: 'load' });
+  await page.waitForFunction(() => globalThis.__captureReady === true, null, { timeout: 15000 });
+
+  await page.evaluate(async (s) => {
+    await window.__capture.setView('2d');
+    window.__capture.setSpeed(1);
+    window.__capture.setTime(s.atMa);
+    window.__capture.setBoundaries(!!s.plates);
+    window.__capture.pause();
+  }, spec);
+
+  await page.waitForTimeout(400);
+
+  // Open the modal and give the DOM a beat to populate (relatives list, transitions).
+  await page.evaluate((id) => window.__capture.openSpeciesModal(id), spec.speciesId);
+  await page.waitForTimeout(500);
+
+  await page.screenshot({ path: out, fullPage: false });
+  console.log(`  ✓ ${out}`);
+
+  await context.close();
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.list) {
     console.log('Available sequences:\n');
     for (const s of sequences) {
-      console.log(`  ${pad2(s.order)} ${s.id.padEnd(14)} ${s.view}  ${s.startMa} → ${s.endMa} Ma  (${s.durationSec}s)  ${s.title}`);
+      const p = s.plates ? ' plates' : '';
+      console.log(`  ${pad2(s.order)} ${s.id.padEnd(14)} ${s.view}${p.padEnd(8)}  ${s.startMa} → ${s.endMa} Ma  (${s.durationSec}s)  ${s.title}`);
+    }
+    console.log('\nModal showcases:\n');
+    for (const m of modalShowcases) {
+      console.log(`  modal-${m.id.padEnd(14)} species=${m.speciesId.padEnd(16)} @ ${m.atMa} Ma`);
     }
     return;
   }
 
-  if (!args.all && args.sequences.length === 0) {
-    console.error('Specify sequence ids, or pass --all. Use --list to see options.');
+  const runSequences = args.all || args.sequences.length > 0;
+  const runModals = args.allModals || args.modals.length > 0;
+
+  if (!runSequences && !runModals) {
+    console.error('Specify sequence ids, --all, or --modals [ids...]. Use --list to see options.');
     process.exit(2);
   }
 
-  const targets = args.all ? sequences : args.sequences.map((id) => {
+  const seqTargets = args.all ? sequences : args.sequences.map((id) => {
     const s = findSequence(id);
     if (!s) throw new Error(`Unknown sequence: ${id}`);
     return s;
+  });
+
+  const modalTargets = args.allModals ? modalShowcases : args.modals.map((id) => {
+    const m = findModalShowcase(id);
+    if (!m) throw new Error(`Unknown modal showcase: ${id}`);
+    return m;
   });
 
   await ensureServerUp(args.baseUrl);
@@ -220,11 +282,19 @@ async function main() {
   });
 
   try {
-    for (const seq of targets) {
+    for (const seq of seqTargets) {
       try {
         await captureSequence(browser, seq, args.baseUrl, args);
       } catch (err) {
         console.error(`✗ ${seq.id}: ${err.message}`);
+        if (process.env.STRICT) throw err;
+      }
+    }
+    for (const spec of modalTargets) {
+      try {
+        await captureModalShowcase(browser, spec, args.baseUrl);
+      } catch (err) {
+        console.error(`✗ modal-${spec.id}: ${err.message}`);
         if (process.env.STRICT) throw err;
       }
     }

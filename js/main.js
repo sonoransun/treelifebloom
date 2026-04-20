@@ -17,6 +17,7 @@ import {
   getOxygenAtTime,
   getCO2AtTime,
 } from './data/atmosphere.js';
+import { species as allSpecies, getSpeciesAtTime } from './data/species.js';
 
 // --- Initialize ---
 
@@ -188,4 +189,14 @@ initCapture({
   controls,
   switchView,
   getViewMode: () => currentMode,
+  setBoundaries: (on) => {
+    showBoundaries = !!on;
+    btnPlates.classList.toggle('active', showBoundaries);
+  },
+  openSpeciesModal: (speciesId) => {
+    const sp = allSpecies.find((s) => s.id === speciesId);
+    if (!sp) return;
+    speciesModal.open(sp, getSpeciesAtTime(clock.currentTimeMa));
+  },
+  closeSpeciesModal: () => speciesModal.close(),
 });

@@ -1,7 +1,7 @@
 # Jurassic Dinosaurs
 
 **Time range:** 200 → 145 Ma  
-**View:** 3D globe  
+**View:** 2D map (with plate overlay)  
 **Duration:** 10 seconds at 1× speed
 
 <video src="../../assets/animations/07-jurassic.webm" autoplay loop muted playsinline width="640">
@@ -18,8 +18,8 @@ Geographically, **Pangaea is splitting**. The Central Atlantic opens, then the S
 
 ## What to watch for
 
-- **3D globe** is the showcase view here — the Fresnel atmosphere shell, cloud drift, and ocean specular all read clearly against the warm-tinted Jurassic atmosphere.
-- **Continents** visibly separate during the clip — Pangaea is mid-rift.
+- **Pangaea visibly splits under the plate overlay** — divergent ridges (orange-red dashed) open in the Central Atlantic, transform offsets (yellow-green) jog along the Pacific margin, and convergent teeth (blue, with tick marks) form the subduction zones along the active coasts.
+- **Continents** drift noticeably during the clip — Pangaea is mid-rift.
 - **No polar ice caps** — temperature is well above the warm threshold so glaciation is suppressed.
 - **Sidebar** features Brachiosaurus, Diplodocus, Stegosaurus, Allosaurus, Pterodactylus, Ichthyosaurs, and Plesiosaurs.
 - **Marker halos** cluster across multiple continents as dinosaurs spread before the breakup completes.

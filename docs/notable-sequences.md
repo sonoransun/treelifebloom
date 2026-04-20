@@ -23,6 +23,31 @@ The list above is in chronological order. To get the full arc in one sitting, wa
 
 To dip in, the three highest-impact picks are **Cambrian**, **K-Pg**, and **Pleistocene** — they're embedded as the hero clips in the [main README](../README.md).
 
+## Species detail modal — iconic highlights
+
+The app opens a detail modal when you click any species in the sidebar — the clock pauses and the modal shows full metadata plus a computed list of close evolutionary relatives. These stills freeze that modal on five iconic species across the timeline:
+
+<table>
+  <tr>
+    <td align="center"><img src="../assets/screenshots/modal-trilobite.png" alt="Trilobite modal" width="260"><br/><sub><b>Trilobite</b> · 521 → 252 Ma</sub></td>
+    <td align="center"><img src="../assets/screenshots/modal-tiktaalik.png" alt="Tiktaalik modal" width="260"><br/><sub><b>Tiktaalik</b> · 375 → 360 Ma</sub></td>
+    <td align="center"><img src="../assets/screenshots/modal-tyrannosaurus.png" alt="T. rex modal" width="260"><br/><sub><b>Tyrannosaurus rex</b> · 68 → 66 Ma</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="../assets/screenshots/modal-mammoth.png" alt="Woolly Mammoth modal" width="260"><br/><sub><b>Woolly Mammoth</b> · Late Pleistocene</sub></td>
+    <td align="center"><img src="../assets/screenshots/modal-homo_sapiens.png" alt="Homo sapiens modal" width="260"><br/><sub><b>Homo sapiens</b> · 0.3 Ma → present</sub></td>
+    <td></td>
+  </tr>
+</table>
+
+Each modal shows the species' full description, time range, and a heuristic-ranked "Close relatives" list from the same category. Regenerate via:
+
+```bash
+cd scripts/capture
+node capture.js --modals                      # all five
+node capture.js --modal trilobite tiktaalik   # just these
+```
+
 ## Capturing your own
 
 Every walkthrough ends with the exact command to regenerate that clip. To re-capture them all:
@@ -30,7 +55,8 @@ Every walkthrough ends with the exact command to regenerate that clip. To re-cap
 ```bash
 cd scripts/capture
 npm install                # one-time
-node capture.js --all      # ~5 minutes
+node capture.js --all      # ~5 minutes (sequences)
+node capture.js --modals   # ~30 seconds (modal stills)
 ```
 
 See [docs/capture.md](capture.md) for full details.

@@ -17,7 +17,12 @@ export function isCaptureMode() {
   return enabled;
 }
 
-export function initCapture({ clock, controls, switchView, getViewMode }) {
+export function initCapture({
+  clock, controls, switchView, getViewMode,
+  setBoundaries,        // (on: boolean) => void — toggles the plate overlay
+  openSpeciesModal,     // (speciesId: string) => void — opens the detail modal (pauses clock)
+  closeSpeciesModal,    // () => void
+}) {
   if (!enabled) return;
 
   document.body.classList.add('capture-mode');
@@ -38,6 +43,15 @@ export function initCapture({ clock, controls, switchView, getViewMode }) {
     },
     setSpeed(mult) {
       clock.setSpeed(Number(mult));
+    },
+    setBoundaries(on) {
+      if (setBoundaries) setBoundaries(!!on);
+    },
+    openSpeciesModal(speciesId) {
+      if (openSpeciesModal) openSpeciesModal(speciesId);
+    },
+    closeSpeciesModal() {
+      if (closeSpeciesModal) closeSpeciesModal();
     },
     play() {
       clock.play();

@@ -1,7 +1,7 @@
 # Earth's Origin & Hadean
 
 **Time range:** 4540 → 4000 Ma  
-**View:** 3D globe  
+**View:** 2D map  
 **Duration:** 6 seconds at 1× speed
 
 <video src="../../assets/animations/01-hadean.webm" autoplay loop muted playsinline width="640">
@@ -19,11 +19,11 @@ By the end of the Hadean (4000 Ma), the first cratons (Vaalbara and Ur) emerge a
 ## What to watch for
 
 - **No species in the sidebar.** Life hasn't appeared yet.
+- **No continents** — the 2D map is almost entirely deep-blue ocean, which is exactly the point; the first proto-cratons don't appear until the very end of the clip.
+- **No plate overlay** — plate reconstructions this deep in time are speculative, so the overlay is intentionally off for Hadean.
 - **Atmosphere readout:** temperature is off the charts (~70 °C surface), CO₂ is enormous (≥ 50,000 ppm), O₂ is essentially zero.
 - **Seismic indicator:** Extreme. Plate tectonics — if it exists at all — is hyperactive.
-- **The 3D globe** has its sun-glint specular cranked up; you can see the bright highlight where the sun's directional light hits the ocean.
-- **Cloud shell** is already present and slowly drifting — a hint that we have a (toxic) atmosphere even now.
-- The sequence ends just as the first proto-cratons emerge from the magma ocean.
+- The sequence ends just as Vaalbara and Ur emerge from the magma ocean.
 
 ## Related data
 

@@ -1,7 +1,7 @@
 # Snowball Earth
 
 **Time range:** 720 → 635 Ma  
-**View:** 3D globe  
+**View:** 2D map  
 **Duration:** 8 seconds at 1× speed
 
 <video src="../../assets/animations/03-snowball.webm" autoplay loop muted playsinline width="640">
@@ -18,10 +18,11 @@ Whatever the precise extent, this was the prelude to the Cambrian. Some hypothes
 
 ## What to watch for
 
-- **Polar ice caps** on the 3D globe spread visibly toward the equator. The cap colors come from `GLACIATION.capColor`; opacity scales with the temperature curve.
+- **Polar ice caps** bleed inward from the top and bottom of the 2D map — the polar-circle dashed lines fill with ice and push down toward the equator as temperature crashes. Cap opacity is driven by the temperature curve.
 - **Temperature readout** crashes toward -5 °C.
 - **Atmosphere haze** shifts toward icy blue.
 - **Continents** are fragments of the breaking-up Rodinia supercontinent.
+- **Plate overlay off** for this sequence — late-Proterozoic boundary reconstructions are still being debated; we leave the map uncluttered so the ice advance is the visual story.
 - **Sidebar** is sparse — early eukaryotes are around but the sidebar's top-15 stays in the algal/single-cell band.
 
 ## Related data
