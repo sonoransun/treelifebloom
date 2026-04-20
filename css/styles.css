@@ -867,3 +867,43 @@ body {
     font-size: 13px;
   }
 }
+
+/* ========================================================================== */
+/* Capture mode — activated via ?capture=1 (see js/capture.js).               */
+/* Hides chrome so external screen-recording scripts get a clean frame.       */
+/* ========================================================================== */
+
+body.capture-mode #toolbar,
+body.capture-mode #timeline-controls,
+body.capture-mode #sidebar,
+body.capture-mode #legend-panel,
+body.capture-mode #time-overlay,
+body.capture-mode #species-popup,
+body.capture-mode #species-modal,
+body.capture-mode #species-modal-backdrop {
+  display: none !important;
+}
+
+body.capture-mode #app {
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas: "viz";
+}
+
+body.capture-mode #viz-container {
+  grid-area: viz;
+}
+
+/* Variant: keep the species sidebar visible (sequences highlighting life). */
+body.capture-mode.capture-mode-with-sidebar #sidebar {
+  display: flex !important;
+}
+body.capture-mode.capture-mode-with-sidebar #app {
+  grid-template-columns: 1fr 280px;
+  grid-template-areas: "viz sidebar";
+}
+
+/* Variant: keep the time/period overlay visible. */
+body.capture-mode.capture-mode-with-clock #time-overlay {
+  display: block !important;
+}

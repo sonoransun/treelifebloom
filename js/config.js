@@ -45,6 +45,7 @@ export const TIMING = {
   minSpeed: 0.25,
   maxSpeed: 4,
   extinctionSlowdown: 0.3, // speed multiplier during extinction events
+  extinctionPauseSeconds: 2, // hard pause when entering an extinction so the overlay can be read
   sidebarUpdateIntervalMs: 80, // throttle sidebar DOM updates
 };
 

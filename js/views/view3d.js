@@ -50,6 +50,9 @@ export class View3D {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setClearColor(0x0a0e1a, 1);
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.containerEl.appendChild(this.renderer.domElement);
 
     // Controls
@@ -74,28 +77,21 @@ export class View3D {
     this.rimLight.position.set(-3, -0.5, -4);
     this.scene.add(this.rimLight);
 
-    // Globe sphere (ocean)
-    const globeGeometry = new THREE.SphereGeometry(RENDER.globeRadius, 64, 64);
+    // Globe sphere (ocean) — wet, mirror-like specular for sun glint.
+    const globeGeometry = new THREE.SphereGeometry(RENDER.globeRadius, 96, 96);
     const globeMaterial = new THREE.MeshPhongMaterial({
       color: new THREE.Color(COLORS.ocean),
-      shininess: 40,
-      specular: new THREE.Color(0x446688),
+      shininess: 110,
+      specular: new THREE.Color(0xbbddff),
     });
     this.globe = new THREE.Mesh(globeGeometry, globeMaterial);
     this.scene.add(this.globe);
 
-    // Atmosphere shell — thin translucent sphere that tints by climate.
-    const shellGeometry = new THREE.SphereGeometry(
-      RENDER.globeRadius * ATMOSPHERE.shellRadiusFactor, 48, 48
-    );
-    const shellMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(ATMOSPHERE.hotColor),
-      transparent: true,
-      opacity: ATMOSPHERE.shellOpacityMin,
-      side: THREE.BackSide,
-      depthWrite: false,
-    });
-    this.atmosphereShell = new THREE.Mesh(shellGeometry, shellMaterial);
+    // Cloud sphere — procedural canvas texture, slow rotation.
+    this._createCloudShell();
+
+    // Atmosphere shell — Fresnel rim-glow shader, additively blended outside the globe.
+    this.atmosphereShell = this._createAtmosphereShell();
     this.scene.add(this.atmosphereShell);
 
     // Polar ice caps (created once, opacity/geometry rebuilt each frame).
@@ -161,9 +157,16 @@ export class View3D {
       }
     }
     if (extinction) {
-      oceanColor.lerp(new THREE.Color(0x3a1010), extinction.progress * 0.4);
+      // Tint ocean toward a muted version of this event's signature color.
+      const extColor = new THREE.Color(extinction.color).multiplyScalar(0.35);
+      oceanColor.lerp(extColor, extinction.progress * 0.5);
     }
     this.globe.material.color.copy(oceanColor);
+
+    // Drift the cloud shell slowly for living-planet feel.
+    if (this.cloudShell) {
+      this.cloudShell.rotation.y += 0.0006;
+    }
 
     // Update atmosphere shell & sun position
     this._updateAtmosphereAndLighting(atmo);
@@ -195,17 +198,97 @@ export class View3D {
       Math.sin(sunRad) * sunDist
     );
 
-    // Atmosphere shell tint & opacity
+    // Atmosphere Fresnel shell — color tints by climate, intensity scales with haze.
     const haze = computeHaze(atmo);
+    const uniforms = this.atmosphereShell.material.uniforms;
     if (haze) {
-      this.atmosphereShell.material.color.setRGB(haze.rgb.r / 255, haze.rgb.g / 255, haze.rgb.b / 255);
-      const opacity = ATMOSPHERE.shellOpacityMin
-        + haze.alpha * (ATMOSPHERE.shellOpacityMax - ATMOSPHERE.shellOpacityMin) / ATMOSPHERE.hazeMaxAlpha;
-      this.atmosphereShell.material.opacity = Math.min(opacity, ATMOSPHERE.shellOpacityMax);
+      uniforms.uColor.value.setRGB(haze.rgb.r / 255, haze.rgb.g / 255, haze.rgb.b / 255);
+      const t = haze.alpha / ATMOSPHERE.hazeMaxAlpha;
+      uniforms.uIntensity.value = 0.55 + t * 0.65;
     } else {
-      this.atmosphereShell.material.opacity = ATMOSPHERE.shellOpacityMin;
-      this.atmosphereShell.material.color.set(0x88aaff);
+      uniforms.uColor.value.setRGB(0.45, 0.62, 1.0); // pale blue baseline
+      uniforms.uIntensity.value = 0.55;
     }
+  }
+
+  _createAtmosphereShell() {
+    const geo = new THREE.SphereGeometry(
+      RENDER.globeRadius * ATMOSPHERE.shellRadiusFactor, 64, 64
+    );
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uColor: { value: new THREE.Color(0.45, 0.62, 1.0) },
+        uIntensity: { value: 0.7 },
+        uPower: { value: 2.6 },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vViewPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+          vViewPos = mvPos.xyz;
+          gl_Position = projectionMatrix * mvPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uColor;
+        uniform float uIntensity;
+        uniform float uPower;
+        varying vec3 vNormal;
+        varying vec3 vViewPos;
+        void main() {
+          vec3 viewDir = normalize(-vViewPos);
+          float fres = pow(1.0 - abs(dot(vNormal, viewDir)), uPower);
+          gl_FragColor = vec4(uColor, fres * uIntensity);
+        }
+      `,
+      transparent: true,
+      side: THREE.BackSide,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    return new THREE.Mesh(geo, mat);
+  }
+
+  _createCloudShell() {
+    const tex = this._buildCloudTexture(1024, 512);
+    const geo = new THREE.SphereGeometry(RENDER.globeRadius * 1.012, 64, 64);
+    const mat = new THREE.MeshLambertMaterial({
+      map: tex,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+    });
+    this.cloudShell = new THREE.Mesh(geo, mat);
+    this.scene.add(this.cloudShell);
+  }
+
+  _buildCloudTexture(w, h) {
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const cx = cv.getContext('2d');
+    cx.clearRect(0, 0, w, h);
+    // Random soft puffs, thinner near the poles.
+    const puffs = 380;
+    for (let i = 0; i < puffs; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const polarFalloff = Math.abs(y / h - 0.5) * 2; // 0 at equator, 1 at poles
+      if (Math.random() < polarFalloff * 0.55) continue;
+      const r = 22 + Math.random() * 80;
+      const a = 0.06 + Math.random() * 0.22;
+      const g = cx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, `rgba(255, 255, 255, ${a})`);
+      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      cx.fillStyle = g;
+      cx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    return tex;
   }
 
   _createIceCaps() {
@@ -419,13 +502,21 @@ export class View3D {
   }
 
   _updateSpeciesMarkers(timeMa) {
-    // Remove old markers
+    // Remove old markers + halos
     for (const marker of this.speciesMarkers) {
       this.scene.remove(marker);
       marker.geometry.dispose();
       marker.material.dispose();
     }
     this.speciesMarkers = [];
+    if (this.markerHalos) {
+      for (const halo of this.markerHalos) {
+        this.scene.remove(halo);
+        halo.geometry.dispose();
+        halo.material.dispose();
+      }
+    }
+    this.markerHalos = [];
 
     const alive = getSpeciesAtTime(timeMa);
     for (const sp of alive) {
@@ -438,18 +529,32 @@ export class View3D {
       const color = COLORS.kingdom[sp.category] || '#aaa';
       const size = 0.012 + sp.currentAbundance * 0.008;
 
-      const geometry = new THREE.SphereGeometry(size, 8, 8);
+      // Solid marker — kept in hover hit list.
+      const geometry = new THREE.SphereGeometry(size, 12, 12);
       const material = new THREE.MeshBasicMaterial({
         color: new THREE.Color(color),
         transparent: true,
-        opacity: 0.8
+        opacity: 0.95,
       });
-
       const marker = new THREE.Mesh(geometry, material);
       marker.position.copy(pos);
       marker.userData.species = sp;
       this.scene.add(marker);
       this.speciesMarkers.push(marker);
+
+      // Additive glow halo — larger sphere, soft, not raycasted.
+      const haloGeo = new THREE.SphereGeometry(size * 2.6, 12, 12);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(color),
+        transparent: true,
+        opacity: 0.22,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      halo.position.copy(pos);
+      this.scene.add(halo);
+      this.markerHalos.push(halo);
     }
   }
 

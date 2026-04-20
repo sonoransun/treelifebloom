@@ -29,7 +29,7 @@ export class Controls {
     // Scrubber
     this.scrubber.addEventListener('input', () => {
       this._scrubbing = true;
-      this.clock.setTime(parseFloat(this.scrubber.value));
+      this.clock.setTime(TIMING.startTimeMa - parseFloat(this.scrubber.value));
     });
     this.scrubber.addEventListener('change', () => {
       this._scrubbing = false;
@@ -110,7 +110,7 @@ export class Controls {
   updateDisplay(timeMa) {
     // Update scrubber position (unless user is dragging)
     if (!this._scrubbing) {
-      this.scrubber.value = timeMa;
+      this.scrubber.value = TIMING.startTimeMa - timeMa;
     }
 
     // Format time

@@ -1,0 +1,15 @@
+{
+  "name": "lifetreebloom-capture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless capture pipeline for Life's Tree Blooms — drives the running app via Playwright and writes WebM clips, PNG posters, and GIF previews into ../../assets/.",
+  "scripts": {
+    "capture": "node capture.js",
+    "capture:all": "node capture.js --all",
+    "list": "node capture.js --list"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

@@ -11,6 +11,7 @@ import { MilestoneOverlay } from './ui/milestoneOverlay.js';
 import { SpeciesPopup } from './ui/speciesPopup.js';
 import { SpeciesModal } from './ui/speciesModal.js';
 import { Legend } from './ui/legend.js';
+import { initCapture } from './capture.js';
 import {
   getTemperatureAtTime,
   getOxygenAtTime,
@@ -29,6 +30,7 @@ let showBoundaries = false;
 
 const sidebar = new Sidebar();
 const controls = new Controls(clock);
+clock.onPlayingChange = () => controls.syncPlayButton();
 const extinctionOverlay = new ExtinctionOverlay();
 const milestoneOverlay = new MilestoneOverlay();
 const popup = new SpeciesPopup();
@@ -178,3 +180,12 @@ controls.updateDisplay(clock.currentTimeMa);
 
 // Start loop
 requestAnimationFrame(animate);
+
+// Capture mode (no-op without `?capture=1`). Exposes window.__capture for headless
+// recording scripts; see scripts/capture/.
+initCapture({
+  clock,
+  controls,
+  switchView,
+  getViewMode: () => currentMode,
+});

@@ -131,10 +131,12 @@ export class View2D {
       this._renderIceCaps(ctx, w, h, glaciation);
     }
 
-    // 2. Grid lines
+    // 2. Graticule — base grid + emphasized equator + tropics & polar circles
     ctx.strokeStyle = COLORS.gridLine;
     ctx.lineWidth = 0.5;
+    ctx.setLineDash([]);
     for (let lon = -180; lon <= 180; lon += RENDER.gridSpacingDeg) {
+      if (lon === 0) continue; // prime meridian drawn emphasized below
       const [x] = this._lonLatToXY(lon, 0);
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -142,32 +144,61 @@ export class View2D {
       ctx.stroke();
     }
     for (let lat = -90; lat <= 90; lat += RENDER.gridSpacingDeg) {
+      if (lat === 0) continue;
       const [, y] = this._lonLatToXY(0, lat);
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(w, y);
       ctx.stroke();
     }
+    // Tropics & polar circles — subtle dashed bands of climate zones
+    ctx.setLineDash([4, 6]);
+    ctx.strokeStyle = 'rgba(255, 230, 180, 0.10)';
+    for (const lat of [23.5, -23.5, 66.5, -66.5]) {
+      const [, y] = this._lonLatToXY(0, lat);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // Equator — slightly brighter solid
+    {
+      const [, y] = this._lonLatToXY(0, 0);
+      ctx.strokeStyle = 'rgba(255, 240, 200, 0.18)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    // Prime meridian — same emphasis
+    {
+      const [x] = this._lonLatToXY(0, 0);
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 0.5;
 
     // 2.5. Tectonic plate boundaries
     if (boundaries) {
       this._renderBoundaries(ctx, boundaries);
     }
 
-    // 3. Continental polygons
+    // 3. Continental polygons — smooth Bezier coastlines with shaded relief
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
       const fractalVerts = fractalSubdivide(continent.vertices);
+      const pixelPts = fractalVerts.map(([lon, lat]) => this._lonLatToXY(lon, lat));
 
-      ctx.beginPath();
-      const [x0, y0] = this._lonLatToXY(fractalVerts[0][0], fractalVerts[0][1]);
-      ctx.moveTo(x0, y0);
-      for (let i = 1; i < fractalVerts.length; i++) {
-        const [x, y] = this._lonLatToXY(fractalVerts[i][0], fractalVerts[i][1]);
-        ctx.lineTo(x, y);
-      }
-      ctx.closePath();
+      // Build the smooth path once; reuse for fill, glow, stroke, and clip.
+      const buildPath = () => {
+        ctx.beginPath();
+        this._tracePath(ctx, pixelPts);
+      };
 
       // Fill — blend with latitude palette for tropical green / polar grey
       const center = this._polygonCentroid(continent.vertices);
@@ -175,12 +206,32 @@ export class View2D {
       if (extinction) {
         baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
       }
+      buildPath();
       ctx.fillStyle = baseColor;
       ctx.globalAlpha = RENDER.continentFillAlpha;
       ctx.fill();
       ctx.globalAlpha = 1;
 
+      // Shaded relief — soft NW highlight + SE shadow inside the shape
+      ctx.save();
+      buildPath();
+      ctx.clip();
+      // Highlight (NW lit)
+      ctx.strokeStyle = 'rgba(255, 240, 215, 0.35)';
+      ctx.lineWidth = 1.6;
+      ctx.translate(-1.2, -1.2);
+      buildPath();
+      ctx.stroke();
+      // Shadow (SE)
+      ctx.strokeStyle = 'rgba(20, 14, 8, 0.45)';
+      ctx.lineWidth = 1.4;
+      ctx.translate(2.4, 2.4);
+      buildPath();
+      ctx.stroke();
+      ctx.restore();
+
       // Outer glow
+      buildPath();
       ctx.strokeStyle = COLORS.landStroke;
       ctx.globalAlpha = 0.25;
       ctx.lineWidth = 3.5;
@@ -188,6 +239,7 @@ export class View2D {
       ctx.globalAlpha = 1;
 
       // Stroke
+      buildPath();
       ctx.strokeStyle = COLORS.landStroke;
       ctx.lineWidth = RENDER.landStrokeWidth;
       ctx.stroke();
@@ -211,38 +263,81 @@ export class View2D {
       }
     }
 
-    // 4. Species markers
+    // 4. Species markers — soft halo + inner highlight, with rim ring for advanced clades
     const aliveSpecies = getSpeciesAtTime(timeMa);
     const now = performance.now() / 1000;
     this._markerHits = [];
+    const advancedClades = new Set(['mammal', 'primate', 'hominin', 'bird']);
     for (const sp of aliveSpecies) {
       if (sp.category === 'event') continue; // Don't draw markers for events
       const [x, y] = this._lonLatToXY(sp.location.lon, sp.location.lat);
       const categoryColor = COLORS.kingdom[sp.category] || '#aaa';
+      const rgb = hexToRgb(categoryColor);
       const pulse = Math.sin(now * 2 + sp.location.lon) * RENDER.speciesMarkerPulseAmplitude;
-      const radius = RENDER.speciesMarkerRadius + pulse;
+      const radius = Math.max(2, RENDER.speciesMarkerRadius + pulse);
+      const haloR = radius * 4.5;
       this._markerHits.push({ sp, x, y, r: radius + 4 });
 
-      // Glow
+      // Halo — radial gradient, additive feel
+      const haloGrad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+      haloGrad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`);
+      haloGrad.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`);
+      haloGrad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+      ctx.fillStyle = haloGrad;
       ctx.beginPath();
-      ctx.arc(x, y, radius + 3, 0, Math.PI * 2);
-      ctx.fillStyle = categoryColor + '20';
+      ctx.arc(x, y, haloR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Marker
+      // Rim ring for "advanced" clades (mammals/primates/hominin/birds)
+      if (advancedClades.has(sp.category)) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius + 1.2, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.85)`;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+      }
+
+      // Marker body
       ctx.beginPath();
-      ctx.arc(x, y, Math.max(2, radius), 0, Math.PI * 2);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = categoryColor;
-      ctx.globalAlpha = 0.8;
+      ctx.globalAlpha = 0.92;
       ctx.fill();
       ctx.globalAlpha = 1;
+
+      // Inner highlight — tiny offset spec dot
+      ctx.beginPath();
+      ctx.arc(x - radius * 0.3, y - radius * 0.3, Math.max(0.6, radius * 0.35), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.fill();
     }
 
-    // 5. Extinction flash effect
+    // 5. Extinction flash — per-event color, with K-Pg asteroid streak at entry
     if (extinction) {
-      const flashIntensity = Math.sin(extinction.progress * Math.PI) * 0.15 * (extinction.severityPercent / 100);
-      ctx.fillStyle = `rgba(255, 0, 0, ${flashIntensity})`;
+      const flashRgb = hexToRgb(extinction.color);
+      const flashIntensity = Math.sin(extinction.progress * Math.PI) * 0.22 * (extinction.severityPercent / 100);
+      ctx.fillStyle = `rgba(${flashRgb.r}, ${flashRgb.g}, ${flashRgb.b}, ${flashIntensity})`;
       ctx.fillRect(0, 0, w, h);
+
+      // K-Pg asteroid streak — bright diagonal flash during the first slice of the event
+      if (extinction.id === 'end-cretaceous' && extinction.progress < 0.18) {
+        const streakAlpha = (1 - extinction.progress / 0.18) * 0.9;
+        const streakGrad = ctx.createLinearGradient(w * 0.05, h * 0.0, w * 0.6, h * 0.85);
+        streakGrad.addColorStop(0, `rgba(255, 255, 255, 0)`);
+        streakGrad.addColorStop(0.5, `rgba(255, 240, 200, ${streakAlpha})`);
+        streakGrad.addColorStop(0.85, `rgba(255, 140, 60, ${streakAlpha * 0.7})`);
+        streakGrad.addColorStop(1, `rgba(255, 60, 20, 0)`);
+        ctx.save();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = streakGrad;
+        ctx.shadowColor = `rgba(255, 200, 120, ${streakAlpha})`;
+        ctx.shadowBlur = 18;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.05, h * 0.0);
+        ctx.lineTo(w * 0.62, h * 0.85);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     ctx.restore();
@@ -343,6 +438,28 @@ export class View2D {
       ctx.fillStyle = grad;
       ctx.fillRect(0, yEdge, w, h - yEdge);
     }
+  }
+
+  // Trace a closed smooth path through the given pixel points using
+  // quadratic Beziers passing through midpoints — gives soft coastlines.
+  _tracePath(ctx, points) {
+    const n = points.length;
+    if (n === 0) return;
+    if (n < 3) {
+      ctx.moveTo(points[0][0], points[0][1]);
+      for (let i = 1; i < n; i++) ctx.lineTo(points[i][0], points[i][1]);
+      ctx.closePath();
+      return;
+    }
+    const last = points[n - 1];
+    const first = points[0];
+    ctx.moveTo((last[0] + first[0]) / 2, (last[1] + first[1]) / 2);
+    for (let i = 0; i < n; i++) {
+      const cur = points[i];
+      const next = points[(i + 1) % n];
+      ctx.quadraticCurveTo(cur[0], cur[1], (cur[0] + next[0]) / 2, (cur[1] + next[1]) / 2);
+    }
+    ctx.closePath();
   }
 
   _polygonCentroid(vertices) {
