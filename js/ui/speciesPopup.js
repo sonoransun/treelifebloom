@@ -2,13 +2,14 @@
 // Shows full descriptionLong, time range, scientific name. Subscribed to by
 // view2d hover, view3d raycaster, and sidebar mouseenter.
 
-import { COLORS } from '../config.js';
+import { cladeColor, lineageLabels } from '../util/taxonomy.js';
 
 export class SpeciesPopup {
   constructor() {
     this.el = document.getElementById('species-popup');
     this.titleEl = document.getElementById('species-popup-title');
     this.sciEl = document.getElementById('species-popup-sci');
+    this.lineageEl = document.getElementById('species-popup-lineage');
     this.bodyEl = document.getElementById('species-popup-body');
     this.metaEl = document.getElementById('species-popup-meta');
     this._lastId = null;
@@ -22,9 +23,10 @@ export class SpeciesPopup {
       this.sciEl.textContent = sp.scientificName || '';
       this.bodyEl.textContent = sp.descriptionLong || sp.description || '';
       this.metaEl.textContent = formatRange(sp);
-      const color = COLORS.kingdom[sp.category] || '#aaa';
+      const color = cladeColor(sp);
       this.el.style.borderColor = color;
       this.titleEl.style.color = color;
+      this._renderLineage(sp, color);
     }
     // Anchor: prefer to the right of cursor; flip to left near right edge.
     const margin = 14;
@@ -44,6 +46,31 @@ export class SpeciesPopup {
   hide() {
     this._lastId = null;
     this.el.classList.add('hidden');
+  }
+
+  _renderLineage(sp, color) {
+    if (!this.lineageEl) return;
+    const segs = lineageLabels(sp);
+    if (!segs.length) {
+      this.lineageEl.textContent = '';
+      return;
+    }
+    this.lineageEl.textContent = '';
+    segs.forEach((seg, i) => {
+      if (i > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'sep';
+        sep.textContent = '›';
+        this.lineageEl.appendChild(sep);
+      }
+      const span = document.createElement('span');
+      span.textContent = seg.value;
+      if (seg.isSelf) {
+        span.className = 'self';
+        span.style.color = color;
+      }
+      this.lineageEl.appendChild(span);
+    });
   }
 }
 

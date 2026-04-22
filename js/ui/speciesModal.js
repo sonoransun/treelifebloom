@@ -1,9 +1,14 @@
 // Species detail modal — opens on sidebar click, pauses the animation,
-// shows full info plus the closest evolutionary relatives (same category,
-// ranked by temporal overlap / proximity).
+// shows full info, the full Linnaean lineage, and the closest evolutionary
+// relatives scored by shared taxonomic rank.
 
-import { COLORS } from '../config.js';
 import { species as allSpecies } from '../data/species.js';
+import {
+  cladeColor,
+  lineageLabels,
+  relativesOf,
+  RANK_LABELS,
+} from '../util/taxonomy.js';
 
 export class SpeciesModal {
   constructor(clock, controls) {
@@ -14,6 +19,7 @@ export class SpeciesModal {
     this.titleEl = document.getElementById('species-modal-title');
     this.sciEl = document.getElementById('species-modal-sci');
     this.metaEl = document.getElementById('species-modal-meta');
+    this.lineageEl = document.getElementById('species-modal-lineage');
     this.bodyEl = document.getElementById('species-modal-body');
     this.relativesEl = document.getElementById('species-modal-relatives');
     this.closeBtn = document.getElementById('species-modal-close');
@@ -48,26 +54,56 @@ export class SpeciesModal {
   }
 
   _populate(sp, alive) {
-    const color = COLORS.kingdom[sp.category] || '#aaa';
+    const color = cladeColor(sp);
     this.el.style.borderLeftColor = color;
     this.titleEl.textContent = sp.name;
     this.titleEl.style.color = color;
     this.sciEl.textContent = sp.scientificName || '';
-    this.metaEl.textContent = `${sp.category} · ${formatRange(sp)}`;
+    const rankLabel = sp.rank ? RANK_LABELS[sp.rank] : null;
+    const metaPrefix = rankLabel
+      ? rankLabel
+      : (sp.taxonomy?.classOrPhylum || sp.taxonomy?.kingdom || sp.taxonomy?.domain || '');
+    this.metaEl.textContent = metaPrefix
+      ? `${metaPrefix} · ${formatRange(sp)}`
+      : formatRange(sp);
+    this._renderLineage(sp, color);
     this.bodyEl.textContent = sp.descriptionLong || sp.description || '';
 
     this.relativesEl.innerHTML = '';
     const aliveIds = new Set((alive || []).map(s => s.id));
-    const relatives = this._relatives(sp);
+    const relatives = relativesOf(sp, allSpecies);
     if (!relatives.length) {
       const empty = document.createElement('li');
       empty.className = 'species-modal-empty';
-      empty.textContent = 'No close relatives in the current dataset.';
+      empty.textContent = 'No close relatives recorded in the taxonomy.';
       this.relativesEl.appendChild(empty);
       return;
     }
     for (const rel of relatives) {
       this.relativesEl.appendChild(this._renderRelative(rel, aliveIds, alive));
+    }
+  }
+
+  _renderLineage(sp, color) {
+    if (!this.lineageEl) return;
+    const segs = lineageLabels(sp);
+    this.lineageEl.innerHTML = '';
+    for (const seg of segs) {
+      const li = document.createElement('li');
+      if (seg.isSelf) li.className = 'self';
+
+      const label = document.createElement('span');
+      label.className = 'rank-label';
+      label.textContent = seg.label;
+
+      const value = document.createElement('span');
+      value.className = 'rank-value';
+      value.textContent = seg.value;
+      if (seg.isSelf) value.style.color = color;
+
+      li.appendChild(label);
+      li.appendChild(value);
+      this.lineageEl.appendChild(li);
     }
   }
 
@@ -77,7 +113,7 @@ export class SpeciesModal {
 
     const dot = document.createElement('span');
     dot.className = 'species-modal-relative-dot';
-    dot.style.background = COLORS.kingdom[rel.category] || '#aaa';
+    dot.style.background = cladeColor(rel);
 
     const name = document.createElement('span');
     name.className = 'species-modal-relative-name';
@@ -99,32 +135,6 @@ export class SpeciesModal {
 
     li.addEventListener('click', () => this.open(rel, alive));
     return li;
-  }
-
-  // Score candidates by same-category overlap duration, falling back to
-  // distance between appearance midpoints when they never coexisted.
-  _relatives(sp) {
-    const spEnd = sp.extinctMa == null ? 0 : sp.extinctMa;
-    const spMid = (sp.appearanceMa + spEnd) / 2;
-
-    const scored = [];
-    for (const cand of allSpecies) {
-      if (cand.id === sp.id || cand.category !== sp.category) continue;
-      const candEnd = cand.extinctMa == null ? 0 : cand.extinctMa;
-      const candMid = (cand.appearanceMa + candEnd) / 2;
-
-      // Overlap window (Ma values; remember larger = older).
-      const overlapStart = Math.min(sp.appearanceMa, cand.appearanceMa);
-      const overlapEnd = Math.max(spEnd, candEnd);
-      const overlap = overlapStart - overlapEnd;
-
-      // overlap > 0 means they share time; higher is a bigger shared window.
-      // If disjoint, score by negative midpoint distance (closer = less negative).
-      const score = overlap > 0 ? overlap : -Math.abs(spMid - candMid);
-      scored.push({ cand, score });
-    }
-    scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 6).map(s => s.cand);
   }
 
   _bindClose() {

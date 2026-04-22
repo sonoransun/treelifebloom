@@ -305,6 +305,62 @@ body {
   padding: 2px 0;
 }
 
+.legend-tip.hidden { display: none; }
+
+/* --- Legend tree-of-life --- */
+.legend-tree {
+  font-size: 11px;
+  color: #c8d4e8;
+}
+.legend-tree details {
+  margin-left: 4px;
+}
+.legend-tree > details {
+  margin-left: 0;
+}
+.legend-tree summary {
+  cursor: pointer;
+  padding: 2px 0;
+  list-style: none;
+  user-select: none;
+  font-weight: 600;
+  color: #c8d4e8;
+}
+.legend-tree summary::-webkit-details-marker { display: none; }
+.legend-tree summary::before {
+  content: '▸';
+  display: inline-block;
+  width: 11px;
+  color: #667;
+  transition: transform 0.12s ease;
+  font-size: 9px;
+}
+.legend-tree details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.legend-tree-domain > summary { font-size: 11px; color: #a9b8d0; }
+.legend-tree-kingdom > summary { font-size: 11px; color: #a9b8d0; padding-left: 4px; }
+.legend-tree-kingdom { padding-left: 10px; border-left: 1px solid #1f2540; }
+.legend-tree-class > summary { font-size: 10px; color: #8898b8; font-weight: 500; padding-left: 4px; }
+.legend-tree-class { padding-left: 10px; border-left: 1px solid #1f2540; }
+.legend-tree-leaf {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 4px 2px 16px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: 400;
+  color: #c8d4e8;
+}
+.legend-tree-leaf:hover { background: rgba(255, 255, 255, 0.05); }
+.legend-tree-leaf-name {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ===== Species popup ===== */
 #species-popup {
   position: fixed;
@@ -345,6 +401,22 @@ body {
   letter-spacing: 0.4px;
   margin-bottom: 6px;
   font-variant-numeric: tabular-nums;
+}
+
+#species-popup-lineage {
+  font-size: 10px;
+  color: #778;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#species-popup-lineage .self {
+  font-weight: 700;
+}
+#species-popup-lineage .sep {
+  color: #556;
+  margin: 0 4px;
 }
 
 #species-popup-body {
@@ -429,6 +501,47 @@ body {
   letter-spacing: 0.5px;
   margin-bottom: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+#species-modal-lineage {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 2px 0 2px 8px;
+  border-left: 1px solid #2a3050;
+}
+#species-modal-lineage li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 8px 3px 10px;
+  position: relative;
+  border-radius: 3px;
+}
+#species-modal-lineage li::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  width: 6px; height: 1px;
+  background: #2a3050;
+}
+#species-modal-lineage .rank-label {
+  flex: 0 0 90px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #667;
+  font-weight: 600;
+}
+#species-modal-lineage .rank-value {
+  font-size: 13px;
+  color: #c8d4e8;
+  font-variant-numeric: tabular-nums;
+}
+#species-modal-lineage li.self {
+  background: rgba(255, 255, 255, 0.045);
+}
+#species-modal-lineage li.self .rank-value {
+  font-weight: 700;
 }
 
 #species-modal-body {

@@ -35,7 +35,7 @@ The `temporalWeight` field is editorial, not from any source — it controls how
 
 ## Species & abundance profiles
 
-`js/data/species.js` — 119 species + milestone events, each with an `abundanceProfile` of `[Ma, abundance]` pairs.
+`js/data/species.js` — 119 species, each with an `abundanceProfile` of `[Ma, abundance]` pairs.
 
 Profiles are illustrative, not quantitative — designed so the sidebar's "dominant life" ranking moves through plausible successions (Stromatolites → trilobites → fish → tetrapods → dinosaurs → mammals → hominins). First-appearance and last-appearance dates loosely follow:
 
@@ -45,6 +45,20 @@ Profiles are illustrative, not quantitative — designed so the sidebar's "domin
 - The fossil record literature in general — e.g. **PBDB** (Paleobiology Database) entries for individual taxa.
 
 Locations are paleogeographically plausible but approximate.
+
+## Taxonomy
+
+`js/data/speciesTaxonomy.js` — a domain → species Linnaean lineage for every one of the 119 entries, plus a `rank` field naming the most specific level each entry represents. Merged into `species.js` at module load.
+
+Classifications follow mainstream consensus from current reference sources rather than any single cladistic authority:
+
+- **Wikipedia classification boxes** (consulted per-taxon) for the modern accepted placements — especially for ambiguous stem groups (Cambrian lobopods, Ediacaran biota).
+- **ITIS** (Integrated Taxonomic Information System, itis.gov) and **Paleobiology Database** for extinct genera and families.
+- **Benton 2015** (as above) for vertebrate-clade ordinal placement where literature disagrees.
+
+Where a species has genuine placement uncertainty (e.g. Kimberella, Hallucigenia, Rhyniognatha), ranks are left `null` above the known resolution rather than fabricated — the lineage ladder displays the known ranks honestly and skips the gaps.
+
+Milestones (GOE, Snowball, Cambrian Explosion, etc.) live in `js/data/milestones.js` with a different schema and are not species.
 
 ## Atmosphere
 

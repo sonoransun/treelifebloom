@@ -9,6 +9,7 @@ import { getSpeciesAtTime } from '../data/species.js';
 import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
+import { cladeColor } from '../util/taxonomy.js';
 
 export class View3D {
   constructor(container) {
@@ -520,13 +521,13 @@ export class View3D {
 
     const alive = getSpeciesAtTime(timeMa);
     for (const sp of alive) {
-      if (sp.category === 'event') continue;
+      if (!sp.taxonomy) continue;
 
       const pos = this._lonLatToVector3(
         sp.location.lon, sp.location.lat, RENDER.markerElevation
       );
 
-      const color = COLORS.kingdom[sp.category] || '#aaa';
+      const color = cladeColor(sp);
       const size = 0.012 + sp.currentAbundance * 0.008;
 
       // Solid marker — kept in hover hit list.

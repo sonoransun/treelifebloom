@@ -14,6 +14,7 @@ import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
 import { mixColors, hexToRgb } from '../util/colorMix.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
+import { cladeColor, hasRimRing } from '../util/taxonomy.js';
 import { GLACIATION } from '../config.js';
 
 export class View2D {
@@ -267,11 +268,10 @@ export class View2D {
     const aliveSpecies = getSpeciesAtTime(timeMa);
     const now = performance.now() / 1000;
     this._markerHits = [];
-    const advancedClades = new Set(['mammal', 'primate', 'hominin', 'bird']);
     for (const sp of aliveSpecies) {
-      if (sp.category === 'event') continue; // Don't draw markers for events
+      if (!sp.taxonomy) continue;
       const [x, y] = this._lonLatToXY(sp.location.lon, sp.location.lat);
-      const categoryColor = COLORS.kingdom[sp.category] || '#aaa';
+      const categoryColor = cladeColor(sp);
       const rgb = hexToRgb(categoryColor);
       const pulse = Math.sin(now * 2 + sp.location.lon) * RENDER.speciesMarkerPulseAmplitude;
       const radius = Math.max(2, RENDER.speciesMarkerRadius + pulse);
@@ -288,8 +288,8 @@ export class View2D {
       ctx.arc(x, y, haloR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Rim ring for "advanced" clades (mammals/primates/hominin/birds)
-      if (advancedClades.has(sp.category)) {
+      // Rim ring for mammalian/avian clades resolved to order or deeper
+      if (hasRimRing(sp)) {
         ctx.beginPath();
         ctx.arc(x, y, radius + 1.2, 0, Math.PI * 2);
         ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.85)`;

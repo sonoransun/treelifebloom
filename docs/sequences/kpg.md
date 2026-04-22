@@ -4,6 +4,8 @@
 **View:** 2D map (with sidebar)  
 **Duration:** 7 seconds at 1× speed (plus 2 s auto-pause)
 
+<img src="../../assets/screenshots/08-kpg.png" alt="K-Pg poster" width="800">
+
 <video src="../../assets/animations/08-kpg.webm" autoplay loop muted playsinline width="800">
   <img src="../../assets/animations/08-kpg.gif" alt="K-Pg asteroid impact" width="800">
 </video>
@@ -16,6 +18,24 @@ Sixty-six million years ago, a 10-km asteroid struck the Yucatán at Chicxulub. 
 
 It's the most famous extinction in the popular imagination, and the only one with a single, clearly identified, instantaneous trigger event.
 
+## Mechanism — impact to extinction in <5 years
+
+```mermaid
+flowchart LR
+    A["10 km bolide<br/>~20 km/s impact<br/>Chicxulub, Yucatán"]
+    A --> TP["Thermal pulse<br/>from re-entering ejecta<br/>ignites continental wildfires<br/>minutes to hours"]
+    A --> Tsu["Mega-tsunamis<br/>across Gulf + Atlantic"]
+    A --> Ej["Dust + SO₂ +<br/>sulfate aerosols<br/>loft into stratosphere"]
+    Ej --> IW["Impact winter<br/>sunlight ↓ 80%+<br/>years to decades"]
+    TP --> FC["Primary producers<br/>collapse on land"]
+    IW --> FP["Photosynthesis ↓<br/>marine + terrestrial"]
+    FC --> Col["Food-chain collapse"]
+    FP --> Col
+    Col --> Ext["76% of species lost<br/>all non-avian dinosaurs"]
+    Dec["Deccan Traps<br/>already erupting<br/>in India"] --> Str["Pre-impact<br/>ecosystem stress"]
+    Str --> Col
+```
+
 ## What to watch for
 
 - **Asteroid streak** — a bright diagonal flash sweeps across the canvas during the first ~18% of the extinction's progress. Watch the upper-left for the entry point.
@@ -23,6 +43,15 @@ It's the most famous extinction in the popular imagination, and the only one wit
 - **Ocean tint** shifts toward dark orange-red.
 - **Sidebar exodus**: Tyrannosaurus, Triceratops, Velociraptor, Quetzalcoatlus, Mosasaurus, Pterosaurs, and the rest of the dinosaur entries fall off the top-15 within a couple of frames as their abundance profiles drop to zero.
 - **Continents** are recognizably modern in arrangement — seven distinct landmasses, India still racing north.
+
+### Time-anchored callouts (7 s clip + 2 s auto-pause)
+
+| Clip time | Time-Ma window | UI detail to watch |
+|---|---|---|
+| 0 s – 1 s | 67 → 66.3 Ma | Full dinosaur sidebar: Tyrannosaurus, Triceratops, Velociraptor, Ankylosaurus, Parasaurolophus, Mosasaurus, Quetzalcoatlus |
+| 1 s – 3 s | ≈ 66 Ma | **Clock crosses extinction window → 2 s hard pause**; overlay re-skins orange (`#ff8800`); a **bright diagonal streak** draws top-left during the first ~18% of progress |
+| 3 s – 5 s | 66 → 65.7 Ma | Screen shake; ocean tints orange-red; dinosaur rows drop out of the sidebar in quick succession |
+| 5 s – 9 s | 65.7 → 64 Ma | Post-extinction quiet; mammal rows rise (Placental Mammals, stem lineages); first primates appear later in play-through |
 
 ## Related data
 

@@ -39,6 +39,9 @@ const speciesModal = new SpeciesModal(clock, controls);
 const legend = new Legend();
 sidebar.attachPopup(popup);
 sidebar.attachModal(speciesModal);
+legend.attachPopup(popup);
+legend.attachModal(speciesModal);
+legend.attachAllSpecies(allSpecies);
 
 // Wire hover from views into popup. view3d hooks up after lazy load.
 view2d.onSpeciesHover((sp, x, y) => {
@@ -167,6 +170,7 @@ function animate(timestamp) {
   controls.updateDisplay(t);
   extinctionOverlay.update(t);
   milestoneOverlay.update(t);
+  legend.update(t);
 
   requestAnimationFrame(animate);
 }

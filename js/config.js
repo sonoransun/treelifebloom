@@ -18,24 +18,78 @@ export const COLORS = {
     transform: '#aacc44',
   },
 
-  // Kingdom colors for species markers/sidebar
-  kingdom: {
-    prokaryote: '#00cccc',
-    eukaryote: '#00aaaa',
-    bacteria: '#00cccc',
-    plant: '#44bb44',
-    invertebrate: '#558888',
-    arthropod: '#cc8844',
-    fish: '#4488cc',
-    amphibian: '#668844',
-    reptile: '#996633',
-    synapsid: '#aa7744',
-    mammal: '#dd8833',
-    bird: '#ccaa33',
-    primate: '#cc4444',
-    hominin: '#ee3333',
-    event: '#ffdd44',
-  }
+  // Clade colors for species markers/sidebar. Keyed on taxonomy.classOrPhylum
+  // (plus kingdom/domain fallbacks — see util/taxonomy.js::cladeColor).
+  clade: {
+    // Microbes
+    Bacteria:          '#00cccc',
+    Cyanobacteria:     '#00c0a8',
+    Archaea:           '#00aaaa',
+    Methanobacteria:   '#00aaaa',
+
+    // Stem / protist eukaryotes
+    Eukaryota:         '#7fbbbb',
+
+    // Kingdom-level fallbacks
+    Plantae:           '#44bb44',
+    Fungi:             '#aa66bb',
+    Animalia:          '#888899',
+
+    // Algae & plant clades
+    Rhodophyta:        '#cc4477',
+    Ascomycota:        '#aa66bb',
+    Embryophyta:       '#44bb44',
+
+    // Basal animals
+    Porifera:          '#778877',
+    Cnidaria:          '#55aa99',
+
+    // Lophotrochozoa
+    Mollusca:          '#668888',
+    Brachiopoda:       '#669090',
+    Annelida:          '#6a7e80',
+    Priapulida:        '#7e8f92',
+
+    // Ecdysozoa
+    Arthropoda:        '#cc8844',
+
+    // Deuterostomes (non-chordate)
+    Echinodermata:     '#bbaa55',
+    Hemichordata:      '#9999aa',
+
+    // Ediacaran / Cambrian stem animals without a modern phylum
+    'Metazoa-stem':    '#558888',
+
+    // Fish-grade chordates — all share the blue family
+    Chordata:          '#5aa0d8',
+    Agnatha:           '#4488cc',
+    Pteraspidomorphi:  '#4488cc',
+    Conodonta:         '#3a7ab8',
+    Placodermi:        '#3568a0',
+    Acanthodii:        '#4488cc',
+    Chondrichthyes:    '#4488cc',
+    Actinopterygii:    '#4488cc',
+    Sarcopterygii:     '#3f78b6',
+
+    // Tetrapod grades & clades
+    Amphibia:          '#668844',
+    Reptilia:          '#996633',
+    Synapsida:         '#aa7744',
+    Dinosauria:        '#b88844',
+    Pterosauria:       '#7a6040',
+    Aves:              '#ccaa33',
+    Mammalia:          '#dd8833',
+  },
+
+  // Narrower overrides consulted before classOrPhylum. Lets us keep the
+  // "apes are visibly special" color cue near the end of the timeline without
+  // bloating the classOrPhylum palette.
+  cladeOverride: {
+    // order-level
+    Primates:          '#cc4444',
+    // family-level
+    Hominidae:         '#ee3333',
+  },
 };
 
 export const TIMING = {
@@ -47,6 +101,7 @@ export const TIMING = {
   extinctionSlowdown: 0.3, // speed multiplier during extinction events
   extinctionPauseSeconds: 2, // hard pause when entering an extinction so the overlay can be read
   sidebarUpdateIntervalMs: 80, // throttle sidebar DOM updates
+  legendUpdateIntervalMs: 500, // throttle legend-tree rebuild (less time-critical than sidebar)
 };
 
 export const RENDER = {

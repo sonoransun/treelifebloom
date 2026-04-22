@@ -31,6 +31,8 @@ Outputs land in:
 6. A still PNG poster is taken at `posterAt × duration` using `page.screenshot` clipped to `#viz-container`.
 7. ffmpeg generates the GIF poster from the WebM with a two-pass palette (`palettegen` + `paletteuse`) for clean color quantization.
 
+The full request/response handshake between the Node capture script, Playwright, the page, and the `MediaRecorder` + ffmpeg pipeline is drawn out as a sequence diagram in [docs/architecture.md](architecture.md#capture-pipeline).
+
 ## Sequence catalog
 
 The 10 sequences are defined in `scripts/capture/sequences.js`. Each entry specifies:
@@ -44,6 +46,25 @@ The 10 sequences are defined in `scripts/capture/sequences.js`. Each entry speci
 - `crossesExtinction: true` — adds 2.2 s buffer for the auto-pause
 
 To add a sequence: append an entry to that array, then `node capture.js <id>`.
+
+### Catalog at a glance
+
+(Source of truth: `scripts/capture/sequences.js`. Re-run `node capture.js --list` for the authoritative view.)
+
+| # | id | Time (Ma) | View | Panel | Plates | Duration | Extinction |
+|---|---|---|---|---|---|---|---|
+| 1 | `hadean` | 4540 → 4000 | 2D | sidebar | ✗ | 6 s | — |
+| 2 | `goe` | 2500 → 2200 | 2D | sidebar | ✗ | 8 s | — |
+| 3 | `snowball` | 720 → 635 | 2D | sidebar | ✗ | 8 s | — |
+| 4 | `cambrian` | 540 → 480 | 2D | sidebar | ✓ | 12 s | — |
+| 5 | `forests` | 410 → 360 | 2D | sidebar | ✓ | 10 s | (late Devonian nearby) |
+| 6 | `permian` | 256 → 250 | 2D | sidebar | ✓ | 8 s + 2 s pause | ✓ End-Permian |
+| 7 | `jurassic` | 200 → 145 | 2D | sidebar | ✓ | 10 s | — |
+| 8 | `kpg` | 67 → 64 | 2D | sidebar | ✓ | 7 s + 2 s pause | ✓ K-Pg |
+| 9 | `pleistocene` | 2.5 → 0.012 | 2D | sidebar | ✓ | 9 s | — |
+| 10 | `hominin` | 6 → 0 | 2D | sidebar | ✓ | 8 s | — |
+
+Five modal showcase stills (`modal-trilobite`, `modal-tiktaalik`, `modal-tyrannosaurus`, `modal-mammoth`, `modal-homo_sapiens`) are produced separately via `node capture.js --modals`.
 
 ## Customization
 

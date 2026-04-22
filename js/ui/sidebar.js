@@ -1,8 +1,8 @@
 // Species sidebar — shows currently alive species ranked by abundance,
 // atmosphere readouts with sparklines, and a biodiversity estimate.
 
-import { COLORS } from '../config.js';
 import { getSpeciesAtTime } from '../data/species.js';
+import { cladeColor } from '../util/taxonomy.js';
 import {
   getTemperatureAtTime,
   getOxygenAtTime,
@@ -181,7 +181,7 @@ export class Sidebar {
     li.className = 'species-item';
     li.dataset.id = sp.id;
 
-    const color = COLORS.kingdom[sp.category] || '#aaa';
+    const color = cladeColor(sp);
     li.style.borderLeftColor = color;
 
     const dot = document.createElement('div');

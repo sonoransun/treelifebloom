@@ -4,18 +4,18 @@ Ten moments worth pausing on. Each links to a detailed walkthrough with an embed
 
 The thumbnail PNGs and WebM/GIF clips are produced by `scripts/capture/capture.js` (see [docs/capture.md](capture.md)). On a fresh clone they may be absent — run `node scripts/capture/capture.js --all` from `scripts/capture/` to populate them.
 
-| # | Time (Ma) | Sequence | Highlight |
-|---|-----------|----------|-----------|
-| 1 | 4540 → 4000 | [Earth's Origin & Hadean](sequences/hadean.md) | Molten newborn planet, no continents, no life |
-| 2 | 2500 → 2200 | [Great Oxygenation Event](sequences/goe.md) | Cyanobacteria peak, methane haze clears |
-| 3 | 720 → 635 | [Snowball Earth](sequences/snowball.md) | Polar ice caps reach the equator |
-| 4 | 540 → 480 | [Cambrian Explosion](sequences/cambrian.md) | Body plans burst — sidebar fills with new clades |
-| 5 | 410 → 360 | [First Forests (Devonian)](sequences/forests.md) | Land turns green, fish crawl out |
-| 6 | 256 → 250 | [End-Permian "Great Dying"](sequences/permian.md) | 96% extinction; clock pauses on the overlay |
-| 7 | 200 → 145 | [Jurassic Dinosaurs](sequences/jurassic.md) | Pangaea splits, peak dinosaur diversity |
-| 8 | 67 → 64 | [K-Pg Asteroid Impact](sequences/kpg.md) | Asteroid streak, dinosaurs vanish |
-| 9 | 2.5 → 0.012 | [Ice Age & Megafauna](sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves |
-| 10 | 6 → 0 | [Hominin Emergence](sequences/hominin.md) | Ardipithecus → erectus → Neanderthal → sapiens |
+| # | Poster | Time (Ma) | Sequence | Highlight |
+|---|---|---|---|---|
+| 1 | <a href="sequences/hadean.md"><img src="../assets/screenshots/01-hadean.png" alt="Hadean" width="160"></a> | 4540 → 4000 | [Earth's Origin & Hadean](sequences/hadean.md) | Molten newborn planet, no continents, no life |
+| 2 | <a href="sequences/goe.md"><img src="../assets/screenshots/02-goe.png" alt="GOE" width="160"></a> | 2500 → 2200 | [Great Oxygenation Event](sequences/goe.md) | Cyanobacteria peak, methane haze clears |
+| 3 | <a href="sequences/snowball.md"><img src="../assets/screenshots/03-snowball.png" alt="Snowball" width="160"></a> | 720 → 635 | [Snowball Earth](sequences/snowball.md) | Polar ice caps reach the equator |
+| 4 | <a href="sequences/cambrian.md"><img src="../assets/screenshots/04-cambrian.png" alt="Cambrian" width="160"></a> | 540 → 480 | [Cambrian Explosion](sequences/cambrian.md) | Body plans burst — sidebar fills with new clades |
+| 5 | <a href="sequences/forests.md"><img src="../assets/screenshots/05-forests.png" alt="First Forests" width="160"></a> | 410 → 360 | [First Forests (Devonian)](sequences/forests.md) | Land turns green, fish crawl out |
+| 6 | <a href="sequences/permian.md"><img src="../assets/screenshots/06-permian.png" alt="End-Permian" width="160"></a> | 256 → 250 | [End-Permian "Great Dying"](sequences/permian.md) | 96% extinction; clock pauses on the overlay |
+| 7 | <a href="sequences/jurassic.md"><img src="../assets/screenshots/07-jurassic.png" alt="Jurassic" width="160"></a> | 200 → 145 | [Jurassic Dinosaurs](sequences/jurassic.md) | Pangaea splits, peak dinosaur diversity |
+| 8 | <a href="sequences/kpg.md"><img src="../assets/screenshots/08-kpg.png" alt="K-Pg" width="160"></a> | 67 → 64 | [K-Pg Asteroid Impact](sequences/kpg.md) | Asteroid streak, dinosaurs vanish |
+| 9 | <a href="sequences/pleistocene.md"><img src="../assets/screenshots/09-pleistocene.png" alt="Pleistocene" width="160"></a> | 2.5 → 0.012 | [Ice Age & Megafauna](sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves |
+| 10 | <a href="sequences/hominin.md"><img src="../assets/screenshots/10-hominin.png" alt="Hominin" width="160"></a> | 6 → 0 | [Hominin Emergence](sequences/hominin.md) | Ardipithecus → erectus → Neanderthal → sapiens |
 
 ## Reading order
 

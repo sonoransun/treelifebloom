@@ -58,6 +58,19 @@ Ten moments worth pausing on, each with a dedicated walkthrough.
 | 9 | 2.5 → 0.012 | [Ice Age & Megafauna](docs/sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves dominate |
 | 10 | 6 → 0 | [Hominin Emergence](docs/sequences/hominin.md) | Ardipithecus → Homo erectus → Neanderthal → sapiens |
 
+<p align="center">
+  <a href="docs/sequences/hadean.md"><img src="assets/screenshots/01-hadean.png" alt="Hadean" width="128"></a>
+  <a href="docs/sequences/goe.md"><img src="assets/screenshots/02-goe.png" alt="Great Oxygenation Event" width="128"></a>
+  <a href="docs/sequences/snowball.md"><img src="assets/screenshots/03-snowball.png" alt="Snowball Earth" width="128"></a>
+  <a href="docs/sequences/cambrian.md"><img src="assets/screenshots/04-cambrian.png" alt="Cambrian Explosion" width="128"></a>
+  <a href="docs/sequences/forests.md"><img src="assets/screenshots/05-forests.png" alt="First Forests" width="128"></a>
+  <a href="docs/sequences/permian.md"><img src="assets/screenshots/06-permian.png" alt="End-Permian" width="128"></a>
+  <a href="docs/sequences/jurassic.md"><img src="assets/screenshots/07-jurassic.png" alt="Jurassic" width="128"></a>
+  <a href="docs/sequences/kpg.md"><img src="assets/screenshots/08-kpg.png" alt="K-Pg" width="128"></a>
+  <a href="docs/sequences/pleistocene.md"><img src="assets/screenshots/09-pleistocene.png" alt="Pleistocene" width="128"></a>
+  <a href="docs/sequences/hominin.md"><img src="assets/screenshots/10-hominin.png" alt="Hominin" width="128"></a>
+</p>
+
 The full index lives in **[docs/notable-sequences.md](docs/notable-sequences.md)**.
 
 ## Features
@@ -85,11 +98,35 @@ Coastlines are rendered with **deterministic fractal subdivision** plus **smooth
 
 ### Species & evolution
 
-**119 species and major events** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens*.
+**119 species** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens*.
 
-Categories span the tree of life: prokaryotes, bacteria, eukaryotes, plants, invertebrates, arthropods, fish, amphibians, reptiles, synapsids, mammals, birds, primates, and hominins. Five milestone events are also tracked (Great Oxygenation Event, Snowball Earth, Cambrian Explosion, Mammalian Radiation, Agriculture & Civilization).
+Every species carries a full Linnaean lineage — domain → kingdom → class/phylum → order → family → genus → species — and that lineage drives the whole UI:
 
-Species appear as pulsing color-coded markers at their geographic origins — each with a soft radial halo, and a rim ring on "advanced" clades (mammals, primates, hominins, birds). **Click any species in the sidebar** to open a detail modal that pauses the animation and lists its closest evolutionary relatives in the dataset.
+- **Marker color** is derived from `taxonomy.classOrPhylum` with order/family-level overrides, not from a flat category label, so convergent forms (e.g. pterosaurs and plesiosaurs) stay visually distinct.
+- **Species modal** shows the full 7-rank ladder with the entry's own rank highlighted.
+- **Hover popup** shows a compact `Eukarya › Animalia › Mammalia › Primates › Hominidae › Homo › sapiens` breadcrumb.
+- **Legend panel** turns into a live tree of currently-alive species grouped by domain → kingdom → class/phylum.
+- **Close relatives** in the modal are scored by shared-rank depth (genus > family > order > … > domain), so Homo sapiens surfaces Homo erectus and Neanderthals first, and a pterosaur no longer lists living lizards as "relatives".
+
+Species appear as pulsing color-coded markers at their geographic origins — each with a soft radial halo, and a rim ring on mammals and birds resolved to order level or deeper. **Click any species in the sidebar** (or in the legend tree) to open a detail modal that pauses the animation and lists its closest evolutionary relatives.
+
+<details>
+<summary><b>How the color lookup works</b></summary>
+
+```mermaid
+flowchart LR
+    sp[species entry] --> F{family<br/>override?}
+    F -->|Hominidae| red[#ee3333]
+    F -->|miss| O{order<br/>override?}
+    O -->|Primates| rb[#cc4444]
+    O -->|miss| CP{classOrPhylum<br/>in palette?}
+    CP -->|Mammalia, Aves,<br/>Dinosauria, Arthropoda,<br/>Embryophyta, …| cladeColor[clade color]
+    CP -->|miss| KD[kingdom / domain<br/>fallback]
+```
+
+Override entries live in `COLORS.cladeOverride`; clade entries in `COLORS.clade`. Both in `js/config.js`.
+
+</details>
 
 ### Mass extinctions
 
@@ -111,6 +148,20 @@ When an extinction begins:
 - The K-Pg event additionally renders a **bright diagonal asteroid streak** across the canvas during its first 18% of progress.
 - The 3D ocean tints toward a muted version of the event color.
 - The viewport shakes proportional to severity, and after the pause playback resumes at 30% speed for the rest of the event window.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> Normal
+    Normal: Normal<br/>playback
+    Paused: 2 s hard<br/>pause
+    Slowed: 0.30×<br/>playback
+    Normal --> Paused: enters<br/>extinction<br/>window
+    Paused --> Slowed: 2 s timer
+    Slowed --> Normal: leaves<br/>window
+```
+
+See [docs/architecture.md](docs/architecture.md#extinction-auto-pause-state-machine) for the full state machine including manual overrides and scrub behavior.
 
 ### Tectonic plate boundaries
 
@@ -138,19 +189,42 @@ Temperature, O₂, and CO₂ readouts include sparklines tracking the curve arou
 
 ### Temporal compression
 
-Not all geological time gets the same screen time. Each period in `js/data/timeline.js` has a `temporalWeight` that scales how slowly the clock advances — billions of years of single-celled stability pass quickly, while diversification bursts linger.
+Not all geological time gets the same screen time. Each period in `js/data/timeline.js` has a `temporalWeight` that scales how slowly the clock advances — billions of years of single-celled stability pass quickly, while diversification bursts linger. The `clock.tick(delta)` multiplies the raw delta by the current period's weight before advancing `currentTimeMa`.
 
-| Period | Weight | On-screen time |
-|---|---|---|
-| Hadean | 0.10 | flies by in seconds |
-| Paleoproterozoic (GOE) | 0.45 | breathing room for the oxygen flip |
-| Cambrian | 5.50 | the explosion gets ~20 s |
-| Cretaceous | 5.50 | dinosaurs play out for ~30 s |
-| Pleistocene | 10.00 | climax of the play-through |
+All 26 periods, sorted by weight (low = flies by, high = lingers):
+
+| Period | Window (Ma) | Weight | Bar |
+|---|---|--:|---|
+| Hadean | 4540 → 4000 | 0.10 | ▏ |
+| Eoarchean | 4000 → 3600 | 0.20 | ▎ |
+| Paleoarchean | 3600 → 3200 | 0.30 | ▍ |
+| Mesoarchean | 3200 → 2800 | 0.20 | ▎ |
+| Neoarchean | 2800 → 2500 | 0.35 | ▍ |
+| Paleoproterozoic (GOE) | 2500 → 1600 | 0.45 | ▌ |
+| Mesoproterozoic | 1600 → 1000 | 0.35 | ▍ |
+| Cryogenian | 1000 → 720 | 0.45 | ▌ |
+| Cryogenian-Snowball | 720 → 635 | 1.00 | █ |
+| Ediacaran | 635 → 538.8 | 2.50 | ██▌ |
+| Cambrian | 538.8 → 485.4 | 5.50 | █████▌ |
+| Ordovician | 485.4 → 443.8 | 4.00 | ████ |
+| Silurian | 443.8 → 419.2 | 3.50 | ███▌ |
+| Devonian | 419.2 → 358.9 | 5.00 | █████ |
+| Carboniferous | 358.9 → 298.9 | 4.00 | ████ |
+| Permian | 298.9 → 251.9 | 3.20 | ███▏ |
+| Triassic | 251.9 → 201.4 | 4.00 | ████ |
+| Jurassic | 201.4 → 145 | 5.50 | █████▌ |
+| Cretaceous | 145 → 66 | 5.50 | █████▌ |
+| Paleocene | 66 → 56 | 3.00 | ███ |
+| Eocene | 56 → 34 | 4.50 | ████▌ |
+| Oligocene | 34 → 23 | 3.00 | ███ |
+| Miocene | 23 → 5.333 | 6.00 | ██████ |
+| Pliocene | 5.333 → 2.58 | 5.00 | █████ |
+| **Pleistocene** | 2.58 → 0.0117 | **10.00** | ██████████ |
+| Holocene | 0.0117 → 0 | 5.00 | █████ |
 
 Total play-through at 1× speed: ~**4 min 27 s**. The speed selector ranges 0.25× → 4×.
 
-Each Big Five extinction adds a **2-second hard pause on entry** plus a 0.3× slowdown for the rest of the window, compounded onto the period weight.
+Each Big Five extinction adds a **2-second hard pause on entry** plus a 0.30× slowdown for the rest of the window, compounded onto the period weight.
 
 ### Views
 
