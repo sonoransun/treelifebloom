@@ -8,6 +8,7 @@ import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
 import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
+import { fbm3D, terrainProfileForAge } from '../engine/terrainNoise.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
 import { cladeColor } from '../util/taxonomy.js';
 
@@ -176,7 +177,7 @@ export class View3D {
     this._updateIceCaps(timeMa);
 
     // Update continental meshes
-    this._updateContinents(polygons, extinction);
+    this._updateContinents(polygons, extinction, timeMa);
 
     // Update plate boundaries
     this._updateBoundaries(boundaries);
@@ -341,7 +342,7 @@ export class View3D {
     this.southCap.material.opacity = g.alpha;
   }
 
-  _updateContinents(polygons, extinction) {
+  _updateContinents(polygons, extinction, timeMa) {
     // Remove old continent meshes
     for (const mesh of this.continentMeshes) {
       this.scene.remove(mesh);
@@ -350,11 +351,13 @@ export class View3D {
     }
     this.continentMeshes = [];
 
+    const profile = terrainProfileForAge(timeMa);
+
     // Create new continent meshes from polygon data
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
-      const mesh = this._createContinentMesh(continent, extinction);
+      const mesh = this._createContinentMesh(continent, extinction, profile);
       if (mesh) {
         this.scene.add(mesh);
         this.continentMeshes.push(mesh);
@@ -362,73 +365,141 @@ export class View3D {
     }
   }
 
-  _createContinentMesh(continent, extinction) {
+  _createContinentMesh(continent, extinction, profile) {
     const fractalVerts = fractalSubdivide(continent.vertices);
     const n = fractalVerts.length;
 
-    // Top face vertices at elevated radius
-    const topVerts = fractalVerts.map(([lon, lat]) =>
-      this._lonLatToVector3(lon, lat, RENDER.continentElevation)
+    // Unit-radial direction for each perimeter vertex (coastline; no displacement).
+    const perimeterUnit = fractalVerts.map(([lon, lat]) =>
+      this._lonLatToVector3(lon, lat, 1).normalize()
     );
 
-    // Bottom edge vertices at ocean radius (for side walls)
-    const botVerts = fractalVerts.map(([lon, lat]) =>
-      this._lonLatToVector3(lon, lat, RENDER.globeRadius)
-    );
+    // Centroid direction (interior; full displacement) for fan triangulation.
+    const centroidUnit = new THREE.Vector3();
+    for (const u of perimeterUnit) centroidUnit.add(u);
+    centroidUnit.normalize();
 
-    // Centroid for fan triangulation
-    const centroid = new THREE.Vector3();
-    for (const v of topVerts) centroid.add(v);
-    centroid.divideScalar(n);
-    centroid.normalize().multiplyScalar(RENDER.continentElevation);
+    // Vertex pool: index 0 = centroid (edgeWeight 1), 1..n = perimeter (edgeWeight 0).
+    // Subdivision midpoints get average edgeWeight of their parents — taper smoothly toward coast.
+    const vertDirs = [centroidUnit, ...perimeterUnit];
+    const vertEdgeWeights = [1, ...new Array(n).fill(0)];
 
-    // Centroid latitude — drives latitude-palette blending of the top face.
-    let sumLat = 0;
-    for (const [, lat] of fractalVerts) sumLat += lat;
-    const centroidLat = sumLat / n;
-    const tinted = continentColorAtLatitude(continent.color, centroidLat);
+    // Shared-midpoint cache so adjacent fan triangles don't crack at edges.
+    const midpointCache = new Map();
+    const getMidpoint = (i, j) => {
+      const lo = Math.min(i, j), hi = Math.max(i, j);
+      const key = lo * 100000 + hi;
+      const cached = midpointCache.get(key);
+      if (cached !== undefined) return cached;
+      const dir = new THREE.Vector3().addVectors(vertDirs[i], vertDirs[j]).normalize();
+      const ew = (vertEdgeWeights[i] + vertEdgeWeights[j]) * 0.5;
+      const idx = vertDirs.length;
+      vertDirs.push(dir);
+      vertEdgeWeights.push(ew);
+      midpointCache.set(key, idx);
+      return idx;
+    };
 
-    // Colors
-    const topColor = new THREE.Color(tinted);
-    if (extinction) topColor.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
+    // 4-into-1 midpoint subdivision; preserves CCW winding.
+    const triIndices = [];
+    const subdivide = (a, b, c, depth) => {
+      if (depth === 0) { triIndices.push(a, b, c); return; }
+      const mab = getMidpoint(a, b);
+      const mbc = getMidpoint(b, c);
+      const mca = getMidpoint(c, a);
+      subdivide(a, mab, mca, depth - 1);
+      subdivide(mab, b, mbc, depth - 1);
+      subdivide(mca, mbc, c, depth - 1);
+      subdivide(mab, mbc, mca, depth - 1);
+    };
+
+    const subdivLevels = RENDER.terrainSubdivLevels;
+    for (let i = 0; i < n; i++) {
+      subdivide(0, 1 + i, 1 + ((i + 1) % n), subdivLevels);
+    }
+
+    // Apply elevation displacement and per-vertex colors.
+    const baseElev = RENDER.continentElevation;
+    const amp = profile.amplitude;
+    const freq = profile.freq;
+    const jaggExp = 1 + profile.jaggedness;
+    const coastTaper = RENDER.terrainCoastTaper;
+    const radius = RENDER.globeRadius;
+    const minR = radius + 0.001;
+
+    const snowColor = new THREE.Color(RENDER.terrainSnowColor);
+    const highlandColor = new THREE.Color(RENDER.terrainHighlandColor);
+    const lowlandColor = new THREE.Color(RENDER.terrainLowlandColor);
+    const hotTintColor = new THREE.Color(RENDER.terrainHotTintColor);
+    const extTint = new THREE.Color(0x4a2020);
     const sideColor = new THREE.Color(RENDER.continentSideColor);
     if (extinction) sideColor.lerp(new THREE.Color(0x2a1010), extinction.progress * 0.3);
 
-    // Build arrays
     const positions = [];
     const colors = [];
     const indices = [];
 
-    // --- Top face: centroid (index 0) + perimeter (indices 1..n) ---
-    positions.push(centroid.x, centroid.y, centroid.z);
-    colors.push(topColor.r, topColor.g, topColor.b);
+    // Top face vertices: displaced positions + per-vertex elevation-driven color.
+    for (let v = 0; v < vertDirs.length; v++) {
+      const dir = vertDirs[v];
+      const ew = vertEdgeWeights[v];
 
-    // Per-vertex latitude tinting along the perimeter.
-    for (let i = 0; i < topVerts.length; i++) {
-      const v = topVerts[i];
-      const lat = fractalVerts[i][1];
-      const vTinted = continentColorAtLatitude(continent.color, lat);
-      const vc = new THREE.Color(vTinted);
-      if (extinction) vc.lerp(new THREE.Color(0x4a2020), extinction.progress * 0.3);
-      positions.push(v.x, v.y, v.z);
-      colors.push(vc.r, vc.g, vc.b);
+      let noise = fbm3D(dir.x * freq, dir.y * freq, dir.z * freq, profile.octaves);
+      if (noise > 1) noise = 1; else if (noise < -1) noise = -1;
+      const sign = noise >= 0 ? 1 : -1;
+      const shaped = sign * Math.pow(Math.abs(noise), jaggExp);
+
+      // Smoothstep taper: coast (ew=0) gets 0 displacement, interior ramps in by coastTaper.
+      let taper;
+      if (ew <= 0) {
+        taper = 0;
+      } else if (ew >= coastTaper) {
+        taper = 1;
+      } else {
+        const t = ew / coastTaper;
+        taper = t * t * (3 - 2 * t);
+      }
+      const displacement = amp * shaped * taper;
+      const r = Math.max(minR, baseElev + displacement);
+
+      positions.push(dir.x * r, dir.y * r, dir.z * r);
+
+      // Latitude-driven base color (dir.y == sin(lat) on unit sphere).
+      const latDeg = Math.asin(Math.max(-1, Math.min(1, dir.y))) * (180 / Math.PI);
+      const c = new THREE.Color(continentColorAtLatitude(continent.color, latDeg));
+
+      // Elevation-driven shading: snow on peaks, highland brown on slopes, green basins.
+      const relAlt = (r - baseElev) / amp;
+      if (relAlt > 0.5) {
+        c.lerp(snowColor, Math.min(1, (relAlt - 0.5) * 2));
+      } else if (relAlt > 0.1) {
+        c.lerp(highlandColor, (relAlt - 0.1) / 0.4);
+      } else if (relAlt < -0.3) {
+        c.lerp(lowlandColor, Math.min(1, (-relAlt - 0.3) / 0.7));
+      }
+
+      // Hot crust on proto-era peaks.
+      if (profile.hotTint > 0 && relAlt > 0) {
+        c.lerp(hotTintColor, profile.hotTint * Math.min(1, relAlt));
+      }
+
+      if (extinction) c.lerp(extTint, extinction.progress * 0.3);
+
+      colors.push(c.r, c.g, c.b);
     }
 
-    for (let i = 1; i <= n; i++) {
-      indices.push(0, i, (i % n) + 1);
-    }
+    for (const idx of triIndices) indices.push(idx);
 
-    // --- Side walls: quads from top edge down to ocean level ---
-    const sideOffset = n + 1;
+    // Side walls: drop from each original perimeter vertex (still at baseElev — taper=0)
+    // down to ocean radius. Same structure as before, separate vertices for distinct color.
+    const sideOffset = positions.length / 3;
     for (let i = 0; i < n; i++) {
-      const t = topVerts[i];
-      const b = botVerts[i];
-      positions.push(t.x, t.y, t.z);
+      const dir = perimeterUnit[i];
+      positions.push(dir.x * baseElev, dir.y * baseElev, dir.z * baseElev);
       colors.push(sideColor.r, sideColor.g, sideColor.b);
-      positions.push(b.x, b.y, b.z);
+      positions.push(dir.x * radius, dir.y * radius, dir.z * radius);
       colors.push(sideColor.r, sideColor.g, sideColor.b);
     }
-
     for (let i = 0; i < n; i++) {
       const next = (i + 1) % n;
       const topI = sideOffset + i * 2;
@@ -455,11 +526,10 @@ export class View3D {
   }
 
   _updateBoundaries(boundaries) {
-    // Remove old boundary lines
-    for (const line of this.boundaryLines) {
-      this.scene.remove(line);
-      line.geometry.dispose();
-      line.material.dispose();
+    for (const obj of this.boundaryLines) {
+      this.scene.remove(obj);
+      obj.geometry.dispose();
+      obj.material.dispose();
     }
     this.boundaryLines = [];
 
@@ -467,39 +537,139 @@ export class View3D {
 
     for (const boundary of boundaries) {
       if (boundary.vertices.length < 2) continue;
-
-      const points = boundary.vertices.map(([lon, lat]) =>
-        this._lonLatToVector3(lon, lat, RENDER.boundaryElevation)
-      );
-
-      const color = COLORS.boundary[boundary.type] || COLORS.boundary.divergent;
-      const isDashed = boundary.type === 'divergent' || boundary.type === 'transform';
-
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      let material;
-
-      if (isDashed) {
-        material = new THREE.LineDashedMaterial({
-          color: new THREE.Color(color),
-          transparent: true,
-          opacity: 0.8,
-          dashSize: boundary.type === 'divergent' ? 0.03 : 0.015,
-          gapSize: boundary.type === 'divergent' ? 0.02 : 0.015,
-        });
-      } else {
-        material = new THREE.LineBasicMaterial({
-          color: new THREE.Color(color),
-          transparent: true,
-          opacity: 0.8,
-        });
+      const mesh = this._buildBoundaryRibbon(boundary);
+      if (mesh) {
+        this.scene.add(mesh);
+        this.boundaryLines.push(mesh);
       }
-
-      const line = new THREE.Line(geometry, material);
-      if (isDashed) line.computeLineDistances();
-
-      this.scene.add(line);
-      this.boundaryLines.push(line);
     }
+  }
+
+  _boundaryCrossSection(type) {
+    // Each entry: [sideU in [-1,1], radialV (offset from globeRadius), color hex]
+    if (type === 'convergent') {
+      const apex = RENDER.boundaryConvergentApex - RENDER.globeRadius;
+      const base = RENDER.boundaryConvergentBaseColor;
+      const top = RENDER.boundaryConvergentApexColor;
+      const mid = '#' + new THREE.Color(base).lerp(new THREE.Color(top), 0.5).getHexString();
+      return [
+        [-1.0, 0.0,        base],
+        [-0.5, apex * 0.4, mid],
+        [ 0.0, apex,       top],
+        [ 0.5, apex * 0.4, mid],
+        [ 1.0, 0.0,        base],
+      ];
+    }
+    if (type === 'divergent') {
+      const lip = RENDER.boundaryDivergentLip - RENDER.globeRadius;
+      const trench = RENDER.boundaryDivergentTrench - RENDER.globeRadius;
+      const lipColor = RENDER.boundaryDivergentLipColor;
+      const innerColor = RENDER.boundaryDivergentInnerColor;
+      // Twin raised ridges with a glowing axial canyon between them; all above ocean.
+      return [
+        [-1.0, 0.0,    lipColor],
+        [-0.5, lip,    lipColor],
+        [ 0.0, trench, innerColor],
+        [ 0.5, lip,    lipColor],
+        [ 1.0, 0.0,    lipColor],
+      ];
+    }
+    // transform: stepped offset cliff
+    const upper = RENDER.boundaryTransformUpper - RENDER.globeRadius;
+    const lower = RENDER.boundaryTransformLower - RENDER.globeRadius;
+    return [
+      [-1.0, lower, RENDER.boundaryTransformLowerColor],
+      [ 0.0, lower, RENDER.boundaryTransformLowerColor],
+      [ 0.0, upper, RENDER.boundaryTransformUpperColor],
+      [ 1.0, upper, RENDER.boundaryTransformUpperColor],
+    ];
+  }
+
+  _buildBoundaryRibbon(boundary) {
+    const cross = this._boundaryCrossSection(boundary.type);
+    const cs = cross.length;
+    const verts = boundary.vertices;
+    const m = verts.length;
+    const radius = RENDER.globeRadius;
+    const halfWidth = (RENDER.boundaryRidgeWidthDeg * Math.PI) / 180; // arc radians ~= world units on unit sphere
+
+    // Compute a tangent-plane frame at each polyline vertex.
+    const frames = new Array(m);
+    for (let i = 0; i < m; i++) {
+      const [lon, lat] = verts[i];
+      const N = this._lonLatToVector3(lon, lat, 1).normalize();
+      let T;
+      if (m === 1) {
+        T = new THREE.Vector3(1, 0, 0);
+      } else if (i === 0) {
+        const [l2, la2] = verts[1];
+        T = this._lonLatToVector3(l2, la2, 1).normalize().sub(N);
+      } else if (i === m - 1) {
+        const [l2, la2] = verts[i - 1];
+        T = N.clone().sub(this._lonLatToVector3(l2, la2, 1).normalize());
+      } else {
+        const [lA, laA] = verts[i - 1];
+        const [lB, laB] = verts[i + 1];
+        const Na = this._lonLatToVector3(lA, laA, 1).normalize();
+        const Nb = this._lonLatToVector3(lB, laB, 1).normalize();
+        T = Nb.sub(Na);
+      }
+      // Project T into tangent plane at N
+      T.addScaledVector(N, -T.dot(N));
+      if (T.lengthSq() < 1e-12) {
+        T.set(N.z, 0, -N.x);
+        if (T.lengthSq() < 1e-12) T.set(0, 1, 0);
+      }
+      T.normalize();
+      const S = new THREE.Vector3().crossVectors(N, T).normalize();
+      frames[i] = { N, S };
+    }
+
+    const positions = [];
+    const colors = [];
+    const indices = [];
+
+    for (let i = 0; i < m; i++) {
+      const { N, S } = frames[i];
+      for (let j = 0; j < cs; j++) {
+        const [sideU, radialV, hex] = cross[j];
+        const r = radius + radialV;
+        const off = halfWidth * sideU * radius;
+        positions.push(N.x * r + S.x * off, N.y * r + S.y * off, N.z * r + S.z * off);
+        const c = new THREE.Color(hex);
+        colors.push(c.r, c.g, c.b);
+      }
+    }
+
+    for (let i = 0; i < m - 1; i++) {
+      for (let j = 0; j < cs - 1; j++) {
+        const a = i * cs + j;
+        const b = a + 1;
+        const c = (i + 1) * cs + j;
+        const d = c + 1;
+        indices.push(a, c, b);
+        indices.push(b, c, d);
+      }
+    }
+
+    if (indices.length === 0) return null;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshPhongMaterial({
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      shininess: 20,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -2,
+    });
+
+    return new THREE.Mesh(geometry, material);
   }
 
   _updateSpeciesMarkers(timeMa) {

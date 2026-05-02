@@ -1369,6 +1369,428 @@ const rawSpecies = [
     descriptionLong: 'A small, hoofed mammal the size of a raccoon that waded in shallow Eocene streams of what is now Kashmir, feeding on aquatic plants much like the modern water chevrotain. Its ear bones share a distinctive structure with early whales, identifying it as the closest known non-whale relative of the cetacean lineage. Indohyus is the transitional fossil that bridges the gap between terrestrial artiodactyls and the earliest whales.',
     location: { lat: 34, lon: 76 }
   },
+
+  // ---- Notable recent discoveries (added 2024+) ----
+
+  // Proterozoic
+  {
+    id: 'ourasphaira',
+    name: 'Ourasphaira',
+    scientificName: 'Ourasphaira giraldae',
+    appearanceMa: 1000,
+    extinctMa: 800,
+    abundanceProfile: [[1000, 0.02], [950, 0.06], [900, 0.08], [850, 0.05], [800, 0.01]],
+    description: 'Microscopic Proterozoic fungus — pushes fungal origin back ~500 Ma',
+    descriptionLong: 'Microfossils from shales of Arctic Canada (Grassy Bay Formation, Northwest Territories), described in 2019, that show branching multicellular filaments and chitin-bearing spheres unmistakably fungal in architecture. At 900–1000 million years old, they more than double the age of the oldest previously accepted fungi and imply that the deep eukaryotic crown groups had already diversified well before the Cryogenian glaciations. Ourasphaira reframes when life on land may have begun, since fungi likely accompanied early algae out of the water.',
+    location: { lat: 70, lon: -120 }
+  },
+
+  // Cambrian
+  {
+    id: 'saccorhytus',
+    name: 'Saccorhytus',
+    scientificName: 'Saccorhytus coronarius',
+    appearanceMa: 540,
+    extinctMa: 530,
+    abundanceProfile: [[540, 0.03], [538, 0.10], [535, 0.09], [532, 0.04], [530, 0.01]],
+    description: 'Sub-millimeter Cambrian "bag with a mouth"; reinterpreted ecdysozoan',
+    descriptionLong: 'A roughly one-millimeter spheroidal microfossil from the Kuanchuanpu Formation of Shaanxi, China, originally announced in 2017 as the earliest known deuterostome (and possibly a stem-vertebrate). Restudy in 2022 with new specimens showed that its supposed gill pores were instead spine bases, reclassifying it as an early ecdysozoan more closely related to arthropods and priapulids than to chordates. Its on-again, off-again identity is itself a reminder of how thin the evidence is for the very earliest animal body plans.',
+    location: { lat: 33, lon: 109 }
+  },
+  {
+    id: 'cambroraster',
+    name: 'Cambroraster',
+    scientificName: 'Cambroraster falcatus',
+    appearanceMa: 510,
+    extinctMa: 500,
+    abundanceProfile: [[510, 0.05], [508, 0.18], [506, 0.22], [503, 0.12], [500, 0.03]],
+    description: 'Burgess Shale radiodont with a Millennium Falcon-shaped head shield',
+    descriptionLong: 'A bottom-feeding radiodont (Anomalocaris-relative) up to 30 centimeters long, named in 2019 from hundreds of new Burgess Shale specimens collected in Kootenay National Park. Its enormous concave horseshoe-shaped head carapace earned the species name "falcatus" and an immediate Star Wars nickname; it likely sieved sediment with its rake-like frontal appendages while the shield blocked downward currents. Cambroraster shows that radiodonts had evolved a benthic-grazing ecology in addition to the iconic open-water predation of Anomalocaris.',
+    location: { lat: 51.4, lon: -116.5 }
+  },
+  {
+    id: 'stanleycaris',
+    name: 'Stanleycaris',
+    scientificName: 'Stanleycaris hirpex',
+    appearanceMa: 510,
+    extinctMa: 500,
+    abundanceProfile: [[510, 0.04], [508, 0.16], [506, 0.20], [503, 0.10], [500, 0.02]],
+    description: 'Three-eyed radiodont with brain preserved; Burgess Shale, 2022',
+    descriptionLong: 'A small radiodont (~20 cm) from the Burgess Shale, redescribed in 2022 from 268 superbly preserved specimens that revealed a previously unknown median third eye on the head and the oldest brain fossils ever recovered from a euarthropod. The three-eyed configuration suggests a sophisticated visual system tuned to predation in dim Cambrian waters, while the brain preservation is rewriting our understanding of how nervous systems evolved early in Arthropoda. Stanleycaris is the most completely known radiodont, period.',
+    location: { lat: 51.4, lon: -116.5 }
+  },
+  {
+    id: 'habelia',
+    name: 'Habelia',
+    scientificName: 'Habelia optata',
+    appearanceMa: 510,
+    extinctMa: 505,
+    abundanceProfile: [[510, 0.03], [508, 0.10], [506, 0.12], [505, 0.04]],
+    description: 'Burgess Shale chelicerate: oldest unambiguous spider/scorpion relative',
+    descriptionLong: 'A small armored arthropod (~2 cm) known from Walcott Quarry for over a century but completely reinterpreted in 2017, when better imaging of the head revealed a chelicerate-style appendage layout. The redescription places Habelia at the base of the chelicerate tree, making it the oldest unambiguous member of the lineage that contains modern spiders, scorpions, and horseshoe crabs. Its powerful jaws-and-pincers head suggests these animals started life as durophagous predators, not the sit-and-wait hunters most modern chelicerates have become.',
+    location: { lat: 51.4, lon: -116.5 }
+  },
+
+  // Devonian
+  {
+    id: 'qikiqtania',
+    name: 'Qikiqtania',
+    scientificName: 'Qikiqtania wakei',
+    appearanceMa: 375,
+    extinctMa: 370,
+    abundanceProfile: [[375, 0.03], [373, 0.10], [371, 0.08], [370, 0.02]],
+    description: 'Tetrapodomorph cousin of Tiktaalik that returned to fully aquatic life',
+    descriptionLong: 'A meter-long sarcopterygian fish from the same Ellesmere Island sites that produced Tiktaalik, formally described in 2022 after decades in storage. Its pectoral fin bones lack the weight-bearing modifications seen in Tiktaalik and show instead an oar-like geometry, indicating that Qikiqtania abandoned shallow-water "walking" and recommitted to swimming even as its close relatives were inching onto land. It is the first clear evidence that the tetrapod-stem lineage included independent re-aquatic experiments running in parallel with the famous fish-to-land trajectory.',
+    location: { lat: 79, lon: -77 }
+  },
+  {
+    id: 'hyneria_udlezinye',
+    name: 'Hyneria udlezinye',
+    scientificName: 'Hyneria udlezinye',
+    appearanceMa: 365,
+    extinctMa: 358,
+    abundanceProfile: [[365, 0.05], [362, 0.18], [360, 0.20], [358, 0.06]],
+    description: 'Apex 2.7 m Devonian sarcopterygian from high-latitude Gondwana',
+    descriptionLong: 'A massive lobe-finned predatory fish, around 2.7 meters long, named in 2022 from the Witpoort Formation of the Eastern Cape, South Africa. Despite living near the Devonian South Pole at roughly 70°S paleolatitude, it occupied the same apex-predator niche as North American Hyneria lindae, demonstrating that giant tristichopterids were a worldwide fixture of late Devonian estuaries. The species name "udlezinye" means "the one that eats others" in the local isiXhosa language.',
+    location: { lat: -33, lon: 27 }
+  },
+
+  // Carboniferous
+  {
+    id: 'arthropleura_giant',
+    name: 'Arthropleura',
+    scientificName: 'Arthropleura armata',
+    appearanceMa: 345,
+    extinctMa: 290,
+    abundanceProfile: [[345, 0.05], [320, 0.30], [305, 0.35], [298, 0.20], [290, 0.03]],
+    description: 'Up to 2.6 m Carboniferous millipede — largest land arthropod ever',
+    descriptionLong: 'A flat-bodied myriapod whose largest known specimens reached 2.6 meters and an estimated 50 kilograms, making it the biggest terrestrial arthropod that has ever lived. A spectacular partial exoskeleton found in a sandstone block on Howick beach, Northumberland, was described in 2021 and forced a major upward revision of size estimates and ecological role: Arthropleura was likely a high-fiber herbivore feeding on Lepidodendron-class lycopsid forests. It thrived in the high-oxygen Carboniferous and disappeared as atmospheric O2 declined and reptile predators diversified.',
+    location: { lat: 55.5, lon: -1.6 }
+  },
+
+  // Middle Triassic
+  {
+    id: 'cymbospondylus',
+    name: 'Cymbospondylus',
+    scientificName: 'Cymbospondylus youngorum',
+    appearanceMa: 247,
+    extinctMa: 244,
+    abundanceProfile: [[247, 0.05], [246, 0.18], [245, 0.16], [244, 0.04]],
+    description: 'Earliest known giant ichthyosaur — 17 m, just 5 Ma after end-Permian',
+    descriptionLong: 'A 17-meter ichthyosaur whose two-meter skull was excavated from the Augusta Mountains of Nevada and named in 2021. Living only about five million years after the end-Permian mass extinction, it shows that marine reptiles ballooned to sperm-whale dimensions almost as soon as ocean ecosystems recovered — far faster than the equivalent rise of giant mammals after the end-Cretaceous. Its sheer size requires an unexpectedly productive Triassic ocean and an explosive growth strategy that no living analogue truly matches.',
+    location: { lat: 40.4, lon: -118 }
+  },
+
+  // Late Triassic
+  {
+    id: 'issi_saaneq',
+    name: 'Issi saaneq',
+    scientificName: 'Issi saaneq',
+    appearanceMa: 215,
+    extinctMa: 212,
+    abundanceProfile: [[215, 0.04], [214, 0.14], [213, 0.10], [212, 0.02]],
+    description: 'Late Triassic plateosaurid sauropodomorph from Greenland (2021)',
+    descriptionLong: 'A medium-sized two-legged sauropodomorph (~3-4 meters), named in 2021 from skulls collected by Danish-led expeditions to the Jameson Land basin of east Greenland. Its name means "cold bone" in Greenlandic Inuktitut, referencing both the Arctic recovery site and the high-latitude environment Issi inhabited. The find pushes plateosaurid range deep into Pangaea\'s polar regions and helps map how this early dinosaur lineage spread before the supercontinent broke apart.',
+    location: { lat: 71, lon: -25 }
+  },
+
+  // Early Jurassic
+  {
+    id: 'ledumahadi',
+    name: 'Ledumahadi',
+    scientificName: 'Ledumahadi mafube',
+    appearanceMa: 200,
+    extinctMa: 195,
+    abundanceProfile: [[200, 0.04], [198, 0.14], [196, 0.10], [195, 0.02]],
+    description: 'Quadrupedal Early Jurassic giant sauropodomorph (12 t, S. Africa)',
+    descriptionLong: 'An Early Jurassic sauropodomorph from the Free State of South Africa, named in 2018, whose 12-tonne body weight made it the largest known terrestrial animal of its time. Limb-bone analysis showed it walked on all fours despite still belonging to the bipedal-leaning sauropodomorph grade — a precocious experiment in giant quadrupedalism tens of millions of years before the true sauropod radiation. Its Sesotho name means "giant thunderclap at dawn."',
+    location: { lat: -29, lon: 28 }
+  },
+
+  // Middle/Late Jurassic
+  {
+    id: 'maiopatagium',
+    name: 'Maiopatagium',
+    scientificName: 'Maiopatagium furculiferum',
+    appearanceMa: 162,
+    extinctMa: 158,
+    abundanceProfile: [[162, 0.04], [160, 0.12], [159, 0.10], [158, 0.03]],
+    description: 'Gliding Jurassic mammaliaform with skin membranes between limbs',
+    descriptionLong: 'A squirrel-sized haramiyidan mammaliaform from the Tiaojishan Formation of northeastern China, described in 2017 with an exquisitely preserved gliding membrane stretched between its limbs. It pre-dates the modern gliding mammals (sugar gliders, flying squirrels) by more than 100 million years and shows that early mammal-line synapsids were already exploiting arboreal niches alongside contemporary feathered dinosaurs. Its diet appears to have been soft plant parts and seeds, prefiguring the later success of arboreal mammalian herbivores.',
+    location: { lat: 41, lon: 119 }
+  },
+  {
+    id: 'yi_qi',
+    name: 'Yi qi',
+    scientificName: 'Yi qi',
+    appearanceMa: 162,
+    extinctMa: 158,
+    abundanceProfile: [[162, 0.03], [160, 0.10], [159, 0.08], [158, 0.02]],
+    description: 'Pigeon-sized scansoriopterygid with bat-like membrane wings',
+    descriptionLong: 'A tiny Jurassic theropod from the Tiaojishan Formation of Hebei, described in 2015, that combined feathers with a stiff styliform wrist bone supporting a membranous wing — closer in plan to a bat or pterosaur than to a bird. The species name (meaning "strange wing" in Mandarin) captures how surprising the find was: it shows dinosaurs experimented with at least two completely different aerodynamic architectures during the Jurassic. Yi qi was probably a short-distance glider hunting insects in the canopy.',
+    location: { lat: 41, lon: 114.5 }
+  },
+  {
+    id: 'anchiornis',
+    name: 'Anchiornis',
+    scientificName: 'Anchiornis huxleyi',
+    appearanceMa: 161,
+    extinctMa: 158,
+    abundanceProfile: [[161, 0.05], [160, 0.18], [159, 0.16], [158, 0.04]],
+    description: 'Four-winged feathered theropod with reconstructed plumage color',
+    descriptionLong: 'A crow-sized paravian from the Tiaojishan Formation of Liaoning, named in 2009 and famous as the first dinosaur to have its full body color reconstructed (in 2010) from the shape of preserved melanosomes. The result — a black-and-white body with a rusty crown patch — was the first time anyone could realistically picture what a non-avian dinosaur actually looked like. Anchiornis sits very near the dinosaur-bird transition and is now one of the best-known feathered theropods on Earth.',
+    location: { lat: 41.6, lon: 120.7 }
+  },
+  {
+    id: 'tianyulong',
+    name: 'Tianyulong',
+    scientificName: 'Tianyulong confuciusi',
+    appearanceMa: 160,
+    extinctMa: 156,
+    abundanceProfile: [[160, 0.04], [159, 0.12], [158, 0.10], [156, 0.03]],
+    description: 'Heterodontosaurid ornithischian with quill-like filamentous integument',
+    descriptionLong: 'A small, fast-running ornithischian from China, originally described in 2009 with bristly filaments preserved along its back and tail. Because ornithischians sit on the opposite branch of Dinosauria from theropods, the existence of fuzz on Tianyulong implies that protofeather-like integument is ancestral for all dinosaurs (and possibly for ornithodirans more broadly), not a theropod novelty. Subsequent work in the 2010s reinforced the interpretation, making Tianyulong a key data point in the deep history of feathers.',
+    location: { lat: 41.6, lon: 120.5 }
+  },
+
+  // Early/Mid Cretaceous
+  {
+    id: 'yutyrannus',
+    name: 'Yutyrannus',
+    scientificName: 'Yutyrannus huali',
+    appearanceMa: 126,
+    extinctMa: 122,
+    abundanceProfile: [[126, 0.04], [125, 0.16], [123, 0.14], [122, 0.04]],
+    description: '9 m feathered tyrannosauroid — biggest known feathered animal',
+    descriptionLong: 'A 9-meter, 1,400-kilogram tyrannosauroid from the Yixian Formation of Liaoning, named in 2012 with patches of long filamentous feathers preserved along its body. Its name means "beautiful feathered tyrant" in Mandarin. As by far the largest known feathered animal, Yutyrannus shows that body-covering feathers persisted at large body size in cool Early Cretaceous climates, complicating the long-running assumption that big tyrannosaurs like T. rex lost most of their integumentary insulation.',
+    location: { lat: 41.6, lon: 121 }
+  },
+  {
+    id: 'wulong',
+    name: 'Wulong',
+    scientificName: 'Wulong bohaiensis',
+    appearanceMa: 122,
+    extinctMa: 118,
+    abundanceProfile: [[122, 0.04], [120, 0.14], [119, 0.10], [118, 0.03]],
+    description: 'Crow-sized juvenile microraptorine dromaeosaurid (China, 2020)',
+    descriptionLong: 'A small four-winged dromaeosaurid from the Jiufotang Formation of Liaoning, named in 2020 from a near-complete juvenile skeleton with extensive feather impressions. Wulong\'s long bony tail tipped with paired plume-feathers shows that ornamental display structures evolved early and may have functioned in courtship before maturity, complicating the line between adult and juvenile plumage in early paravians. The name means "dancing dragon."',
+    location: { lat: 41.6, lon: 120.5 }
+  },
+  {
+    id: 'borealopelta',
+    name: 'Borealopelta',
+    scientificName: 'Borealopelta markmitchelli',
+    appearanceMa: 112,
+    extinctMa: 108,
+    abundanceProfile: [[112, 0.05], [110, 0.18], [109, 0.16], [108, 0.05]],
+    description: 'Mummified nodosaur with skin, scales, and original color preserved',
+    descriptionLong: 'A 5.5-meter armored ankylosaur recovered nose-down in marine sediment at the Suncor Millennium Mine in Alberta, named in 2017 after years of meticulous preparation. The carcass was floated out to sea, sank in low-oxygen mud, and lithified essentially three-dimensionally — preserving osteoderms, keratinous sheaths, gut contents, and even pigment chemistry that revealed reddish-brown countershading. Borealopelta is among the most lifelike dinosaur fossils ever found and remains the basis for our most confident dinosaur color reconstruction.',
+    location: { lat: 57, lon: -111.5 }
+  },
+  {
+    id: 'cretophasmomima',
+    name: 'Cretophasmomima',
+    scientificName: 'Cretophasmomima melanogramma',
+    appearanceMa: 127,
+    extinctMa: 122,
+    abundanceProfile: [[127, 0.03], [125, 0.10], [124, 0.08], [122, 0.02]],
+    description: 'Cretaceous stick insect with leaf-mimicking wing pattern',
+    descriptionLong: 'A leaf-mimicking phasmid from the Yixian Formation of Liaoning, described in 2014 from beautifully preserved adults whose dark longitudinal wing stripes mirror those of contemporary gymnosperm leaves recovered in the same beds. It is among the earliest unambiguous evidence of insect leaf-mimicry — a textbook camouflage strategy whose evolutionary origin had been hard to date. Cretophasmomima also lived alongside the first flowering plants, suggesting that the plant–insect mimicry arms race got started in the Early Cretaceous.',
+    location: { lat: 41.5, lon: 121.5 }
+  },
+  {
+    id: 'patagotitan',
+    name: 'Patagotitan',
+    scientificName: 'Patagotitan mayorum',
+    appearanceMa: 103,
+    extinctMa: 100,
+    abundanceProfile: [[103, 0.05], [102, 0.20], [101, 0.18], [100, 0.05]],
+    description: '~70 t titanosaur from Argentine Patagonia — among the largest land animals',
+    descriptionLong: 'An enormous Patagonian titanosaur, formally named in 2017 from at least six individuals quarried at La Flecha farm in Chubut Province. Femur length of 2.4 meters and a body length of around 37 meters place Patagotitan in the running for the largest land animal that ever lived (along with Argentinosaurus and Notocolossus). Its discovery filled in critical anatomy of the late lognkosaurian sauropods and inspired the iconic American Museum of Natural History full-skeleton mount.',
+    location: { lat: -43.5, lon: -69 }
+  },
+  {
+    id: 'xiyunykus',
+    name: 'Xiyunykus',
+    scientificName: 'Xiyunykus pengi',
+    appearanceMa: 122,
+    extinctMa: 118,
+    abundanceProfile: [[122, 0.03], [120, 0.10], [119, 0.08], [118, 0.02]],
+    description: 'Long-snouted Early Cretaceous alvarezsaurian theropod (Xinjiang, 2018)',
+    descriptionLong: 'A medium-sized alvarezsaurian theropod from the Tugulu Group of Xinjiang, named in 2018, that fills a critical gap between basal alvarezsaurs and the highly specialized later forms. Its elongated snout shows the early stages of the slender insectivorous skull seen in Mononykus, while its arms still retain a more typical theropod build before the lineage\'s later reduction to a single stout claw. Xiyunykus and its sister Bannykus together document one of the most striking evolutionary transformations in any dinosaur clade.',
+    location: { lat: 44, lon: 86 }
+  },
+  {
+    id: 'halszkaraptor',
+    name: 'Halszkaraptor',
+    scientificName: 'Halszkaraptor escuilliei',
+    appearanceMa: 75,
+    extinctMa: 71,
+    abundanceProfile: [[75, 0.04], [74, 0.14], [73, 0.10], [71, 0.03]],
+    description: 'Goose-necked, semi-aquatic Mongolian dromaeosaurid (2017)',
+    descriptionLong: 'A roughly duck-sized dromaeosaurid from the Mongolian Gobi, named in 2017, with a long flexible neck, flipper-like forelimbs, and a body plan more reminiscent of waterfowl than a "raptor." Synchrotron scans of the holotype settled an authentication dispute and revealed teeth, body proportions, and bone microstructure consistent with a piscivorous, semi-aquatic lifestyle. Halszkaraptor is the only confirmed semi-aquatic non-avialan dinosaur outside Spinosauridae.',
+    location: { lat: 43.5, lon: 102 }
+  },
+  {
+    id: 'mansourasaurus',
+    name: 'Mansourasaurus',
+    scientificName: 'Mansourasaurus shahinae',
+    appearanceMa: 81,
+    extinctMa: 78,
+    abundanceProfile: [[81, 0.04], [80, 0.14], [79, 0.10], [78, 0.03]],
+    description: 'Late Cretaceous African titanosaur — rare African Mesozoic dinosaur',
+    descriptionLong: 'A medium-sized titanosaur (~10 m, 5.5 t) from the Quseir Formation of the Dakhla Oasis, Egypt, named in 2018 from a partial skeleton including the skull, jaw, and significant postcrania. The specimen is the most complete late Cretaceous African dinosaur known and has phylogenetic affinities with European sauropods, indicating that land bridges between Africa and southern Europe were still functional well into the Campanian. Mansourasaurus single-handedly improved our understanding of late-Mesozoic Gondwanan biogeography.',
+    location: { lat: 25.5, lon: 28.9 }
+  },
+  {
+    id: 'vintana',
+    name: 'Vintana',
+    scientificName: 'Vintana sertichi',
+    appearanceMa: 71,
+    extinctMa: 66,
+    abundanceProfile: [[71, 0.04], [70, 0.14], [68, 0.12], [66, 0.04]],
+    description: 'Baseball-sized-skull gondwanatherian from Late Cretaceous Madagascar',
+    descriptionLong: 'A 9-kilogram herbivorous gondwanatherian mammal from the Maevarano Formation of Madagascar, named in 2014 from a remarkably complete skull. Its size dwarfed every other Mesozoic mammal known at the time, and its grinding dentition suggests it ate tough vegetation on a Late Cretaceous Gondwanan island already evolving its peculiar isolated fauna. Vintana means "luck" in Malagasy — a nod to the unexpected discovery that Mesozoic mammals could be this large and this strange.',
+    location: { lat: -16, lon: 46.5 }
+  },
+  {
+    id: 'adalatherium',
+    name: 'Adalatherium',
+    scientificName: 'Adalatherium hui',
+    appearanceMa: 70,
+    extinctMa: 66,
+    abundanceProfile: [[70, 0.04], [69, 0.13], [67, 0.11], [66, 0.04]],
+    description: '"Crazy beast" — gondwanatherian mammal with extreme insular morphology',
+    descriptionLong: 'A 3-kilogram badger-like mammal from the Maevarano Formation of Madagascar, named in 2020 from a near-complete skeleton (the most complete Mesozoic mammal from the Southern Hemisphere). Its body plan combines a long flexible spine with massive forelimbs, bizarre tooth morphology, and an unprecedented number of cranial foramina, suggesting a sensory and behavioral package unlike any modern analog. Adalatherium hui (Malagasy "crazy beast / Hu\'s") embodies how isolated Late Cretaceous Madagascar incubated its own evolutionary experiments alongside the dinosaurs.',
+    location: { lat: -16, lon: 46.5 }
+  },
+  {
+    id: 'natovenator',
+    name: 'Natovenator',
+    scientificName: 'Natovenator polydontus',
+    appearanceMa: 73,
+    extinctMa: 69,
+    abundanceProfile: [[73, 0.03], [72, 0.10], [71, 0.08], [69, 0.02]],
+    description: 'Streamlined diving dromaeosaurid from Mongolia (2022)',
+    descriptionLong: 'A small Halszkaraptor-relative from the Barun Goyot Formation of Mongolia, named in 2022, whose ribcage shows the goose-style streamlining typical of modern diving birds — flat, posteriorly-directed ribs that compress the body into a hydrodynamic shape. Combined with its many small needle-like teeth and a sinuous neck, Natovenator firmly establishes a second clear case of semi-aquatic ecology in non-avialan theropods. The name means "swimming hunter."',
+    location: { lat: 43.5, lon: 102 }
+  },
+  {
+    id: 'dakotaraptor',
+    name: 'Dakotaraptor',
+    scientificName: 'Dakotaraptor steini',
+    appearanceMa: 67,
+    extinctMa: 66,
+    abundanceProfile: [[67, 0.04], [66.5, 0.12], [66.1, 0.10], [66, 0.02]],
+    description: '5+ m feathered dromaeosaurid from Hell Creek (S. Dakota, 2015)',
+    descriptionLong: 'A roughly 5.5-meter dromaeosaurid from the Hell Creek Formation of South Dakota, named in 2015, with quill knobs on the ulna confirming flight-style feathers on the arms despite the animal being far too large to fly. Dakotaraptor lived alongside Tyrannosaurus rex right up to the K-Pg boundary, occupying a mid-sized predator niche otherwise hard to fill in latest Maastrichtian faunas. Some elements of the original holotype have since been argued to belong to a turtle, but the dromaeosaurid identity of the type material itself stands.',
+    location: { lat: 45.6, lon: -103.4 }
+  },
+
+  // Earliest Paleogene
+  {
+    id: 'asteriornis',
+    name: 'Asteriornis',
+    scientificName: 'Asteriornis maastrichtensis',
+    appearanceMa: 67,
+    extinctMa: 66,
+    abundanceProfile: [[67, 0.04], [66.7, 0.12], [66.3, 0.10], [66, 0.04]],
+    description: '"Wonderchicken" — earliest known modern crown-bird (Belgium, 2020)',
+    descriptionLong: 'A small chicken-sized bird from latest Cretaceous beach deposits in Belgium, named in 2020, whose nearly complete skull is the oldest unambiguous fossil of a modern crown bird. It sits at or near the split between landfowl (chickens) and waterfowl (ducks), proving that the Galloanserae lineage already existed when the asteroid struck — and probably explaining why these groups, alongside paleognaths and a few neoavians, were the seed stock for all 11,000 living bird species. Its informal nickname "Wonderchicken" stuck immediately.',
+    location: { lat: 51, lon: 3.7 }
+  },
+
+  // Eocene
+  {
+    id: 'kumimanu',
+    name: 'Kumimanu',
+    scientificName: 'Kumimanu fordycei',
+    appearanceMa: 59,
+    extinctMa: 55,
+    abundanceProfile: [[59, 0.04], [57, 0.14], [56, 0.12], [55, 0.04]],
+    description: 'Heaviest known penguin (~150 kg) — Paleocene New Zealand, 2023',
+    descriptionLong: 'A giant Paleocene penguin from the Moeraki Formation of New Zealand\'s Otago coast, formally described in 2023, whose flipper bones imply a body mass around 150 kilograms — three times the largest living penguin (the emperor) and the heaviest seabird ever known. Kumimanu shows that penguins had achieved gigantism within just a few million years of the K-Pg extinction, exploiting marine niches left empty by the demise of mosasaurs and pteranodontids. Its name means "monster bird" in Maori.',
+    location: { lat: -45.5, lon: 170.6 }
+  },
+  {
+    id: 'phiomicetus',
+    name: 'Phiomicetus',
+    scientificName: 'Phiomicetus anubis',
+    appearanceMa: 44,
+    extinctMa: 41,
+    abundanceProfile: [[44, 0.04], [43, 0.14], [42, 0.12], [41, 0.03]],
+    description: '3 m four-legged predatory whale; "Anubis whale" (Egypt, 2021)',
+    descriptionLong: 'A roughly 3-meter, 600-kilogram four-legged whale from the Fayum Depression of Egypt, named in 2021 — the first protocetid whale described by an Arab-led team. Its powerful jaws and elongated skull proportions earned it the species name "anubis" after the Egyptian god of mummification, evoking a fearsome predator able to take large prey on land or in water. Phiomicetus refines our picture of how amphibious whales spread across the Tethys Sea coastlines on their way to fully aquatic life.',
+    location: { lat: 29.3, lon: 30.7 }
+  },
+  {
+    id: 'peregocetus',
+    name: 'Peregocetus',
+    scientificName: 'Peregocetus pacificus',
+    appearanceMa: 43,
+    extinctMa: 40,
+    abundanceProfile: [[43, 0.04], [42.5, 0.13], [41, 0.10], [40, 0.03]],
+    description: 'Four-legged whale on the Pacific coast of Peru — first New World find',
+    descriptionLong: 'A 4-meter four-legged whale from Playa Media Luna, Peru, named in 2019 — the first quadrupedal whale ever found in the Americas. Anatomical details of the tail and feet suggest it could swim using both webbed feet and a tail-driven undulation, a transitional locomotion mode between Indohyus-style wading and the fully fluked propulsion of basilosaurids. Its presence in South America implies that early whales crossed the South Atlantic from West Africa within just a few million years of taking to the water.',
+    location: { lat: -14.4, lon: -75.9 }
+  },
+  {
+    id: 'inkayacu',
+    name: 'Inkayacu',
+    scientificName: 'Inkayacu paracasensis',
+    appearanceMa: 37,
+    extinctMa: 34,
+    abundanceProfile: [[37, 0.04], [36, 0.14], [35, 0.12], [34, 0.04]],
+    description: 'Giant Eocene Peruvian penguin with reconstructed reddish-brown plumage',
+    descriptionLong: 'A 1.5-meter Eocene penguin from the Otuma Formation of Peru\'s Pisco Basin, named in 2010 from a near-complete skeleton with feather impressions. Crucially, melanosomes preserved in its plumage allowed the first color reconstruction of any extinct penguin, revealing reddish-brown and grey rather than the modern black-and-white. Inkayacu shows that penguin gigantism extended into low latitudes during the warmer Eocene and that today\'s tuxedo coloring is a comparatively recent specialization.',
+    location: { lat: -14, lon: -75.5 }
+  },
+
+  // Pleistocene Hominins
+  {
+    id: 'denisovans',
+    name: 'Denisovans',
+    scientificName: 'Homo sp. Denisova',
+    appearanceMa: 0.5,
+    extinctMa: 0.03,
+    abundanceProfile: [[0.5, 0.05], [0.2, 0.20], [0.06, 0.18], [0.03, 0.02]],
+    description: 'Asian sister group to Neanderthals, identified from genetics in 2010',
+    descriptionLong: 'A previously unknown human lineage first identified in 2010 from a single finger bone in Denisova Cave, Siberia, when ancient DNA revealed it belonged to neither Homo sapiens nor Neanderthals. Subsequent finds (a jaw from the Tibetan Plateau in 2019; teeth from Laos in 2022) extended their range across East Asia and into high-altitude environments. Surviving Denisovan ancestry of up to 5% in modern Melanesians and Papuans shows that they interbred extensively with our own species before going extinct around 30,000 years ago.',
+    location: { lat: 51.4, lon: 84.7 }
+  },
+  {
+    id: 'homo_naledi',
+    name: 'Homo naledi',
+    scientificName: 'Homo naledi',
+    appearanceMa: 0.335,
+    extinctMa: 0.236,
+    abundanceProfile: [[0.335, 0.05], [0.3, 0.18], [0.27, 0.16], [0.236, 0.04]],
+    description: 'Mosaic-anatomy hominin from Rising Star Cave, S. Africa (2015)',
+    descriptionLong: 'A small-brained but otherwise gracile hominin named in 2015 from over 1,500 fossils packed into the nearly inaccessible Dinaledi Chamber of South Africa\'s Rising Star Cave system. Its mosaic anatomy — primitive shoulders and pelvis, modern feet and teeth — initially suggested a Pliocene age, but radiometric dating in 2017 placed it at just 335-236 thousand years ago, contemporary with early Homo sapiens. Whether the chamber represents deliberate body disposal by Homo naledi remains contested but stands as one of the most provocative open questions in paleoanthropology.',
+    location: { lat: -25.9, lon: 27.8 }
+  },
+  {
+    id: 'homo_longi',
+    name: 'Homo longi',
+    scientificName: 'Homo longi',
+    appearanceMa: 0.2,
+    extinctMa: 0.146,
+    abundanceProfile: [[0.2, 0.05], [0.18, 0.16], [0.16, 0.14], [0.146, 0.04]],
+    description: '"Dragon Man" — large-skulled Pleistocene hominin from Harbin (2021)',
+    descriptionLong: 'A massive, well-preserved Middle Pleistocene cranium from Harbin, northeast China, named in 2021 from a skull that had been hidden in a well since 1933 to keep it from Japanese occupiers. Its huge braincase, broad face, and large brow ridge prompted formal designation as a new species (Homo longi, "dragon"), though many researchers now suspect the specimen actually represents a Denisovan — which would finally give that elusive lineage a face. Either way, Homo longi enriches the picture of how diverse our genus was in Asia just before sapiens arrived.',
+    location: { lat: 45.8, lon: 126.5 }
+  },
+  {
+    id: 'homo_luzonensis',
+    name: 'Homo luzonensis',
+    scientificName: 'Homo luzonensis',
+    appearanceMa: 0.067,
+    extinctMa: 0.05,
+    abundanceProfile: [[0.067, 0.04], [0.06, 0.12], [0.055, 0.10], [0.05, 0.02]],
+    description: 'Small-bodied Philippine island hominin from Callao Cave (2019)',
+    descriptionLong: 'A small-bodied hominin named in 2019 from a handful of teeth and foot bones found in Callao Cave on Luzon, Philippines, dated to between 67 and 50 thousand years ago. Its mosaic anatomy — primitive curved finger and toe bones together with modern-looking molars — closely parallels Homo floresiensis on the nearby island of Flores, suggesting that Southeast Asia hosted multiple independent island-dwarf hominin lineages contemporaneous with early Homo sapiens. Luzon was never connected to mainland Asia, implying these ancestors arrived by water.',
+    location: { lat: 17.7, lon: 121.8 }
+  },
 ];
 
 // Merge Linnaean taxonomy + rank (and any scientificName overrides) into every entry.

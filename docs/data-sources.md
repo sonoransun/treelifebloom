@@ -35,7 +35,7 @@ The `temporalWeight` field is editorial, not from any source — it controls how
 
 ## Species & abundance profiles
 
-`js/data/species.js` — 119 species, each with an `abundanceProfile` of `[Ma, abundance]` pairs.
+`js/data/species.js` — 155 species, each with an `abundanceProfile` of `[Ma, abundance]` pairs.
 
 Profiles are illustrative, not quantitative — designed so the sidebar's "dominant life" ranking moves through plausible successions (Stromatolites → trilobites → fish → tetrapods → dinosaurs → mammals → hominins). First-appearance and last-appearance dates loosely follow:
 
@@ -46,9 +46,50 @@ Profiles are illustrative, not quantitative — designed so the sidebar's "domin
 
 Locations are paleogeographically plausible but approximate.
 
+### Recent-discovery additions (post-2010 paleontology)
+
+A batch of ~36 species added later draws from primary literature published since 2010, much of it summarized in popular outlets but cited here in shortened form for traceability:
+
+- **Berger, L. R. et al.** (2015) "Homo naledi, a new species of the genus Homo" *eLife* — `homo_naledi`.
+- **Détroit, F. et al.** (2019) "A new species of Homo from the Late Pleistocene of the Philippines" *Nature* — `homo_luzonensis`.
+- **Reich, D. et al.** (2010) "Genetic history of an archaic hominin group from Denisova Cave" *Nature* — `denisovans`.
+- **Ji, Q. et al.** (2021) "Late Middle Pleistocene Harbin cranium represents a new Homo species" *The Innovation* — `homo_longi`.
+- **Carballido, J. L. et al.** (2017) "A new giant titanosaur sheds light on body mass evolution" *Proc. R. Soc. B* — `patagotitan`.
+- **Xu, X. et al.** (2015) "A bizarre Jurassic maniraptoran theropod with preserved evidence of membranous wings" *Nature* — `yi_qi`.
+- **Brown, C. M. et al.** (2017) "An exceptionally preserved three-dimensional armored dinosaur reveals insights into coloration and Cretaceous predator-prey dynamics" *Curr. Biol.* — `borealopelta`.
+- **Cau, A. et al.** (2017) "Synchrotron scanning reveals amphibious ecomorphology in a new clade of bird-like dinosaurs" *Nature* — `halszkaraptor`.
+- **Poust, A. W. et al.** (2020) "A new microraptorine theropod from the Jehol Biota" *Anat. Rec.* — `wulong`.
+- **McPhee, B. W. et al.** (2018) "A giant dinosaur from the earliest Jurassic of South Africa and the transition to quadrupedality in early sauropodomorphs" *Curr. Biol.* — `ledumahadi`.
+- **Sallam, H. M. et al.** (2018) "New Egyptian sauropod reveals Late Cretaceous dinosaur dispersal between Europe and Africa" *Nat. Ecol. Evol.* — `mansourasaurus`.
+- **Beccari, V. et al.** (2021) "Issi saaneq gen. et sp. nov. — a new sauropodomorph dinosaur from the Late Triassic of Greenland" *Diversity* — `issi_saaneq`.
+- **Xu, X. et al.** (2012) "A gigantic feathered dinosaur from the Lower Cretaceous of China" *Nature* — `yutyrannus`.
+- **Hu, D. et al.** (2009) "A pre-Archaeopteryx troodontid theropod from China with long feathers on the metatarsus" *Nature* + **Li, Q. et al.** (2010) "Plumage color patterns of an extinct dinosaur" *Science* — `anchiornis`.
+- **DePalma, R. A. et al.** (2015) "The first giant raptor (Theropoda: Dromaeosauridae) from the Hell Creek Formation" *Paleontol. Contrib.* — `dakotaraptor`.
+- **Zheng, X.-T. et al.** (2009) "An Early Cretaceous heterodontosaurid dinosaur with filamentous integumentary structures" *Nature* — `tianyulong`.
+- **Lee, S. et al.** (2022) "A non-avian dinosaur with a streamlined body exhibits potential adaptations for swimming" *Commun. Biol.* — `natovenator`.
+- **Sander, P. M. et al.** (2021) "Early giant reveals faster evolution of large body size in ichthyosaurs than in cetaceans" *Science* — `cymbospondylus`.
+- **Moysiuk, J. & Caron, J.-B.** (2019) "A new hurdiid radiodont from the Burgess Shale evinces the exploitation of Cambrian infaunal food sources" *Proc. R. Soc. B* — `cambroraster`.
+- **Moysiuk, J. & Caron, J.-B.** (2022) "A three-eyed radiodont with fossilized neuroanatomy informs the origin of the arthropod head and segmentation" *Curr. Biol.* — `stanleycaris`.
+- **Aria, C. & Caron, J.-B.** (2017) "Mandibulate convergence in an armoured Cambrian stem chelicerate" *BMC Evol. Biol.* — `habelia`.
+- **Lambert, O. et al.** (2019) "An amphibious whale from the Middle Eocene of Peru reveals early South Pacific dispersal of quadrupedal cetaceans" *Curr. Biol.* — `peregocetus`.
+- **Gohar, A. S. et al.** (2021) "A new protocetid whale offers clues to biogeography and feeding ecology in early cetacean evolution" *Proc. R. Soc. B* — `phiomicetus`.
+- **Field, D. J. et al.** (2020) "Late Cretaceous neornithine from Europe illuminates the origins of crown birds" *Nature* — `asteriornis`.
+- **Clarke, J. A. et al.** (2010) "Fossil evidence for evolution of the shape and color of penguin feathers" *Science* — `inkayacu`.
+- **Ksepka, D. T. et al.** (2023) "Largest-known fossil penguin provides insight into the early evolution of sphenisciform body size and flipper anatomy" *J. Paleontol.* — `kumimanu`.
+- **Meng, Q.-J. et al.** (2017) "New gliding mammaliaforms from the Jurassic" *Nature* — `maiopatagium`.
+- **Krause, D. W. et al.** (2014) "First cranial remains of a gondwanatherian mammal reveal remarkable mosaicism" *Nature* — `vintana`.
+- **Krause, D. W. et al.** (2020) "Skeleton of a Cretaceous mammal from Madagascar reflects long-term insularity" *Nature* — `adalatherium`.
+- **Loron, C. C. et al.** (2019) "Early fungi from the Proterozoic era in Arctic Canada" *Nature* — `ourasphaira`.
+- **Wang, M. et al.** (2014) "Stick insect leaf mimicry in the mid-Mesozoic" *PLoS ONE* — `cretophasmomima`.
+- **Han, J. et al.** (2017) "Meiofaunal deuterostomes from the basal Cambrian of Shaanxi" *Nature* + **Liu, Y. et al.** (2022) "Saccorhytus is an early ecdysozoan and not the earliest deuterostome" *Nature* — `saccorhytus`.
+- **Xu, X. et al.** (2018) "Two Early Cretaceous fossils document transitional stages in alvarezsaurian dinosaur evolution" *Curr. Biol.* — `xiyunykus`.
+- **Stewart, T. A. et al.** (2022) "A new elpistostegalian from the Late Devonian of the Canadian Arctic" *Nature* — `qikiqtania`.
+- **Gess, R. & Ahlberg, P. E.** (2022) "A high-latitude Gondwanan species of the Late Devonian tristichopterid Hyneria" *PLoS ONE* — `hyneria_udlezinye`.
+- **Davies, N. S. et al.** (2021) "The largest arthropod in Earth history: insights from newly discovered Arthropleura remains" *J. Geol. Soc.* — `arthropleura_giant`.
+
 ## Taxonomy
 
-`js/data/speciesTaxonomy.js` — a domain → species Linnaean lineage for every one of the 119 entries, plus a `rank` field naming the most specific level each entry represents. Merged into `species.js` at module load.
+`js/data/speciesTaxonomy.js` — a domain → species Linnaean lineage for every one of the 155 entries, plus a `rank` field naming the most specific level each entry represents. Merged into `species.js` at module load.
 
 Classifications follow mainstream consensus from current reference sources rather than any single cladistic authority:
 

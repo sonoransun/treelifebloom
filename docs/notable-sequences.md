@@ -1,6 +1,6 @@
 # Notable sequences
 
-Ten moments worth pausing on. Each links to a detailed walkthrough with an embedded clip, an explainer, and a checklist of what to watch for.
+Eleven moments worth pausing on. Each links to a detailed walkthrough with an embedded clip, an explainer, and a checklist of what to watch for.
 
 The thumbnail PNGs and WebM/GIF clips are produced by `scripts/capture/capture.js` (see [docs/capture.md](capture.md)). On a fresh clone they may be absent — run `node scripts/capture/capture.js --all` from `scripts/capture/` to populate them.
 
@@ -13,9 +13,10 @@ The thumbnail PNGs and WebM/GIF clips are produced by `scripts/capture/capture.j
 | 5 | <a href="sequences/forests.md"><img src="../assets/screenshots/05-forests.png" alt="First Forests" width="160"></a> | 410 → 360 | [First Forests (Devonian)](sequences/forests.md) | Land turns green, fish crawl out |
 | 6 | <a href="sequences/permian.md"><img src="../assets/screenshots/06-permian.png" alt="End-Permian" width="160"></a> | 256 → 250 | [End-Permian "Great Dying"](sequences/permian.md) | 96% extinction; clock pauses on the overlay |
 | 7 | <a href="sequences/jurassic.md"><img src="../assets/screenshots/07-jurassic.png" alt="Jurassic" width="160"></a> | 200 → 145 | [Jurassic Dinosaurs](sequences/jurassic.md) | Pangaea splits, peak dinosaur diversity |
-| 8 | <a href="sequences/kpg.md"><img src="../assets/screenshots/08-kpg.png" alt="K-Pg" width="160"></a> | 67 → 64 | [K-Pg Asteroid Impact](sequences/kpg.md) | Asteroid streak, dinosaurs vanish |
-| 9 | <a href="sequences/pleistocene.md"><img src="../assets/screenshots/09-pleistocene.png" alt="Pleistocene" width="160"></a> | 2.5 → 0.012 | [Ice Age & Megafauna](sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves |
-| 10 | <a href="sequences/hominin.md"><img src="../assets/screenshots/10-hominin.png" alt="Hominin" width="160"></a> | 6 → 0 | [Hominin Emergence](sequences/hominin.md) | Ardipithecus → erectus → Neanderthal → sapiens |
+| 8 | <a href="sequences/feathered.md"><img src="../assets/screenshots/08-feathered.png" alt="Feathered (poster TBD)" width="160"></a> | 165 → 65 | [Feathered Dinosaurs & Dawn of Birds](sequences/feathered.md) | Tianyulong, Yi qi, Yutyrannus, Wulong, Asteriornis "Wonderchicken" |
+| 9 | <a href="sequences/kpg.md"><img src="../assets/screenshots/09-kpg.png" alt="K-Pg" width="160"></a> | 67 → 64 | [K-Pg Asteroid Impact](sequences/kpg.md) | Asteroid streak, dinosaurs vanish |
+| 10 | <a href="sequences/pleistocene.md"><img src="../assets/screenshots/10-pleistocene.png" alt="Pleistocene" width="160"></a> | 2.5 → 0.012 | [Ice Age & Megafauna](sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves |
+| 11 | <a href="sequences/hominin.md"><img src="../assets/screenshots/11-hominin.png" alt="Hominin" width="160"></a> | 6 → 0 | [Hominin Emergence](sequences/hominin.md) | Sahelanthropus → erectus → Neanderthal/Denisovan/naledi/sapiens |
 
 ## Reading order
 

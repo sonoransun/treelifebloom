@@ -47,11 +47,15 @@ graph TD
     S --> SP[Sauropodomorpha<br/>long-necks]
     T --> Al[Allosauridae<br/>Allosaurus]
     T --> Cl[Coelophysidae<br/>Coelophysis]
+    T --> Sc[Scansoriopterygidae<br/>Yi qi — bat-winged]
+    T --> An[Anchiornithidae<br/>Anchiornis — color reconstructed]
     T --> Av[Avialae<br/>Archaeopteryx → birds]
     SP --> Br[Brachiosauridae]
     SP --> Dp[Diplodocidae]
+    SP --> Le[Ledumahadi<br/>quadrupedal early giant]
     O --> St[Stegosauria<br/>Stegosaurus]
     O --> Or[Ornithopoda<br/>Iguanodon line]
+    O --> Hd[Heterodontosauridae<br/>Tianyulong — fuzzy ornithischian]
 ```
 
 Parallel, off-the-Dinosauria branches flourishing in the same clip: **Pterosauria** (Pterodactylus) in the air, **Ichthyosauria** + **Plesiosauria** in the seas.
@@ -61,16 +65,16 @@ Parallel, off-the-Dinosauria branches flourishing in the same clip: **Pterosauri
 - **Pangaea visibly splits under the plate overlay** — divergent ridges (orange-red dashed) open in the Central Atlantic, transform offsets (yellow-green) jog along the Pacific margin, and convergent teeth (blue, with tick marks) form the subduction zones along the active coasts.
 - **Continents** drift noticeably during the clip — Pangaea is mid-rift.
 - **No polar ice caps** — temperature is well above the warm threshold so glaciation is suppressed.
-- **Sidebar** features Brachiosaurus, Diplodocus, Stegosaurus, Allosaurus, Pterodactylus, Ichthyosaurs, and Plesiosaurs.
+- **Sidebar** features Brachiosaurus, Diplodocus, Stegosaurus, Allosaurus, Pterodactylus, Ichthyosaurs, and Plesiosaurs. Recent feathered-dinosaur additions also light up: **Anchiornis** (the first dinosaur with a complete color reconstruction), **Yi qi** (membranous bat-like wings — a parallel flight experiment), **Tianyulong** (a fuzzy ornithischian, suggesting feathers go all the way back to the base of Dinosauria), and the gliding mammaliaform **Maiopatagium** (an early mammal-line aerialist sharing the canopy). The sauropodomorph **Ledumahadi** rounds out the early Jurassic giants.
 - **Marker halos** cluster across multiple continents as dinosaurs spread before the breakup completes.
 
 ### Time-anchored callouts (10 s clip)
 
 | Clip time | Time-Ma window | UI detail to watch |
 |---|---|---|
-| 0 s – 3 s | 200 → 180 Ma | Pangaea still mostly one mass; plate overlay shows Central Atlantic rift opening (orange-red dashed) |
-| 3 s – 6 s | 180 → 160 Ma | Sauropods (Brachiosaurus, Diplodocus) and theropods (Allosaurus) fill the sidebar; Ichthyosaurs + Plesiosaurs in seas |
-| 6 s – 9 s | 160 → 150 Ma | Stegosaurus peaks; Archaeopteryx appears (its own color — Aves) as the feathered-flight branch |
+| 0 s – 3 s | 200 → 180 Ma | Pangaea still mostly one mass; plate overlay shows Central Atlantic rift opening; Ledumahadi pulses in S. Africa as the largest Early Jurassic herbivore |
+| 3 s – 6 s | 180 → 160 Ma | Sauropods (Brachiosaurus, Diplodocus) and theropods (Allosaurus) fill the sidebar; Ichthyosaurs + Plesiosaurs in seas; Maiopatagium glides in the Liaoning canopy |
+| 6 s – 9 s | 160 → 150 Ma | Stegosaurus peaks; **feathered-dinosaur cluster lights up Liaoning** — Anchiornis (color-reconstructed), Yi qi (bat wings), Tianyulong (fuzzy ornithischian); Archaeopteryx then appears as the avialan branch |
 | 9 s – 10 s | 150 → 145 Ma | Pangaea clearly split into two; Gondwana + Laurasia distinct with a widening Tethys |
 
 ## Related data

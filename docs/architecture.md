@@ -184,7 +184,7 @@ The same taxonomy drives:
 |---|---|
 | `js/data/timeline.js` | 26 geological periods with ICS colors and `temporalWeight` values |
 | `js/data/continents.js` | 12 continental polygon time slices |
-| `js/data/species.js` | 119 species with abundance profiles; merges Linnaean `taxonomy` + `rank` from `speciesTaxonomy.js` at load |
+| `js/data/species.js` | 155 species with abundance profiles; merges Linnaean `taxonomy` + `rank` from `speciesTaxonomy.js` at load |
 | `js/data/speciesTaxonomy.js` | Domain → species lineage for every entry, keyed by species id |
 | `js/data/extinctions.js` | The Big Five with timing, severity, cause, signature color |
 | `js/data/atmosphere.js` | Temperature, O₂, CO₂ curves |

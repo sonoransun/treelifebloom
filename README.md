@@ -14,14 +14,14 @@ An interactive animated visualization of Earth's evolutionary history spanning 4
       <sub><b>Cambrian Explosion</b> — 540 → 480 Ma · <a href="docs/sequences/cambrian.md">walkthrough</a></sub>
     </td>
     <td align="center">
-      <video src="assets/animations/08-kpg.webm" autoplay loop muted playsinline width="320">
-        <img src="assets/animations/08-kpg.gif" alt="K-Pg asteroid impact" width="320">
+      <video src="assets/animations/09-kpg.webm" autoplay loop muted playsinline width="320">
+        <img src="assets/animations/09-kpg.gif" alt="K-Pg asteroid impact" width="320">
       </video><br/>
       <sub><b>K-Pg Asteroid Impact</b> — 67 → 64 Ma · <a href="docs/sequences/kpg.md">walkthrough</a></sub>
     </td>
     <td align="center">
-      <video src="assets/animations/09-pleistocene.webm" autoplay loop muted playsinline width="320">
-        <img src="assets/animations/09-pleistocene.gif" alt="Ice Age & megafauna" width="320">
+      <video src="assets/animations/10-pleistocene.webm" autoplay loop muted playsinline width="320">
+        <img src="assets/animations/10-pleistocene.gif" alt="Ice Age & megafauna" width="320">
       </video><br/>
       <sub><b>Ice Age & Megafauna</b> — 2.5 → 0.012 Ma · <a href="docs/sequences/pleistocene.md">walkthrough</a></sub>
     </td>
@@ -43,7 +43,7 @@ Then open <http://localhost:8080> in a modern browser. A full play-through at 1�
 
 ## Featured sequences
 
-Ten moments worth pausing on, each with a dedicated walkthrough.
+Eleven moments worth pausing on, each with a dedicated walkthrough.
 
 | # | Time (Ma) | Sequence | What to watch |
 |---|-----------|----------|---------------|
@@ -54,9 +54,10 @@ Ten moments worth pausing on, each with a dedicated walkthrough.
 | 5 | 410 → 360 | [First Forests (Devonian)](docs/sequences/forests.md) | Land turns green, fish crawl out, O₂ surges |
 | 6 | 256 → 250 | [End-Permian "Great Dying"](docs/sequences/permian.md) | 96% of species lost; clock pauses on the overlay |
 | 7 | 200 → 145 | [Jurassic Dinosaurs](docs/sequences/jurassic.md) | Pangaea splits, peak dinosaur diversity |
-| 8 | 67 → 64 | [K-Pg Asteroid Impact](docs/sequences/kpg.md) | Asteroid streak across the sky, dinosaurs vanish |
-| 9 | 2.5 → 0.012 | [Ice Age & Megafauna](docs/sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves dominate |
-| 10 | 6 → 0 | [Hominin Emergence](docs/sequences/hominin.md) | Ardipithecus → Homo erectus → Neanderthal → sapiens |
+| 8 | 165 → 65 | [Feathered Dinosaurs & Dawn of Birds](docs/sequences/feathered.md) | Tianyulong, Yi qi, Yutyrannus, Wulong, Asteriornis — much of it discovered post-2010 |
+| 9 | 67 → 64 | [K-Pg Asteroid Impact](docs/sequences/kpg.md) | Asteroid streak across the sky, dinosaurs vanish |
+| 10 | 2.5 → 0.012 | [Ice Age & Megafauna](docs/sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves dominate |
+| 11 | 6 → 0 | [Hominin Emergence](docs/sequences/hominin.md) | Sahelanthropus → Australopithecus → erectus → Neanderthal/Denisovan/naledi/sapiens |
 
 <p align="center">
   <a href="docs/sequences/hadean.md"><img src="assets/screenshots/01-hadean.png" alt="Hadean" width="128"></a>
@@ -66,9 +67,10 @@ Ten moments worth pausing on, each with a dedicated walkthrough.
   <a href="docs/sequences/forests.md"><img src="assets/screenshots/05-forests.png" alt="First Forests" width="128"></a>
   <a href="docs/sequences/permian.md"><img src="assets/screenshots/06-permian.png" alt="End-Permian" width="128"></a>
   <a href="docs/sequences/jurassic.md"><img src="assets/screenshots/07-jurassic.png" alt="Jurassic" width="128"></a>
-  <a href="docs/sequences/kpg.md"><img src="assets/screenshots/08-kpg.png" alt="K-Pg" width="128"></a>
-  <a href="docs/sequences/pleistocene.md"><img src="assets/screenshots/09-pleistocene.png" alt="Pleistocene" width="128"></a>
-  <a href="docs/sequences/hominin.md"><img src="assets/screenshots/10-hominin.png" alt="Hominin" width="128"></a>
+  <a href="docs/sequences/feathered.md"><img src="assets/screenshots/08-feathered.png" alt="Feathered Dinosaurs (poster TBD — regenerate via capture pipeline)" width="128"></a>
+  <a href="docs/sequences/kpg.md"><img src="assets/screenshots/09-kpg.png" alt="K-Pg" width="128"></a>
+  <a href="docs/sequences/pleistocene.md"><img src="assets/screenshots/10-pleistocene.png" alt="Pleistocene" width="128"></a>
+  <a href="docs/sequences/hominin.md"><img src="assets/screenshots/11-hominin.png" alt="Hominin" width="128"></a>
 </p>
 
 The full index lives in **[docs/notable-sequences.md](docs/notable-sequences.md)**.
@@ -98,7 +100,7 @@ Coastlines are rendered with **deterministic fractal subdivision** plus **smooth
 
 ### Species & evolution
 
-**119 species** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens*.
+**155 species** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens* — including a recent batch of post-2010 paleontological discoveries (Patagotitan, Yi qi, the "Wonderchicken" Asteriornis, Homo naledi, Cambroraster, Ourasphaira, and many more).
 
 Every species carries a full Linnaean lineage — domain → kingdom → class/phylum → order → family → genus → species — and that lineage drives the whole UI:
 

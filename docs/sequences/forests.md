@@ -44,7 +44,7 @@ flowchart LR
 
 ## What to watch for
 
-- **Sidebar** fills with new fish (Dunkleosteus, Eusthenopteron, lobe-fins) and the first plant entries (Archaeopteris, Cooksonia hold-overs).
+- **Sidebar** fills with new fish (Dunkleosteus, Eusthenopteron, lobe-fins) and the first plant entries (Archaeopteris, Cooksonia hold-overs). Two recent finds round out the lobe-fin story: **Qikiqtania** (named 2022 from Tiktaalik's Ellesmere Island sites) — a tetrapodomorph that *returned* to fully aquatic life — and **Hyneria udlezinye** (named 2022 from South Africa) — a 2.7 m apex predator showing that giant tristichopterids prowled high-latitude Gondwana too.
 - **O₂ readout** ramps up — first forests draw down CO₂ and pump out oxygen. By the late Devonian, O₂ is well above modern levels heading into the Carboniferous spike.
 - **CO₂ readout** drops correspondingly.
 - **Marker halos** cluster around shallow-coastal locations as marine life diversifies.
@@ -56,8 +56,8 @@ flowchart LR
 |---|---|---|
 | 0 s – 3 s | 410 → 395 Ma | First Devonian fish markers (Acanthodii jaws, early placoderms) pulse along coastlines |
 | 3 s – 6 s | 395 → 380 Ma | Archaeopteris (first forests) rises in the sidebar green band; O₂ sparkline inflects upward |
-| 6 s – 8 s | 380 → 370 Ma | Dunkleosteus + Eusthenopteron visible in sidebar; Tiktaalik appears as a transitional leaf near the shore |
-| 8 s – 10 s | 370 → 360 Ma | Ichthyostega / Acanthostega join the list; end-window may include onset of Late Devonian extinction pause |
+| 6 s – 8 s | 380 → 370 Ma | Dunkleosteus + Eusthenopteron visible in sidebar; Tiktaalik appears as a transitional leaf near the shore; Qikiqtania pulses on Ellesmere Island as the "return to water" cousin |
+| 8 s – 10 s | 370 → 360 Ma | Ichthyostega / Acanthostega join the list; Hyneria udlezinye appears as a Gondwanan apex predator; end-window may include onset of Late Devonian extinction pause |
 
 ## Related data
 

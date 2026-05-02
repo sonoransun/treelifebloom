@@ -84,7 +84,17 @@ export const sequences = [
     blurb: 'Pangaea splits, oceans flood the gaps, and dinosaur diversity reaches its peak.',
   },
   {
-    id: 'kpg', order: 8,
+    id: 'feathered', order: 8,
+    title: 'Feathered Dinosaurs & Dawn of Birds',
+    view: '2d', panel: 'sidebar', plates: false,
+    startMa: 165, endMa: 65,
+    durationSec: 22, posterAt: 0.45, fps: 30,
+    width: 1280, height: 720,
+    crossesExtinction: true,
+    blurb: 'A century of "scaly lizards" gives way to a 100-Ma explosion of feathers, gliding membranes, and proto-birds — much of it discovered post-2010.',
+  },
+  {
+    id: 'kpg', order: 9,
     title: 'K-Pg Asteroid Impact',
     view: '2d', panel: 'sidebar', plates: true,
     startMa: 67, endMa: 64,
@@ -94,7 +104,7 @@ export const sequences = [
     blurb: 'A 10-km asteroid streaks across the sky and the non-avian dinosaurs vanish from the sidebar.',
   },
   {
-    id: 'pleistocene', order: 9,
+    id: 'pleistocene', order: 10,
     title: 'Ice Age & Megafauna',
     view: '2d', panel: 'sidebar', plates: true,
     startMa: 2.5, endMa: 0.012,
@@ -103,13 +113,13 @@ export const sequences = [
     blurb: 'Polar caps expand, mammoths and dire wolves spread across continents reshaped by ice.',
   },
   {
-    id: 'hominin', order: 10,
+    id: 'hominin', order: 11,
     title: 'Hominin Emergence',
     view: '2d', panel: 'sidebar', plates: true,
     startMa: 6, endMa: 0,
     durationSec: 8, posterAt: 0.6, fps: 30,
     width: 1280, height: 720,
-    blurb: 'Ardipithecus → Homo erectus → Neanderthals → Homo sapiens, on the heels of the megafauna.',
+    blurb: 'Sahelanthropus → Australopithecus → erectus → six coexisting Homo species → sapiens, on the heels of the megafauna.',
   },
 ];
 

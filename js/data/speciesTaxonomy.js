@@ -562,4 +562,172 @@ export const TAXONOMY = {
     rank: 'order',
     scientificName: 'Ammonitida',
   },
+
+  // ---- Notable recent discoveries (added 2024+) ----
+
+  // Proterozoic
+  ourasphaira: {
+    taxonomy: T('Eukarya', 'Fungi', 'Ascomycota', null, null, 'Ourasphaira', 'giraldae'),
+    rank: 'species',
+  },
+
+  // Cambrian
+  saccorhytus: {
+    // 2022 reinterpretation places it within Ecdysozoa (stem group) rather than Deuterostomia.
+    taxonomy: T('Eukarya', 'Animalia', 'Ecdysozoa', null, null, 'Saccorhytus', 'coronarius'),
+    rank: 'species',
+  },
+  cambroraster: {
+    taxonomy: T('Eukarya', 'Animalia', 'Arthropoda', 'Radiodonta', 'Hurdiidae', 'Cambroraster', 'falcatus'),
+    rank: 'species',
+  },
+  stanleycaris: {
+    taxonomy: T('Eukarya', 'Animalia', 'Arthropoda', 'Radiodonta', 'Hurdiidae', 'Stanleycaris', 'hirpex'),
+    rank: 'species',
+  },
+  habelia: {
+    taxonomy: T('Eukarya', 'Animalia', 'Arthropoda', 'Habeliida', 'Habeliidae', 'Habelia', 'optata'),
+    rank: 'species',
+  },
+
+  // Devonian
+  qikiqtania: {
+    taxonomy: T('Eukarya', 'Animalia', 'Sarcopterygii', 'Elpistostegalia', null, 'Qikiqtania', 'wakei'),
+    rank: 'species',
+  },
+  hyneria_udlezinye: {
+    taxonomy: T('Eukarya', 'Animalia', 'Sarcopterygii', 'Tristichopteridae', null, 'Hyneria', 'udlezinye'),
+    rank: 'species',
+  },
+
+  // Carboniferous
+  arthropleura_giant: {
+    taxonomy: T('Eukarya', 'Animalia', 'Arthropoda', 'Arthropleurida', 'Arthropleuridae', 'Arthropleura', 'armata'),
+    rank: 'species',
+  },
+
+  // Triassic
+  cymbospondylus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Reptilia', 'Ichthyosauria', 'Cymbospondylidae', 'Cymbospondylus', 'youngorum'),
+    rank: 'species',
+  },
+  issi_saaneq: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Sauropodomorpha', 'Plateosauridae', 'Issi', 'saaneq'),
+    rank: 'species',
+  },
+
+  // Jurassic
+  ledumahadi: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Sauropodomorpha', null, 'Ledumahadi', 'mafube'),
+    rank: 'species',
+  },
+  maiopatagium: {
+    taxonomy: T('Eukarya', 'Animalia', 'Synapsida', 'Haramiyida', 'Eleutherodontidae', 'Maiopatagium', 'furculiferum'),
+    rank: 'species',
+  },
+  yi_qi: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Scansoriopterygidae', 'Yi', 'qi'),
+    rank: 'species',
+  },
+  anchiornis: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Anchiornithidae', 'Anchiornis', 'huxleyi'),
+    rank: 'species',
+  },
+  tianyulong: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Ornithischia', 'Heterodontosauridae', 'Tianyulong', 'confuciusi'),
+    rank: 'species',
+  },
+
+  // Cretaceous
+  yutyrannus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Proceratosauridae', 'Yutyrannus', 'huali'),
+    rank: 'species',
+  },
+  wulong: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Dromaeosauridae', 'Wulong', 'bohaiensis'),
+    rank: 'species',
+  },
+  borealopelta: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Ankylosauria', 'Nodosauridae', 'Borealopelta', 'markmitchelli'),
+    rank: 'species',
+  },
+  cretophasmomima: {
+    taxonomy: T('Eukarya', 'Animalia', 'Arthropoda', 'Phasmatodea', 'Susumaniidae', 'Cretophasmomima', 'melanogramma'),
+    rank: 'species',
+  },
+  patagotitan: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Sauropoda', 'Lognkosauria', 'Patagotitan', 'mayorum'),
+    rank: 'species',
+  },
+  xiyunykus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Alvarezsauridae', 'Xiyunykus', 'pengi'),
+    rank: 'species',
+  },
+  halszkaraptor: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Dromaeosauridae', 'Halszkaraptor', 'escuilliei'),
+    rank: 'species',
+  },
+  mansourasaurus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Sauropoda', 'Titanosauria', 'Mansourasaurus', 'shahinae'),
+    rank: 'species',
+  },
+  vintana: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Gondwanatheria', 'Sudamericidae', 'Vintana', 'sertichi'),
+    rank: 'species',
+  },
+  adalatherium: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Gondwanatheria', null, 'Adalatherium', 'hui'),
+    rank: 'species',
+  },
+  natovenator: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Dromaeosauridae', 'Natovenator', 'polydontus'),
+    rank: 'species',
+  },
+  dakotaraptor: {
+    taxonomy: T('Eukarya', 'Animalia', 'Dinosauria', 'Theropoda', 'Dromaeosauridae', 'Dakotaraptor', 'steini'),
+    rank: 'species',
+  },
+
+  // Earliest Paleogene
+  asteriornis: {
+    taxonomy: T('Eukarya', 'Animalia', 'Aves', 'Galloanserae', null, 'Asteriornis', 'maastrichtensis'),
+    rank: 'species',
+  },
+
+  // Paleocene/Eocene
+  kumimanu: {
+    taxonomy: T('Eukarya', 'Animalia', 'Aves', 'Sphenisciformes', 'Spheniscidae', 'Kumimanu', 'fordycei'),
+    rank: 'species',
+  },
+  phiomicetus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Cetacea', 'Protocetidae', 'Phiomicetus', 'anubis'),
+    rank: 'species',
+  },
+  peregocetus: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Cetacea', 'Protocetidae', 'Peregocetus', 'pacificus'),
+    rank: 'species',
+  },
+  inkayacu: {
+    taxonomy: T('Eukarya', 'Animalia', 'Aves', 'Sphenisciformes', 'Spheniscidae', 'Inkayacu', 'paracasensis'),
+    rank: 'species',
+  },
+
+  // Pleistocene Hominins
+  denisovans: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Primates', 'Hominidae', 'Homo', null),
+    rank: 'genus',
+    scientificName: 'Homo sp. Denisova',
+  },
+  homo_naledi: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Primates', 'Hominidae', 'Homo', 'naledi'),
+    rank: 'species',
+  },
+  homo_longi: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Primates', 'Hominidae', 'Homo', 'longi'),
+    rank: 'species',
+  },
+  homo_luzonensis: {
+    taxonomy: T('Eukarya', 'Animalia', 'Mammalia', 'Primates', 'Hominidae', 'Homo', 'luzonensis'),
+    rank: 'species',
+  },
 };

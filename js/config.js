@@ -123,6 +123,66 @@ export const RENDER = {
   markerElevation: 1.035,
   starCount: 2000,
   autoRotateSpeed: 0.3,
+
+  // Terrain relief (always-on). Drop terrainSubdivLevels to 2 if perf < 60fps.
+  terrainSubdivLevels: 3,
+  terrainBaseAmplitude: 0.040,
+  terrainProtoAmplitude: 0.075,
+  terrainBaseFreq: 5.0,
+  terrainProtoFreq: 9.0,
+  terrainBaseOctaves: 4,
+  terrainProtoOctaves: 5,
+  terrainProtoJaggedness: 0.6,
+  terrainProtoStartMa: 1000,
+  terrainProtoFullMa: 3000,
+  terrainHotTintColor: '#a83820',
+  terrainSnowColor: '#e8e8ec',
+  terrainHighlandColor: '#5a4530',
+  terrainLowlandColor: '#3d4a2e',
+  terrainCoastTaper: 0.3,
+
+  // Plate boundary 3D (toggle-gated). Heights in sphere-radius units.
+  boundaryRidgeWidthDeg: 1.8,
+  boundaryConvergentApex: 1.18,
+  boundaryConvergentBaseColor: '#5d6f9a',
+  boundaryConvergentApexColor: '#c4d4e8',
+  // Divergent: twin raised ridges (lip) with a glowing axial canyon floor
+  // between them. Both above ocean so they're visible above the opaque sea.
+  boundaryDivergentTrench: 1.04,
+  boundaryDivergentLip: 1.10,
+  boundaryDivergentInnerColor: '#ff4422',
+  boundaryDivergentLipColor: '#3a4658',
+  boundaryTransformUpper: 1.04,
+  boundaryTransformLower: 0.98,
+  boundaryTransformUpperColor: '#9aac6a',
+  boundaryTransformLowerColor: '#5a6438',
+
+  // 2D terrain hillshade (always-on). Reuses terrain* config above and the
+  // terrainProfileForAge ramp so the 2D map and 3D globe show consistent peaks.
+  view2dHillshadeSpacing: 14,
+  view2dHillshadeBlobRadius: 11,
+  view2dHillshadeAlpha: 0.20,
+  view2dHighlandThreshold: 0.25,
+  view2dHighlandBlobRadius: 7,
+  view2dHighlandAlpha: 0.45,
+  view2dSnowThreshold: 0.55,
+  view2dSnowBlobRadius: 4.5,
+  view2dSnowAlpha: 0.85,
+  view2dHotPeakColor: '#ff5530',
+
+  // 2D plate boundaries (toggle-gated). Layered strokes for "astronomical" contrast.
+  view2dBoundaryGlow: 6,
+  view2dBoundaryAlpha: 1.0,
+  view2dConvergentShadowWidth: 9,
+  view2dConvergentBaseWidth: 6,
+  view2dConvergentSnowWidth: 2.0,
+  view2dConvergentToothSize: 11,
+  view2dConvergentToothSpacing: 55,
+  view2dDivergentRailOffset: 3.5,
+  view2dDivergentRailWidth: 3,
+  view2dDivergentCoreWidth: 2.0,
+  view2dTransformRailWidth: 4,
+  view2dTransformRailOffset: 4,
 };
 
 export const LAYOUT = {

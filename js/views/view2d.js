@@ -1,17 +1,12 @@
 // 2D Canvas equirectangular map renderer.
 
 import { COLORS, RENDER } from '../config.js';
-
-const BOUNDARY_STYLES = {
-  divergent:  { color: COLORS.boundary.divergent, lineWidth: 1.5, dash: [8, 6] },
-  convergent: { color: COLORS.boundary.convergent, lineWidth: 2.0, dash: [] },
-  transform:  { color: COLORS.boundary.transform, lineWidth: 1.2, dash: [3, 4] },
-};
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
 import { getGlaciation } from '../data/glaciation.js';
 import { fractalSubdivide } from '../engine/fractal.js';
+import { fbm3D, terrainProfileForAge } from '../engine/terrainNoise.js';
 import { mixColors, hexToRgb } from '../util/colorMix.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
 import { cladeColor, hasRimRing } from '../util/taxonomy.js';
@@ -188,14 +183,15 @@ export class View2D {
       this._renderBoundaries(ctx, boundaries);
     }
 
-    // 3. Continental polygons — smooth Bezier coastlines with shaded relief
+    // 3. Continental polygons — smooth Bezier coastlines with hillshaded relief
+    //    and elevation-threshold contour bands (highland + snow caps).
+    const terrainProfile = terrainProfileForAge(timeMa);
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
       const fractalVerts = fractalSubdivide(continent.vertices);
       const pixelPts = fractalVerts.map(([lon, lat]) => this._lonLatToXY(lon, lat));
 
-      // Build the smooth path once; reuse for fill, glow, stroke, and clip.
       const buildPath = () => {
         ctx.beginPath();
         this._tracePath(ctx, pixelPts);
@@ -213,22 +209,11 @@ export class View2D {
       ctx.fill();
       ctx.globalAlpha = 1;
 
-      // Shaded relief — soft NW highlight + SE shadow inside the shape
+      // Hillshade + contour bands — clipped to the polygon path so blobs can't spill.
       ctx.save();
       buildPath();
       ctx.clip();
-      // Highlight (NW lit)
-      ctx.strokeStyle = 'rgba(255, 240, 215, 0.35)';
-      ctx.lineWidth = 1.6;
-      ctx.translate(-1.2, -1.2);
-      buildPath();
-      ctx.stroke();
-      // Shadow (SE)
-      ctx.strokeStyle = 'rgba(20, 14, 8, 0.45)';
-      ctx.lineWidth = 1.4;
-      ctx.translate(2.4, 2.4);
-      buildPath();
-      ctx.stroke();
+      this._renderHillshade(ctx, pixelPts, terrainProfile, w, h);
       ctx.restore();
 
       // Outer glow
@@ -343,75 +328,267 @@ export class View2D {
     ctx.restore();
   }
 
+  // Hillshaded relief inside a polygon. Caller is responsible for clipping
+  // to the polygon path. Reuses the same fbm3D field used by the 3D globe so
+  // peaks/valleys appear in matching lat/lon when toggling views.
+  _renderHillshade(ctx, pixelPts, profile, w, h) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y] of pixelPts) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+
+    const spacing = RENDER.view2dHillshadeSpacing;
+    const blobR   = RENDER.view2dHillshadeBlobRadius;
+    const baseA   = RENDER.view2dHillshadeAlpha;
+    const highT   = RENDER.view2dHighlandThreshold;
+    const highR   = RENDER.view2dHighlandBlobRadius;
+    const highA   = RENDER.view2dHighlandAlpha;
+    const snowT   = RENDER.view2dSnowThreshold;
+    const snowR   = RENDER.view2dSnowBlobRadius;
+    const snowA   = RENDER.view2dSnowAlpha;
+
+    const snow      = RENDER.terrainSnowColor;
+    const highland  = RENDER.terrainHighlandColor;
+    const hotPeak   = RENDER.view2dHotPeakColor;
+    const hot       = profile.hotTint;
+    const freq      = profile.freq;
+    const jaggExp   = 1 + profile.jaggedness;
+    const octaves   = profile.octaves;
+
+    // Precompute hot-tinted band/peak colors once per polygon.
+    const peakColor = hot > 0 ? mixColors(snow, hotPeak, Math.min(1, hot * 1.6)) : snow;
+    const bandColor = hot > 0 ? mixColors(highland, hotPeak, hot) : highland;
+    const snowColor = hot > 0 ? mixColors(snow, hotPeak, hot * 1.2) : snow;
+
+    let row = 0;
+    for (let py = minY; py <= maxY; py += spacing) {
+      const offX = (row & 1) ? spacing * 0.5 : 0;
+      for (let px = minX + offX; px <= maxX; px += spacing) {
+        // Pixel -> lon/lat -> unit-sphere xyz (matches 3D _lonLatToVector3).
+        const lon = (px / w) * 360 - 180;
+        const lat = 90 - (py / h) * 180;
+        const phi = (90 - lat) * (Math.PI / 180);
+        const theta = (lon + 180) * (Math.PI / 180);
+        const sinPhi = Math.sin(phi);
+        const ux = -sinPhi * Math.cos(theta);
+        const uy = Math.cos(phi);
+        const uz = sinPhi * Math.sin(theta);
+
+        let n = fbm3D(ux * freq, uy * freq, uz * freq, octaves);
+        if (n > 1) n = 1; else if (n < -1) n = -1;
+        const sign = n >= 0 ? 1 : -1;
+        const relAlt = sign * Math.pow(Math.abs(n), jaggExp);
+
+        // Hillshade base: light on positive relAlt, dark on negative.
+        if (relAlt >= 0) {
+          ctx.fillStyle = peakColor;
+          ctx.globalAlpha = baseA * Math.min(1, relAlt + 0.15);
+        } else {
+          ctx.fillStyle = '#000000';
+          ctx.globalAlpha = baseA * Math.min(1, -relAlt + 0.10);
+        }
+        ctx.beginPath();
+        ctx.arc(px, py, blobR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Highland contour band.
+        if (relAlt > highT) {
+          const t = (relAlt - highT) / Math.max(0.001, snowT - highT);
+          ctx.fillStyle = bandColor;
+          ctx.globalAlpha = highA * Math.min(1, t + 0.3);
+          ctx.beginPath();
+          ctx.arc(px, py, highR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Snow-cap peak band.
+        if (relAlt > snowT) {
+          ctx.fillStyle = snowColor;
+          ctx.globalAlpha = snowA * Math.min(1, (relAlt - snowT) / 0.4 + 0.5);
+          ctx.beginPath();
+          ctx.arc(px, py, snowR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      row++;
+    }
+    ctx.globalAlpha = 1;
+  }
+
   _renderBoundaries(ctx, boundaries) {
     for (const boundary of boundaries) {
       if (boundary.vertices.length < 2) continue;
+      const segments = this._boundarySegments(boundary);
+      if (segments.length === 0) continue;
 
-      const style = BOUNDARY_STYLES[boundary.type] || BOUNDARY_STYLES.divergent;
-      ctx.strokeStyle = style.color;
-      ctx.lineWidth = style.lineWidth;
-      ctx.setLineDash(style.dash);
-      ctx.globalAlpha = 0.7;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = RENDER.view2dBoundaryAlpha;
 
-      ctx.beginPath();
-      const [x0, y0] = this._lonLatToXY(boundary.vertices[0][0], boundary.vertices[0][1]);
-      ctx.moveTo(x0, y0);
-
-      for (let i = 1; i < boundary.vertices.length; i++) {
-        const prevLon = boundary.vertices[i - 1][0];
-        const curLon = boundary.vertices[i][0];
-        const [x, y] = this._lonLatToXY(curLon, boundary.vertices[i][1]);
-
-        // Break path at antimeridian crossing
-        if (Math.abs(curLon - prevLon) > 180) {
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-      }
-      ctx.stroke();
-
-      // Draw convergent teeth
       if (boundary.type === 'convergent') {
-        this._drawConvergentTeeth(ctx, boundary.vertices, style.color);
+        this._renderConvergentBoundary(ctx, segments);
+      } else if (boundary.type === 'divergent') {
+        this._renderDivergentBoundary(ctx, segments);
+      } else {
+        this._renderTransformBoundary(ctx, segments);
       }
-    }
 
+      ctx.restore();
+    }
+    ctx.shadowBlur = 0;
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   }
 
-  _drawConvergentTeeth(ctx, vertices, color) {
-    const toothSize = 5 / this.zoom;
-    ctx.fillStyle = color;
-    ctx.globalAlpha = 0.6;
+  // Pixel-space line segments, dropping any antimeridian-crossing segment.
+  _boundarySegments(boundary) {
+    const segs = [];
+    for (let i = 0; i < boundary.vertices.length - 1; i++) {
+      const lon1 = boundary.vertices[i][0];
+      const lat1 = boundary.vertices[i][1];
+      const lon2 = boundary.vertices[i + 1][0];
+      const lat2 = boundary.vertices[i + 1][1];
+      if (Math.abs(lon2 - lon1) > 180) continue;
+      const [x1, y1] = this._lonLatToXY(lon1, lat1);
+      const [x2, y2] = this._lonLatToXY(lon2, lat2);
+      segs.push({ x1, y1, x2, y2 });
+    }
+    return segs;
+  }
 
-    for (let i = 0; i < vertices.length - 1; i++) {
-      const [x1, y1] = this._lonLatToXY(vertices[i][0], vertices[i][1]);
-      const [x2, y2] = this._lonLatToXY(vertices[i + 1][0], vertices[i + 1][1]);
+  _strokePolyline(ctx, segments) {
+    ctx.beginPath();
+    for (const { x1, y1, x2, y2 } of segments) {
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+  }
 
-      // Skip antimeridian-crossing segments
-      if (Math.abs(vertices[i + 1][0] - vertices[i][0]) > 180) continue;
-
-      const mx = (x1 + x2) / 2;
-      const my = (y1 + y2) / 2;
-      const dx = x2 - x1;
-      const dy = y2 - y1;
+  // Stroke each segment shifted perpendicularly by `offset` pixels.
+  // Adjacent segments don't perfectly miter at the offset, but at thin widths
+  // the gaps are invisible and the round lineCap hides them further.
+  _strokeOffsetPolyline(ctx, segments, offset) {
+    ctx.beginPath();
+    for (const { x1, y1, x2, y2 } of segments) {
+      const dx = x2 - x1, dy = y2 - y1;
       const len = Math.sqrt(dx * dx + dy * dy);
-      if (len < 1) continue;
+      if (len < 0.5) continue;
+      const ox = (-dy / len) * offset;
+      const oy = ( dx / len) * offset;
+      ctx.moveTo(x1 + ox, y1 + oy);
+      ctx.lineTo(x2 + ox, y2 + oy);
+    }
+    ctx.stroke();
+  }
 
-      // Perpendicular direction for tooth point
-      const px = -dy / len;
-      const py = dx / len;
+  _renderConvergentBoundary(ctx, segments) {
+    // Layered ridge: dark drop shadow → mid-tone base body → bright snow centerline.
+    // Then oversized teeth pointing perpendicular, suggesting overriding plate.
+    ctx.shadowBlur = 0;
 
-      ctx.beginPath();
-      ctx.moveTo(mx - dx * 0.15, my - dy * 0.15);
-      ctx.lineTo(mx + px * toothSize, my + py * toothSize);
-      ctx.lineTo(mx + dx * 0.15, my + dy * 0.15);
-      ctx.closePath();
-      ctx.fill();
+    // Drop shadow for depth illusion (offset DOWN-RIGHT).
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = RENDER.view2dConvergentShadowWidth;
+    this._strokeOffsetPolyline(ctx, segments, 1.6);
+
+    // Main ridge body with halo glow.
+    ctx.shadowColor = RENDER.boundaryConvergentBaseColor;
+    ctx.shadowBlur = RENDER.view2dBoundaryGlow;
+    ctx.strokeStyle = RENDER.boundaryConvergentBaseColor;
+    ctx.lineWidth = RENDER.view2dConvergentBaseWidth;
+    this._strokePolyline(ctx, segments);
+
+    // Snow-cap centerline.
+    ctx.shadowColor = RENDER.boundaryConvergentApexColor;
+    ctx.shadowBlur = RENDER.view2dBoundaryGlow * 0.6;
+    ctx.strokeStyle = RENDER.boundaryConvergentApexColor;
+    ctx.lineWidth = RENDER.view2dConvergentSnowWidth;
+    this._strokePolyline(ctx, segments);
+
+    ctx.shadowBlur = 0;
+
+    // Big teeth.
+    this._drawConvergentTeeth(
+      ctx, segments,
+      RENDER.view2dConvergentToothSize,
+      RENDER.view2dConvergentToothSpacing,
+      RENDER.boundaryConvergentBaseColor
+    );
+  }
+
+  _renderDivergentBoundary(ctx, segments) {
+    // Twin parallel ridge rails with a glowing red axial rift between them.
+    const railOff = RENDER.view2dDivergentRailOffset;
+    ctx.shadowBlur = 0;
+
+    // Outer dark halo to suggest mass under the ridges.
+    ctx.strokeStyle = 'rgba(20,28,42,0.7)';
+    ctx.lineWidth = RENDER.view2dDivergentRailWidth + 4;
+    this._strokePolyline(ctx, segments);
+
+    // Twin ridge rails (one each side of the centerline).
+    ctx.strokeStyle = RENDER.boundaryDivergentLipColor;
+    ctx.lineWidth = RENDER.view2dDivergentRailWidth;
+    this._strokeOffsetPolyline(ctx, segments,  railOff);
+    this._strokeOffsetPolyline(ctx, segments, -railOff);
+
+    // Glowing axial rift core.
+    ctx.shadowColor = RENDER.boundaryDivergentInnerColor;
+    ctx.shadowBlur = RENDER.view2dBoundaryGlow + 2;
+    ctx.strokeStyle = RENDER.boundaryDivergentInnerColor;
+    ctx.lineWidth = RENDER.view2dDivergentCoreWidth;
+    this._strokePolyline(ctx, segments);
+
+    ctx.shadowBlur = 0;
+  }
+
+  _renderTransformBoundary(ctx, segments) {
+    // Twin offset cliff: upper rail bright, lower rail dark, suggesting strike-slip step.
+    const off = RENDER.view2dTransformRailOffset;
+    ctx.shadowBlur = 0;
+
+    // Lower (shadow) rail.
+    ctx.strokeStyle = RENDER.boundaryTransformLowerColor;
+    ctx.lineWidth = RENDER.view2dTransformRailWidth;
+    ctx.setLineDash([8, 5]);
+    this._strokeOffsetPolyline(ctx, segments, -off);
+
+    // Upper (lit) rail with halo glow.
+    ctx.shadowColor = RENDER.boundaryTransformUpperColor;
+    ctx.shadowBlur = RENDER.view2dBoundaryGlow * 0.7;
+    ctx.strokeStyle = RENDER.boundaryTransformUpperColor;
+    ctx.lineWidth = RENDER.view2dTransformRailWidth;
+    this._strokeOffsetPolyline(ctx, segments,  off);
+
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+  }
+
+  _drawConvergentTeeth(ctx, segments, size, spacing, color) {
+    ctx.fillStyle = color;
+    for (const { x1, y1, x2, y2 } of segments) {
+      const dx = x2 - x1, dy = y2 - y1;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len < spacing * 0.5) continue;
+      const tx = dx / len, ty = dy / len;
+      const px = -ty * size, py = tx * size;
+      const nTeeth = Math.max(1, Math.floor(len / spacing));
+      for (let k = 1; k <= nTeeth; k++) {
+        const t = k / (nTeeth + 1);
+        const mx = x1 + dx * t;
+        const my = y1 + dy * t;
+        ctx.beginPath();
+        ctx.moveTo(mx - tx * size * 0.5, my - ty * size * 0.5);
+        ctx.lineTo(mx + px, my + py);
+        ctx.lineTo(mx + tx * size * 0.5, my + ty * size * 0.5);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 

@@ -29,10 +29,11 @@ graph TD
     Bi --> Pr[Protostomia]
     Bi --> De[Deuterostomia]
     Pr --> Mo[Mollusca]
-    Pr --> Ar[Arthropoda<br/>trilobites,<br/>Anomalocaris]
+    Pr --> Ar[Arthropoda<br/>trilobites,<br/>Anomalocaris,<br/>Cambroraster,<br/>Stanleycaris,<br/>Habelia]
     Pr --> An[Annelida]
     Pr --> Pp[Priapulida<br/>Ottoia]
     Pr --> Lo[Lobopodia<br/>Hallucigenia,<br/>Aysheaia]
+    Pr --> Sa[Saccorhytus<br/>stem ecdysozoan]
     De --> Ec[Echinodermata<br/>crinoids]
     De --> He[Hemichordata]
     De --> Ch[Chordata<br/>Pikaia,<br/>Myllokunmingia]
@@ -42,7 +43,7 @@ Almost every one of those boxes lights up the sidebar within the 12-second clip.
 
 ## What to watch for
 
-- **Sidebar** fills rapidly: trilobites, anomalocaris, hallucigenia, wiwaxia, marrella, ottoia, archaeocyatha, pikaia, and more — a cascade of new categories (arthropods, invertebrates, the first chordates).
+- **Sidebar** fills rapidly: trilobites, anomalocaris, hallucigenia, wiwaxia, marrella, ottoia, archaeocyatha, pikaia, and more — a cascade of new categories (arthropods, invertebrates, the first chordates). Recent Burgess Shale finds add **Cambroraster** (a horseshoe-headed bottom-grazing radiodont, 2019), **Stanleycaris** (three-eyed, with the oldest preserved arthropod brain, 2022), and **Habelia** (the oldest unambiguous chelicerate, 2017 redescription). The submillimeter "bag with a mouth" **Saccorhytus** appears at 540 Ma — once thought to be the earliest deuterostome, now reinterpreted as an early ecdysozoan (2022).
 - **Biodiversity readout** climbs sharply — this is the steepest single-period rise in the entire play-through.
 - **Marker halos** of multiple colors crowd the map for the first time. Pulsing arthropod oranges and invertebrate teal-greys dominate.
 - **Continents** are Gondwana + Laurentia, Baltica, Siberia — separated, with shallow tropical shelves where most of this evolution happens.
@@ -53,8 +54,8 @@ Almost every one of those boxes lights up the sidebar within the 12-second clip.
 | Clip time | Time-Ma window | UI detail to watch |
 |---|---|---|
 | 0 s – 2 s | 540 → 530 Ma | Sidebar mostly microbial; Cambrian Explosion milestone fires top-center |
-| 2 s – 5 s | 530 → 515 Ma | Trilobita, Anomalocaris, Archaeocyatha, Myllokunmingia appear — first wave of orange arthropod markers on the map |
-| 5 s – 9 s | 515 → 495 Ma | Sidebar fills out: Opabinia, Hallucigenia, Wiwaxia, Pikaia, Marrella, Ottoia, Aysheaia — the weird Burgess Shale crowd |
+| 2 s – 5 s | 530 → 515 Ma | Trilobita, Anomalocaris, Archaeocyatha, Myllokunmingia appear — first wave of orange arthropod markers on the map; Saccorhytus pulses briefly in Shaanxi |
+| 5 s – 9 s | 515 → 495 Ma | Sidebar fills out: Opabinia, Hallucigenia, Wiwaxia, Pikaia, Marrella, Ottoia, Aysheaia — the weird Burgess Shale crowd. **New Burgess additions**: Cambroraster, Stanleycaris, Habelia all light up British Columbia |
 | 9 s – 12 s | 495 → 480 Ma | Biodiversity sparkline at the steepest slope in the whole play-through; markers crowd the tropical shelves of Gondwana |
 
 ## Related data
