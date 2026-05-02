@@ -1,6 +1,8 @@
 // Geological periods with temporal weights for animation compression.
 // temporalWeight > 1 = slower playback (more screen time), < 1 = faster.
 
+import { TIMING } from '../config.js';
+
 export const timeline = [
   // HADEAN
   { eon: 'Hadean', era: null, period: 'Hadean', startMa: 4540, endMa: 4000, color: '#d10068', temporalWeight: 0.10, description: 'Earth forming, molten surface' },
@@ -61,4 +63,69 @@ export function getPeriodAtTime(timeMa) {
 export function getTemporalWeight(timeMa) {
   const period = getPeriodAtTime(timeMa);
   return period ? period.temporalWeight : 1.0;
+}
+
+// Cumulative weighted-time over the playable window [endTimeMa, startTimeMa].
+// Used by the slider mapping below so that periods with high temporalWeight
+// (Pleistocene 10×, Cretaceous 5.5×, Cambrian 5.5×) — which consume most of
+// the play-through — get proportional slider real estate. Without weighting,
+// the entire Cenozoic occupies <2% of the slider even though it eats ~30%
+// of the play-through clock.
+export const TOTAL_WEIGHTED_TIME = (() => {
+  let sum = 0;
+  for (const p of timeline) {
+    const start = Math.min(p.startMa, TIMING.startTimeMa);
+    const end = Math.max(p.endMa, TIMING.endTimeMa);
+    if (start > end) sum += (start - end) * p.temporalWeight;
+  }
+  return sum;
+})();
+
+/**
+ * Map a real Ma to a 0..1 fraction along the "screen-time" axis.
+ *   0 = TIMING.endTimeMa   (present, slider rightmost)
+ *   1 = TIMING.startTimeMa (start of playable range, slider leftmost)
+ * Iterates timeline youngest→oldest, summing each period's weighted contribution.
+ */
+export function timeMaToFraction(timeMa) {
+  if (timeMa <= TIMING.endTimeMa) return 0;
+  if (timeMa >= TIMING.startTimeMa) return 1;
+  let weighted = 0;
+  for (let i = timeline.length - 1; i >= 0; i--) {
+    const p = timeline[i];
+    const periodStart = Math.min(p.startMa, TIMING.startTimeMa);
+    const periodEnd = Math.max(p.endMa, TIMING.endTimeMa);
+    if (periodStart <= periodEnd) continue;          // period clipped out of window
+    if (timeMa <= periodEnd) continue;               // timeMa is younger than this period
+    if (timeMa >= periodStart) {
+      weighted += (periodStart - periodEnd) * p.temporalWeight;
+    } else {
+      weighted += (timeMa - periodEnd) * p.temporalWeight;
+      break;                                          // timeMa lies inside this period; done
+    }
+  }
+  return weighted / TOTAL_WEIGHTED_TIME;
+}
+
+/**
+ * Inverse of timeMaToFraction. Given a 0..1 fraction, returns the Ma it lands in.
+ */
+export function fractionToTimeMa(fraction) {
+  if (fraction <= 0) return TIMING.endTimeMa;
+  if (fraction >= 1) return TIMING.startTimeMa;
+  const target = fraction * TOTAL_WEIGHTED_TIME;
+  let accumulated = 0;
+  for (let i = timeline.length - 1; i >= 0; i--) {
+    const p = timeline[i];
+    const periodStart = Math.min(p.startMa, TIMING.startTimeMa);
+    const periodEnd = Math.max(p.endMa, TIMING.endTimeMa);
+    if (periodStart <= periodEnd) continue;
+    const periodWeighted = (periodStart - periodEnd) * p.temporalWeight;
+    if (accumulated + periodWeighted >= target) {
+      const remainingWeighted = target - accumulated;
+      return periodEnd + remainingWeighted / p.temporalWeight;
+    }
+    accumulated += periodWeighted;
+  }
+  return TIMING.startTimeMa;
 }

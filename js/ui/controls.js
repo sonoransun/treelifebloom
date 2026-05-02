@@ -1,7 +1,7 @@
 // Timeline controls — scrubber, play/pause, speed, era strip.
 
 import { timeline } from '../data/timeline.js';
-import { getPeriodAtTime } from '../data/timeline.js';
+import { getPeriodAtTime, timeMaToFraction, fractionToTimeMa, TOTAL_WEIGHTED_TIME } from '../data/timeline.js';
 import { TIMING } from '../config.js';
 
 export class Controls {
@@ -26,10 +26,13 @@ export class Controls {
     // Build era strip
     this._buildEraStrip();
 
-    // Scrubber
+    // Scrubber — mapped via cumulative temporalWeight so periods get slider real
+    // estate proportional to their playback duration (not raw Ma duration).
+    // sliderValue 0 (left) = past, sliderValue max (right) = present.
     this.scrubber.addEventListener('input', () => {
       this._scrubbing = true;
-      this.clock.setTime(TIMING.startTimeMa - parseFloat(this.scrubber.value));
+      const fraction = 1 - parseFloat(this.scrubber.value) / parseFloat(this.scrubber.max);
+      this.clock.setTime(fractionToTimeMa(fraction));
     });
     this.scrubber.addEventListener('change', () => {
       this._scrubbing = false;
@@ -61,12 +64,18 @@ export class Controls {
           this.clock.togglePlay();
           this._updatePlayButton();
           break;
-        case 'ArrowRight':
-          this.clock.setTime(this.clock.currentTimeMa - 20);
+        case 'ArrowRight': {
+          // Step ~0.5% of weighted play-through time toward present —
+          // proportional in both Hadean (~10 Ma) and Pleistocene (~0.013 Ma).
+          const f = timeMaToFraction(this.clock.currentTimeMa);
+          this.clock.setTime(fractionToTimeMa(Math.max(0, f - 0.005)));
           break;
-        case 'ArrowLeft':
-          this.clock.setTime(this.clock.currentTimeMa + 20);
+        }
+        case 'ArrowLeft': {
+          const f = timeMaToFraction(this.clock.currentTimeMa);
+          this.clock.setTime(fractionToTimeMa(Math.min(1, f + 0.005)));
           break;
+        }
         case 'r':
           this.clock.restart();
           this._updatePlayButton();
@@ -76,13 +85,15 @@ export class Controls {
   }
 
   _buildEraStrip() {
-    // Total duration
-    const totalMa = TIMING.startTimeMa;
+    // Widths are proportional to weighted screen-time so the strip aligns with
+    // the (now also weighted) scrubber — total sums to exactly 100%, not 113.5%.
     this.eraStrip.innerHTML = '';
 
     for (const period of timeline) {
-      const duration = period.startMa - period.endMa;
-      const widthPercent = (duration / totalMa) * 100;
+      const periodStart = Math.min(period.startMa, TIMING.startTimeMa);
+      const periodEnd = Math.max(period.endMa, TIMING.endTimeMa);
+      if (periodStart <= periodEnd) continue; // entirely outside playable window
+      const widthPercent = ((periodStart - periodEnd) * period.temporalWeight / TOTAL_WEIGHTED_TIME) * 100;
       const segment = document.createElement('div');
       segment.className = 'era-segment';
       segment.style.width = widthPercent + '%';
@@ -110,7 +121,8 @@ export class Controls {
   updateDisplay(timeMa) {
     // Update scrubber position (unless user is dragging)
     if (!this._scrubbing) {
-      this.scrubber.value = TIMING.startTimeMa - timeMa;
+      const fraction = timeMaToFraction(timeMa);
+      this.scrubber.value = (1 - fraction) * parseFloat(this.scrubber.max);
     }
 
     // Format time
