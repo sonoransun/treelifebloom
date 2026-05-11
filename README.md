@@ -2,6 +2,8 @@
 
 An interactive animated visualization of Earth's evolutionary history spanning 4 billion years — from the first prokaryotes to modern humans. Continents drift, species rise and fall, mass extinctions reshape the biosphere, and the atmosphere transforms — all rendered in real time across 2D map and 3D globe views.
 
+<a href="https://lifestreeblooms.org/"><b>View online at LifesTreeBlooms.org</b></a>
+<br />
 <img src="assets/life-tree-bloom.png">
 <br />
 
