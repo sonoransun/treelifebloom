@@ -32,7 +32,6 @@ let showBoundaries = false;
 const sidebar = new Sidebar();
 const controls = new Controls(clock);
 clock.onPlayingChange = () => controls.syncPlayButton();
-clock.subscribe(() => scheduleFrame());
 const extinctionOverlay = new ExtinctionOverlay();
 const milestoneOverlay = new MilestoneOverlay();
 const popup = new SpeciesPopup();
@@ -130,18 +129,7 @@ async function switchView(mode) {
 
 // --- Animation Loop ---
 
-// The loop only runs while `clock.playing` is true. `scheduleFrame()` re-arms it
-// when the clock wakes (play/restart/scrub/extinction-resume/capture-API). This
-// keeps CPU near idle once the timeline auto-pauses at t = 0 Ma.
 let lastTimestamp = 0;
-let rafId = null;
-
-function scheduleFrame() {
-  if (rafId === null) {
-    lastTimestamp = 0;
-    rafId = requestAnimationFrame(animate);
-  }
-}
 
 // Sun longitude rotates once per ~12 real seconds — drives day/night terminator on the 3D globe.
 const SUN_PERIOD_SEC = 12;
@@ -155,7 +143,6 @@ function buildAtmoSnapshot(timeMa, nowMs) {
 }
 
 function animate(timestamp) {
-  rafId = null;
   const delta = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
   lastTimestamp = timestamp;
 
@@ -185,9 +172,7 @@ function animate(timestamp) {
   milestoneOverlay.update(t);
   legend.update(t);
 
-  if (clock.playing) {
-    rafId = requestAnimationFrame(animate);
-  }
+  requestAnimationFrame(animate);
 }
 
 // Initial render
@@ -198,8 +183,8 @@ activeView.render(initialPolygons, clock.currentTimeMa, initialBoundaries, initi
 sidebar.update(clock.currentTimeMa);
 controls.updateDisplay(clock.currentTimeMa);
 
-// Start loop (renders one frame; idles immediately since the clock starts paused).
-scheduleFrame();
+// Start loop
+requestAnimationFrame(animate);
 
 // Capture mode (no-op without `?capture=1`). Exposes window.__capture for headless
 // recording scripts; see scripts/capture/.
