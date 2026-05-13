@@ -34,6 +34,7 @@ export class GeoClock {
   play() {
     this._clearExtinctionResume();
     this.playing = true;
+    this._notify();
   }
 
   pause() {
@@ -44,6 +45,7 @@ export class GeoClock {
   togglePlay() {
     this._clearExtinctionResume();
     this.playing = !this.playing;
+    this._notify();
   }
 
   setSpeed(multiplier) {
@@ -121,6 +123,7 @@ export class GeoClock {
       this._extinctionResumeTimer = null;
       this.playing = true;
       if (this.onPlayingChange) this.onPlayingChange();
+      this._notify();
     }, TIMING.extinctionPauseSeconds * 1000);
   }
 }
