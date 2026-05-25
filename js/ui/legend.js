@@ -33,9 +33,16 @@ export class Legend {
   attachAllSpecies(species) { this._allSpecies = species; }
 
   toggle() {
-    const open = !this.panel.classList.contains('hidden');
-    this.panel.classList.toggle('hidden', open);
-    this.btn.classList.toggle('active', !open);
+    const open = this.panel.classList.contains('hidden'); // new state after toggling
+    this.setOpen(open);
+    if (this.onToggle) this.onToggle(open);
+  }
+
+  /** Set open/closed without firing onToggle — used to restore persisted state. */
+  setOpen(open) {
+    if (!this.panel) return;
+    this.panel.classList.toggle('hidden', !open);
+    this.btn.classList.toggle('active', open);
     // Reset the throttle so the next animate() tick rebuilds immediately.
     this._lastUpdateMs = 0;
     this._lastUpdateMa = null;

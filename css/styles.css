@@ -99,6 +99,55 @@ body {
   color: #bbb;
 }
 
+/* Relief exaggeration slider (3D only). Range thumb/track mirror #scrubber. */
+.relief-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #888;
+}
+
+.relief-control label {
+  white-space: nowrap;
+}
+
+#elevation-value {
+  min-width: 34px;
+  color: #b8c4e0;
+  font-variant-numeric: tabular-nums;
+}
+
+#elevation-slider {
+  width: 90px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1a2040;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+#elevation-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #5588cc;
+  cursor: pointer;
+  border: 2px solid #0a0e1a;
+}
+
+#elevation-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #5588cc;
+  cursor: pointer;
+  border: 2px solid #0a0e1a;
+}
+
 /* ===== Visualization Container ===== */
 
 #viz-container {
@@ -1019,4 +1068,113 @@ body.capture-mode.capture-mode-with-sidebar #app {
 /* Variant: keep the time/period overlay visible. */
 body.capture-mode.capture-mode-with-clock #time-overlay {
   display: block !important;
+}
+
+/* ===== Toolbar additions: jump dropdown, action group ===== */
+.action-group {
+  display: flex;
+  gap: 2px;
+  background: #1a1e30;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+#milestone-jump {
+  padding: 4px 8px;
+  background: #1a2040;
+  border: 1px solid #2a3050;
+  border-radius: 4px;
+  color: #b8c4e0;
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 170px;
+}
+
+#btn-share.copied {
+  color: #6fdc8c;
+}
+
+/* ===== Keyboard / controls help overlay ===== */
+#help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 8, 20, 0.72);
+}
+
+#help-overlay.hidden {
+  display: none;
+}
+
+#help-panel {
+  position: relative;
+  max-width: 440px;
+  width: calc(100% - 48px);
+  background: #111628;
+  border: 1px solid #2a3050;
+  border-radius: 10px;
+  padding: 20px 24px;
+  color: #c8d2ec;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+#help-panel h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #e0e8ff;
+}
+
+#help-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+#help-list kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  background: #20284a;
+  border: 1px solid #38426e;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: center;
+  color: #d8e0ff;
+}
+
+#help-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #8892b8;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#help-close:hover {
+  color: #d0d8f0;
+}
+
+/* ===== Reduced-motion: calm transitions/animations on request ===== */
+@media (prefers-reduced-motion: reduce) {
+  #era-badge,
+  .toggle-btn,
+  #extinction-overlay,
+  #milestone-overlay,
+  #species-modal,
+  #species-modal-backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
 }

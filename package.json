@@ -1,0 +1,10 @@
+{
+  "name": "lifes-tree-blooms",
+  "version": "1.0.0",
+  "description": "Interactive animated visualization of Earth's 4-billion-year evolutionary history (2D map / 3D globe).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/"
+  }
+}

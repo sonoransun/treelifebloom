@@ -20,6 +20,7 @@ export function isCaptureMode() {
 export function initCapture({
   clock, controls, switchView, getViewMode,
   setBoundaries,        // (on: boolean) => void — toggles the plate overlay
+  setElevation,         // (mult: number) => void — 3D globe relief exaggeration
   openSpeciesModal,     // (speciesId: string) => void — opens the detail modal (pauses clock)
   closeSpeciesModal,    // () => void
 }) {
@@ -46,6 +47,9 @@ export function initCapture({
     },
     setBoundaries(on) {
       if (setBoundaries) setBoundaries(!!on);
+    },
+    setElevation(mult) {
+      if (setElevation) setElevation(Number(mult));
     },
     openSpeciesModal(speciesId) {
       if (openSpeciesModal) openSpeciesModal(speciesId);

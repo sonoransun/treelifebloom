@@ -12,7 +12,7 @@ brew install ffmpeg              # for WebM → GIF
 
 # Each run
 python3 -m http.server 8080      # in another shell, from project root
-node capture.js --all            # ~5 minutes, all 10 sequences
+node capture.js --all            # ~5 minutes, all 11 sequences
 ```
 
 Outputs land in:
@@ -35,7 +35,7 @@ The full request/response handshake between the Node capture script, Playwright,
 
 ## Sequence catalog
 
-The 10 sequences are defined in `scripts/capture/sequences.js`. Each entry specifies:
+The 11 sequences are defined in `scripts/capture/sequences.js`. Each entry specifies:
 
 - `id`, `order`, `title` — used for naming and docs
 - `view: '2d' | '3d'` — which renderer to capture

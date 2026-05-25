@@ -1,6 +1,6 @@
 // 2D Canvas equirectangular map renderer.
 
-import { COLORS, RENDER } from '../config.js';
+import { COLORS, RENDER, RENDER_EXTRA } from '../config.js';
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
@@ -9,6 +9,7 @@ import { fractalSubdivide } from '../engine/fractal.js';
 import { fbm3D, terrainProfileForAge } from '../engine/terrainNoise.js';
 import { mixColors, hexToRgb } from '../util/colorMix.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
+import { biomeColorAt, biomeClimate } from '../util/biome.js';
 import { cladeColor, hasRimRing } from '../util/taxonomy.js';
 import { GLACIATION } from '../config.js';
 
@@ -28,19 +29,38 @@ export class View2D {
     this._dragging = false;
     this._lastMouse = null;
 
+    // Touch state (single-finger pan + two-finger pinch).
+    this._touchLast = null;
+    this._pinchDist = null;
+
     // Hover state — recorded per-frame so hit-test can find species under cursor.
     this._markerHits = []; // [{sp, x, y, r}]
     this._hoverCb = null;
+    this._reducedMotion = false;
+    this._interactionCb = null; // requests a render so pan/zoom is live while paused
 
     // Bound handlers for cleanup
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
     this._onMouseUp = this._onMouseUp.bind(this);
     this._onWheel = this._onWheel.bind(this);
+    this._onTouchStart = this._onTouchStart.bind(this);
+    this._onTouchMove = this._onTouchMove.bind(this);
+    this._onTouchEnd = this._onTouchEnd.bind(this);
   }
 
   onSpeciesHover(cb) {
     this._hoverCb = cb;
+  }
+
+  /** Register a callback to request a render after pan/zoom (so it updates while paused). */
+  onInteraction(cb) {
+    this._interactionCb = cb;
+  }
+
+  /** Disable marker pulsing when the user prefers reduced motion. */
+  setReducedMotion(b) {
+    this._reducedMotion = b;
   }
 
   init() {
@@ -55,6 +75,10 @@ export class View2D {
     this.canvas.addEventListener('mouseup', this._onMouseUp);
     this.canvas.addEventListener('mouseleave', this._onMouseUp);
     this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
+    this.canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+    this.canvas.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    this.canvas.addEventListener('touchend', this._onTouchEnd);
+    this.canvas.addEventListener('touchcancel', this._onTouchEnd);
   }
 
   destroy() {
@@ -63,6 +87,10 @@ export class View2D {
     this.canvas.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('mouseleave', this._onMouseUp);
     this.canvas.removeEventListener('wheel', this._onWheel);
+    this.canvas.removeEventListener('touchstart', this._onTouchStart);
+    this.canvas.removeEventListener('touchmove', this._onTouchMove);
+    this.canvas.removeEventListener('touchend', this._onTouchEnd);
+    this.canvas.removeEventListener('touchcancel', this._onTouchEnd);
     this.canvas.style.display = 'none';
   }
 
@@ -70,6 +98,7 @@ export class View2D {
     const rect = this.container.getBoundingClientRect();
     this.width = rect.width;
     this.height = rect.height;
+    if (this.width < 1 || this.height < 1) return; // container hidden mid-switch
     this.canvas.width = this.width * this.dpr;
     this.canvas.height = this.height * this.dpr;
     this.canvas.style.width = this.width + 'px';
@@ -186,6 +215,7 @@ export class View2D {
     // 3. Continental polygons — smooth Bezier coastlines with hillshaded relief
     //    and elevation-threshold contour bands (highland + snow caps).
     const terrainProfile = terrainProfileForAge(timeMa);
+    const climate = biomeClimate(timeMa);
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
@@ -200,6 +230,8 @@ export class View2D {
       // Fill — blend with latitude palette for tropical green / polar grey
       const center = this._polygonCentroid(continent.vertices);
       let baseColor = continentColorAtLatitude(continent.color, center[1]);
+      const centroidBiome = biomeColorAt(center[1], 0, climate, 0);
+      if (centroidBiome) baseColor = mixColors(baseColor, centroidBiome, RENDER_EXTRA.biome.blend);
       if (extinction) {
         baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
       }
@@ -213,7 +245,7 @@ export class View2D {
       ctx.save();
       buildPath();
       ctx.clip();
-      this._renderHillshade(ctx, pixelPts, terrainProfile, w, h);
+      this._renderHillshade(ctx, pixelPts, terrainProfile, climate, w, h);
       ctx.restore();
 
       // Outer glow
@@ -252,13 +284,13 @@ export class View2D {
     // 4. Species markers — soft halo + inner highlight, with rim ring for advanced clades
     const aliveSpecies = getSpeciesAtTime(timeMa);
     const now = performance.now() / 1000;
-    this._markerHits = [];
+    this._markerHits.length = 0;
     for (const sp of aliveSpecies) {
       if (!sp.taxonomy) continue;
       const [x, y] = this._lonLatToXY(sp.location.lon, sp.location.lat);
       const categoryColor = cladeColor(sp);
       const rgb = hexToRgb(categoryColor);
-      const pulse = Math.sin(now * 2 + sp.location.lon) * RENDER.speciesMarkerPulseAmplitude;
+      const pulse = (this._reducedMotion ? 0 : Math.sin(now * 2 + sp.location.lon)) * RENDER.speciesMarkerPulseAmplitude;
       const radius = Math.max(2, RENDER.speciesMarkerRadius + pulse);
       const haloR = radius * 4.5;
       this._markerHits.push({ sp, x, y, r: radius + 4 });
@@ -331,7 +363,7 @@ export class View2D {
   // Hillshaded relief inside a polygon. Caller is responsible for clipping
   // to the polygon path. Reuses the same fbm3D field used by the 3D globe so
   // peaks/valleys appear in matching lat/lon when toggling views.
-  _renderHillshade(ctx, pixelPts, profile, w, h) {
+  _renderHillshade(ctx, pixelPts, profile, climate, w, h) {
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (const [x, y] of pixelPts) {
       if (x < minX) minX = x;
@@ -381,6 +413,18 @@ export class View2D {
         if (n > 1) n = 1; else if (n < -1) n = -1;
         const sign = n >= 0 ? 1 : -1;
         const relAlt = sign * Math.pow(Math.abs(n), jaggExp);
+
+        // Procedural biome tint (vegetation/desert/tundra/rock), under the relief.
+        if (climate) {
+          const biome = biomeColorAt(lat, relAlt, climate, n);
+          if (biome) {
+            ctx.fillStyle = biome;
+            ctx.globalAlpha = RENDER_EXTRA.biome.blend * 0.5;
+            ctx.beginPath();
+            ctx.arc(px, py, blobR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
 
         // Hillshade base: light on positive relAlt, dark on negative.
         if (relAlt >= 0) {
@@ -659,6 +703,7 @@ export class View2D {
       this.panX += (e.clientX - this._lastMouse.x) / this.zoom;
       this.panY += (e.clientY - this._lastMouse.y) / this.zoom;
       this._lastMouse = { x: e.clientX, y: e.clientY };
+      if (this._interactionCb) this._interactionCb();
       return;
     }
     // Hover hit-test in canvas-local coords.
@@ -697,5 +742,52 @@ export class View2D {
     e.preventDefault();
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     this.zoom = Math.max(0.5, Math.min(5, this.zoom * zoomFactor));
+    if (this._interactionCb) this._interactionCb();
+  }
+
+  // --- Touch: one finger pans, two fingers pinch-zoom (reuses pan/zoom state). ---
+
+  _onTouchStart(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      this._touchLast = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      this._pinchDist = null;
+    } else if (e.touches.length === 2) {
+      this._pinchDist = this._touchDistance(e.touches);
+      this._touchLast = null;
+    }
+  }
+
+  _onTouchMove(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && this._touchLast) {
+      const t = e.touches[0];
+      this.panX += (t.clientX - this._touchLast.x) / this.zoom;
+      this.panY += (t.clientY - this._touchLast.y) / this.zoom;
+      this._touchLast = { x: t.clientX, y: t.clientY };
+    } else if (e.touches.length === 2 && this._pinchDist != null) {
+      const d = this._touchDistance(e.touches);
+      if (this._pinchDist > 0) {
+        this.zoom = Math.max(0.5, Math.min(5, this.zoom * (d / this._pinchDist)));
+      }
+      this._pinchDist = d;
+    }
+    if (this._interactionCb) this._interactionCb();
+  }
+
+  _onTouchEnd(e) {
+    if (e.touches.length === 0) {
+      this._touchLast = null;
+      this._pinchDist = null;
+    } else if (e.touches.length === 1) {
+      this._touchLast = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      this._pinchDist = null;
+    }
+  }
+
+  _touchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
   }
 }

@@ -22,19 +22,31 @@
       <div id="era-badge">
         <span id="era-name">Hadean</span>
       </div>
+      <select id="milestone-jump" aria-label="Jump to a notable moment" title="Jump to a notable moment">
+        <option value="">Jump to…</option>
+      </select>
       <div class="layer-toggle">
-        <button id="btn-plates" class="toggle-btn" title="Toggle Plate Boundaries">Plates</button>
-        <button id="btn-legend" class="toggle-btn" title="Toggle Legend">Legend</button>
+        <button id="btn-plates" class="toggle-btn" title="Toggle Plate Boundaries" aria-label="Toggle plate boundaries" aria-pressed="false">Plates</button>
+        <button id="btn-legend" class="toggle-btn" title="Toggle Legend" aria-label="Toggle legend" aria-pressed="false">Legend</button>
+      </div>
+      <div class="relief-control" id="relief-control" style="display:none">
+        <label for="elevation-slider" title="Globe terrain relief exaggeration">Relief</label>
+        <input type="range" id="elevation-slider" min="0.5" max="3" step="0.1" value="1" aria-label="Globe terrain relief exaggeration">
+        <span id="elevation-value">1.0×</span>
       </div>
       <div class="view-toggle">
-        <button id="btn-2d" class="toggle-btn active" title="2D Map View">2D Map</button>
-        <button id="btn-3d" class="toggle-btn" title="3D Globe View">3D Globe</button>
+        <button id="btn-2d" class="toggle-btn active" title="2D Map View" aria-label="2D map view" aria-pressed="true">2D Map</button>
+        <button id="btn-3d" class="toggle-btn" title="3D Globe View" aria-label="3D globe view" aria-pressed="false">3D Globe</button>
+      </div>
+      <div class="action-group">
+        <button id="btn-share" class="toggle-btn" title="Copy a shareable link to this moment" aria-label="Copy shareable link">Share</button>
+        <button id="btn-help" class="toggle-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
     </header>
 
     <!-- Main visualization area -->
     <main id="viz-container">
-      <canvas id="canvas2d"></canvas>
+      <canvas id="canvas2d" role="img" aria-label="Animated 2D map of Earth's continents, species, and climate at the selected time"></canvas>
       <div id="globe-container"></div>
 
       <!-- Extinction overlay (DOM element over both views) -->
@@ -117,13 +129,13 @@
       <div id="era-strip"></div>
       <div class="scrubber-row">
         <span class="time-label-end">4 Ga</span>
-        <input type="range" id="scrubber" min="0" max="1000" step="any" value="0">
+        <input type="range" id="scrubber" min="0" max="1000" step="any" value="0" aria-label="Scrub through geological time (left = past, right = present)">
         <span class="time-label-end">Now</span>
       </div>
       <div class="transport-row">
-        <button id="btn-play" class="transport-btn" title="Play/Pause">&#9654;</button>
-        <button id="btn-restart" class="transport-btn" title="Restart">&#8634;</button>
-        <select id="speed-select" title="Playback Speed">
+        <button id="btn-play" class="transport-btn" title="Play/Pause" aria-label="Play or pause">&#9654;</button>
+        <button id="btn-restart" class="transport-btn" title="Restart" aria-label="Restart from 4 billion years ago">&#8634;</button>
+        <select id="speed-select" title="Playback Speed" aria-label="Playback speed">
           <option value="0.25">0.25x</option>
           <option value="0.5">0.5x</option>
           <option value="1" selected>1x</option>
@@ -133,6 +145,25 @@
         <span id="current-time-display">4,000 Ma</span>
       </div>
     </footer>
+
+    <!-- Keyboard & controls help (toggled with ? or the toolbar button) -->
+    <div id="help-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div id="help-panel">
+        <button id="help-close" aria-label="Close help">&times;</button>
+        <h3 id="help-title">Keyboard &amp; controls</h3>
+        <ul id="help-list">
+          <li><kbd>Space</kbd> Play / pause</li>
+          <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> Step back / forward in time</li>
+          <li><kbd>R</kbd> Restart at 4 Ga</li>
+          <li><kbd>P</kbd> Toggle plate boundaries</li>
+          <li><kbd>?</kbd> Toggle this help</li>
+          <li><kbd>Esc</kbd> Close dialogs</li>
+          <li>2D map: drag to pan, scroll or pinch to zoom</li>
+          <li>3D globe: drag to rotate, scroll or pinch to zoom</li>
+          <li>Click a species (sidebar or legend) for details</li>
+        </ul>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="js/main.js"></script>

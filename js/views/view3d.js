@@ -2,7 +2,8 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { COLORS, RENDER, ATMOSPHERE, GLACIATION } from '../config.js';
+import { COLORS, RENDER, RENDER_EXTRA, ATMOSPHERE, GLACIATION } from '../config.js';
+import { biomeColorAt, biomeClimate } from '../util/biome.js';
 import { getPeriodAtTime } from '../data/timeline.js';
 import { getActiveExtinction } from '../data/extinctions.js';
 import { getSpeciesAtTime } from '../data/species.js';
@@ -29,10 +30,31 @@ export class View3D {
     this._raycaster = null;
     this._pointerNdc = null;
     this._onPointerMove = null;
+    this.elevationExaggeration = 1.0;
+    this._reducedMotion = false;
+    this._interactionCb = null;
   }
 
   onSpeciesHover(cb) {
     this._hoverCb = cb;
+  }
+
+  /** Runtime relief exaggeration multiplier (1.0 = baseline). Read each frame
+   *  by the continent + marker rebuild; caller should re-render after setting. */
+  setElevationExaggeration(v) {
+    this.elevationExaggeration = v;
+  }
+
+  /** Disable globe auto-rotation when the user prefers reduced motion. */
+  setReducedMotion(b) {
+    this._reducedMotion = b;
+    if (this.controls) this.controls.autoRotate = !b;
+  }
+
+  /** Register a callback to request a render when the camera changes (so drag/zoom
+   *  responds even while the clock is paused). */
+  onInteraction(cb) {
+    this._interactionCb = cb;
   }
 
   init() {
@@ -63,8 +85,10 @@ export class View3D {
     this.controls.dampingFactor = 0.05;
     this.controls.minDistance = 1.5;
     this.controls.maxDistance = 5;
-    this.controls.autoRotate = true;
+    this.controls.autoRotate = !this._reducedMotion;
     this.controls.autoRotateSpeed = RENDER.autoRotateSpeed;
+    // Repaint on camera change so drag/zoom is live even when the clock is paused.
+    this.controls.addEventListener('change', () => { if (this._interactionCb) this._interactionCb(); });
 
     // Lighting — lower ambient lets the day/night terminator show on the globe.
     this.ambientLight = new THREE.AmbientLight(0x445577, ATMOSPHERE.ambientLow);
@@ -352,12 +376,13 @@ export class View3D {
     this.continentMeshes = [];
 
     const profile = terrainProfileForAge(timeMa);
+    const climate = biomeClimate(timeMa);
 
     // Create new continent meshes from polygon data
     for (const continent of polygons) {
       if (continent.vertices.length < 3) continue;
 
-      const mesh = this._createContinentMesh(continent, extinction, profile);
+      const mesh = this._createContinentMesh(continent, extinction, profile, climate);
       if (mesh) {
         this.scene.add(mesh);
         this.continentMeshes.push(mesh);
@@ -365,7 +390,7 @@ export class View3D {
     }
   }
 
-  _createContinentMesh(continent, extinction, profile) {
+  _createContinentMesh(continent, extinction, profile, climate) {
     const fractalVerts = fractalSubdivide(continent.vertices);
     const n = fractalVerts.length;
 
@@ -459,7 +484,8 @@ export class View3D {
         const t = ew / coastTaper;
         taper = t * t * (3 - 2 * t);
       }
-      const displacement = amp * shaped * taper;
+      const exag = this.elevationExaggeration ?? 1;
+      const displacement = amp * shaped * taper * exag;
       const r = Math.max(minR, baseElev + displacement);
 
       positions.push(dir.x * r, dir.y * r, dir.z * r);
@@ -469,7 +495,15 @@ export class View3D {
       const c = new THREE.Color(continentColorAtLatitude(continent.color, latDeg));
 
       // Elevation-driven shading: snow on peaks, highland brown on slopes, green basins.
-      const relAlt = (r - baseElev) / amp;
+      // Back-normalize by the same exaggeration so color thresholds track relief, not raw height.
+      const relAlt = (r - baseElev) / (amp * exag);
+
+      // Procedural biome base (vegetation/desert/tundra/rock), mottled by relief noise.
+      if (climate) {
+        const biome = biomeColorAt(latDeg, relAlt, climate, shaped);
+        if (biome) c.lerp(new THREE.Color(biome), RENDER_EXTRA.biome.blend);
+      }
+
       if (relAlt > 0.5) {
         c.lerp(snowColor, Math.min(1, (relAlt - 0.5) * 2));
       } else if (relAlt > 0.1) {
@@ -689,12 +723,20 @@ export class View3D {
     }
     this.markerHalos = [];
 
+    // Float markers above the tallest possible terrain at this time/exaggeration so
+    // they never bury (max local peak = continentElevation + amplitude * exaggeration).
+    const prof = terrainProfileForAge(timeMa);
+    const markerR = Math.max(
+      RENDER.markerElevation,
+      RENDER.continentElevation + prof.amplitude * (this.elevationExaggeration ?? 1) + RENDER.markerTerrainClearance
+    );
+
     const alive = getSpeciesAtTime(timeMa);
     for (const sp of alive) {
       if (!sp.taxonomy) continue;
 
       const pos = this._lonLatToVector3(
-        sp.location.lon, sp.location.lat, RENDER.markerElevation
+        sp.location.lon, sp.location.lat, markerR
       );
 
       const color = cladeColor(sp);

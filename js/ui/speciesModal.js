@@ -35,11 +35,14 @@ export class SpeciesModal {
       if (this.controls && this.controls.syncPlayButton) {
         this.controls.syncPlayButton();
       }
+      // Remember what had focus so we can restore it on close (a11y).
+      this._lastFocus = document.activeElement;
     }
     this._populate(sp, alive);
     this.el.classList.remove('hidden');
     this.backdropEl.classList.remove('hidden');
     this._isOpen = true;
+    if (this.closeBtn) this.closeBtn.focus();
   }
 
   // Hide the modal. Does not auto-resume — viewer presses play when ready.
@@ -47,6 +50,11 @@ export class SpeciesModal {
     this.el.classList.add('hidden');
     this.backdropEl.classList.add('hidden');
     this._isOpen = false;
+    // Restore focus to whatever opened the modal (a11y).
+    if (this._lastFocus && typeof this._lastFocus.focus === 'function') {
+      this._lastFocus.focus();
+      this._lastFocus = null;
+    }
   }
 
   isOpen() {

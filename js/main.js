@@ -18,6 +18,8 @@ import {
   getCO2AtTime,
 } from './data/atmosphere.js';
 import { species as allSpecies, getSpeciesAtTime } from './data/species.js';
+import { loadSettings, saveSetting, readUrlState, writeUrlState, buildShareUrl } from './util/settings.js';
+import { milestones } from './data/milestones.js';
 
 // --- Initialize ---
 
@@ -28,6 +30,7 @@ let view3d = null; // Lazy-loaded
 let activeView = view2d;
 let currentMode = '2d';
 let showBoundaries = false;
+let loadingView3d = false; // guards against double-import when 3D is clicked rapidly
 
 const sidebar = new Sidebar();
 const controls = new Controls(clock);
@@ -52,6 +55,20 @@ view2d.onSpeciesHover((sp, x, y) => {
 // Initialize 2D view
 view2d.init();
 
+// Respect the OS "reduce motion" preference (no auto-rotate, no marker pulse).
+const reduceMotionMq = window.matchMedia('(prefers-reduced-motion: reduce)');
+function applyReducedMotion() {
+  const r = reduceMotionMq.matches;
+  view2d.setReducedMotion(r);
+  if (view3d) view3d.setReducedMotion(r);
+  scheduleFrame();
+}
+reduceMotionMq.addEventListener('change', applyReducedMotion);
+view2d.setReducedMotion(reduceMotionMq.matches); // flag only at boot; initial render follows
+
+// Keep pan/zoom (mouse + touch) responsive even while the clock is paused.
+view2d.onInteraction(() => scheduleFrame());
+
 // Resize handling
 const resizeObserver = new ResizeObserver(() => {
   activeView.resize();
@@ -72,6 +89,9 @@ const btnPlates = document.getElementById('btn-plates');
 btnPlates.addEventListener('click', () => {
   showBoundaries = !showBoundaries;
   btnPlates.classList.toggle('active', showBoundaries);
+  saveSetting({ plates: showBoundaries });
+  syncUrl();
+  scheduleFrame();
 });
 
 document.addEventListener('keydown', (e) => {
@@ -79,7 +99,77 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'p') {
     showBoundaries = !showBoundaries;
     btnPlates.classList.toggle('active', showBoundaries);
+    saveSetting({ plates: showBoundaries });
+    syncUrl();
+    scheduleFrame();
   }
+});
+
+// --- Elevation Exaggeration Slider (3D globe relief) ---
+
+let elevationExaggeration = 1.0;
+const elevationSlider = document.getElementById('elevation-slider');
+const elevationValue = document.getElementById('elevation-value');
+const reliefControl = document.getElementById('relief-control');
+
+elevationSlider.addEventListener('input', () => {
+  elevationExaggeration = parseFloat(elevationSlider.value);
+  elevationValue.textContent = elevationExaggeration.toFixed(1) + '×';
+  if (view3d) view3d.setElevationExaggeration(elevationExaggeration);
+  scheduleFrame(); // re-render one frame even while paused
+  saveSetting({ elevation: elevationExaggeration });
+  syncUrl();
+});
+
+// --- Keyboard shortcuts help overlay ---
+
+const helpOverlay = document.getElementById('help-overlay');
+const btnHelp = document.getElementById('btn-help');
+const helpClose = document.getElementById('help-close');
+function toggleHelp(force) {
+  const show = typeof force === 'boolean' ? force : helpOverlay.classList.contains('hidden');
+  helpOverlay.classList.toggle('hidden', !show);
+}
+btnHelp.addEventListener('click', () => toggleHelp());
+helpClose.addEventListener('click', () => toggleHelp(false));
+helpOverlay.addEventListener('click', (e) => { if (e.target === helpOverlay) toggleHelp(false); });
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === '?') { e.preventDefault(); toggleHelp(); }
+  else if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) toggleHelp(false);
+});
+
+// --- Share link + jump-to-moment ---
+
+const btnShare = document.getElementById('btn-share');
+btnShare.addEventListener('click', async () => {
+  const url = buildShareUrl(currentState());
+  try {
+    await navigator.clipboard.writeText(url);
+    btnShare.textContent = 'Copied!';
+    btnShare.classList.add('copied');
+  } catch {
+    window.prompt('Copy this link:', url); // clipboard blocked (insecure context)
+  }
+  setTimeout(() => { btnShare.textContent = 'Share'; btnShare.classList.remove('copied'); }, 1500);
+});
+
+const milestoneJump = document.getElementById('milestone-jump');
+// Oldest → most recent, matching the timeline's left→right past→present.
+for (const m of [...milestones].sort((a, b) => b.timeMa - a.timeMa)) {
+  const opt = document.createElement('option');
+  opt.value = String(m.timeMa);
+  opt.textContent = m.name;
+  milestoneJump.appendChild(opt);
+}
+milestoneJump.addEventListener('change', () => {
+  const ma = Number(milestoneJump.value);
+  if (!milestoneJump.value || !Number.isFinite(ma)) return;
+  clock.pause();
+  controls.syncPlayButton();
+  clock.setTime(ma);
+  syncUrl();
+  milestoneJump.value = ''; // reset to the "Jump to…" placeholder
 });
 
 async function switchView(mode) {
@@ -88,6 +178,8 @@ async function switchView(mode) {
   if (mode === '3d') {
     // Lazy load 3D view
     if (!view3d) {
+      if (loadingView3d) return; // import already in flight from a prior click
+      loadingView3d = true;
       try {
         const { View3D } = await import('./views/view3d.js');
         view3d = new View3D(vizContainer);
@@ -95,10 +187,14 @@ async function switchView(mode) {
           if (sp) popup.show(sp, x, y);
           else popup.hide();
         });
+        view3d.onInteraction(() => scheduleFrame()); // live drag/zoom while paused
+        view3d.setReducedMotion(reduceMotionMq.matches);
       } catch (err) {
         console.error('Failed to load 3D view:', err);
         alert('3D Globe requires WebGL support. Please use a modern browser.');
         return;
+      } finally {
+        loadingView3d = false;
       }
     }
 
@@ -111,6 +207,11 @@ async function switchView(mode) {
 
     btn2d.classList.remove('active');
     btn3d.classList.add('active');
+
+    // Re-apply current relief setting (instance may have been re-init'd) + reveal slider.
+    view3d.setElevationExaggeration(elevationExaggeration);
+    view3d.setReducedMotion(reduceMotionMq.matches);
+    reliefControl.style.display = 'flex';
   } else {
     activeView.destroy();
     activeView = view2d;
@@ -121,10 +222,15 @@ async function switchView(mode) {
 
     btn3d.classList.remove('active');
     btn2d.classList.add('active');
+
+    reliefControl.style.display = 'none';
   }
 
   activeView.resize();
   currentMode = mode;
+  saveSetting({ view: mode });
+  syncUrl();
+  scheduleFrame(); // render the newly-active view at least once, even while paused
 }
 
 // --- Animation Loop ---
@@ -175,6 +281,53 @@ function animate(timestamp) {
   requestAnimationFrame(animate);
 }
 
+// --- Persisted preferences + shareable URL state ---
+
+function currentState() {
+  return {
+    time: clock.currentTimeMa,
+    view: currentMode,
+    plates: showBoundaries,
+    elevation: elevationExaggeration,
+  };
+}
+// Reflect the live view in the address bar so it's copy-paste shareable.
+function syncUrl() {
+  writeUrlState(currentState());
+}
+
+legend.onToggle = (open) => saveSetting({ legend: open });
+
+const speedSelectEl = document.getElementById('speed-select');
+speedSelectEl.addEventListener('change', () => {
+  saveSetting({ speed: parseFloat(speedSelectEl.value) });
+  syncUrl();
+});
+// Scrubber drag-end (controls.js owns the live 'input'); update URL on release.
+document.getElementById('scrubber').addEventListener('change', syncUrl);
+
+// Restore on boot. URL params win over stored prefs so shared links are exact.
+(function applyInitialState() {
+  const init = { ...loadSettings(), ...readUrlState() };
+
+  if (typeof init.speed === 'number') {
+    clock.setSpeed(init.speed);
+    speedSelectEl.value = String(init.speed);
+  }
+  if (typeof init.elevation === 'number') {
+    elevationExaggeration = init.elevation;
+    elevationSlider.value = String(init.elevation);
+    elevationValue.textContent = init.elevation.toFixed(1) + '×';
+  }
+  if (init.plates) {
+    showBoundaries = true;
+    btnPlates.classList.add('active');
+  }
+  if (init.legend) legend.setOpen(true);
+  if (typeof init.time === 'number') clock.setTime(init.time);
+  if (init.view === '3d') switchView('3d'); // async; re-applies elevation + schedules a frame
+})();
+
 // Initial render
 const initialPolygons = getPolygonsAtTime(clock.currentTimeMa);
 const initialBoundaries = showBoundaries ? getBoundariesAtTime(clock.currentTimeMa) : null;
@@ -196,6 +349,13 @@ initCapture({
   setBoundaries: (on) => {
     showBoundaries = !!on;
     btnPlates.classList.toggle('active', showBoundaries);
+  },
+  setElevation: (v) => {
+    elevationExaggeration = Number(v);
+    elevationSlider.value = String(elevationExaggeration);
+    elevationValue.textContent = elevationExaggeration.toFixed(1) + '×';
+    if (view3d) view3d.setElevationExaggeration(elevationExaggeration);
+    scheduleFrame();
   },
   openSpeciesModal: (speciesId) => {
     const sp = allSpecies.find((s) => s.id === speciesId);

@@ -118,16 +118,17 @@ export const RENDER = {
 
   // 3D specific
   globeRadius: 1,
-  continentElevation: 1.025,
-  continentSideColor: '#3d2e1a',
-  markerElevation: 1.035,
+  continentElevation: 1.05,
+  continentSideColor: '#6b5234',
+  markerElevation: 1.135,
+  markerTerrainClearance: 0.012, // gap kept above the (possibly exaggerated) terrain so markers never bury
   starCount: 2000,
   autoRotateSpeed: 0.3,
 
   // Terrain relief (always-on). Drop terrainSubdivLevels to 2 if perf < 60fps.
   terrainSubdivLevels: 3,
-  terrainBaseAmplitude: 0.040,
-  terrainProtoAmplitude: 0.075,
+  terrainBaseAmplitude: 0.075,
+  terrainProtoAmplitude: 0.14,
   terrainBaseFreq: 5.0,
   terrainProtoFreq: 9.0,
   terrainBaseOctaves: 4,
@@ -161,13 +162,13 @@ export const RENDER = {
   // terrainProfileForAge ramp so the 2D map and 3D globe show consistent peaks.
   view2dHillshadeSpacing: 14,
   view2dHillshadeBlobRadius: 11,
-  view2dHillshadeAlpha: 0.20,
-  view2dHighlandThreshold: 0.25,
+  view2dHillshadeAlpha: 0.34,
+  view2dHighlandThreshold: 0.20,
   view2dHighlandBlobRadius: 7,
-  view2dHighlandAlpha: 0.45,
-  view2dSnowThreshold: 0.55,
+  view2dHighlandAlpha: 0.66,
+  view2dSnowThreshold: 0.48,
   view2dSnowBlobRadius: 4.5,
-  view2dSnowAlpha: 0.85,
+  view2dSnowAlpha: 0.92,
   view2dHotPeakColor: '#ff5530',
 
   // 2D plate boundaries (toggle-gated). Layered strokes for "astronomical" contrast.
@@ -234,4 +235,21 @@ export const RENDER_EXTRA = {
     { lat:  90, color: '#c8d4dc' },
   ],
   latitudeBlend: 0.55, // how strongly to lean toward latitude palette vs. continent.color
+
+  // Procedural biome texturing (js/util/biome.js): era + climate + latitude + elevation
+  // drive a vegetation/desert/tundra/rock surface color, mottled by relief noise.
+  biome: {
+    enabled: true,
+    rock: '#8a7a5e',    // barren land (pre-vegetation / arid base)
+    desert: '#c9a86a',  // arid subtropics (sand)
+    grass: '#869a4e',   // temperate grassland (olive)
+    forest: '#3f6b34',  // lush tropical/temperate forest
+    boreal: '#4a6750',  // cool high-latitude conifer (green-grey)
+    tundra: '#9aa090',  // sub-polar tundra fringe (grey-green)
+    desertLatCenter: 25, // latitude of the subtropical desert belt
+    desertLatWidth: 14,  // half-width of the desert belt (degrees)
+    vegStartMa: 470,     // land plants (bryophytes) — greening begins
+    vegForestMa: 385,    // first forests — greening reaches majority cover
+    blend: 0.8,          // how strongly biome replaces the latitude/base color
+  },
 };

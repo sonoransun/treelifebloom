@@ -1,6 +1,6 @@
 # Capture pipeline
 
-Headless capture of the 10 notable sequences embedded in the project README and `docs/sequences/`.
+Headless capture of the 11 notable sequences embedded in the project README and `docs/sequences/`.
 
 For each entry in [`sequences.js`](sequences.js) the pipeline produces:
 
@@ -35,7 +35,7 @@ cd scripts/capture
 node capture.js --list             # see the catalog
 node capture.js cambrian           # one sequence
 node capture.js cambrian permian   # several
-node capture.js --all              # all 10 (~5 min)
+node capture.js --all              # all 11 (~5 min)
 ```
 
 Useful flags:

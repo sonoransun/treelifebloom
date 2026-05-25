@@ -22,6 +22,7 @@ function lerp(a, b, t) {
  * If vertex counts differ, the shorter polygon is padded by repeating its last vertex.
  */
 function interpolateVertices(verts1, verts2, alpha) {
+  if (!verts1.length || !verts2.length) return []; // guard: empty slice would index [-1] → NaN
   const maxLen = Math.max(verts1.length, verts2.length);
   const result = [];
 

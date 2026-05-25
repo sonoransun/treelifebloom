@@ -43,6 +43,12 @@ python3 -m http.server 8080
 
 Then open <http://localhost:8080> in a modern browser. A full play-through at 1× takes about **4 minutes 27 seconds**.
 
+A small unit-test suite covers the pure engine/util modules and needs no dependencies (uses Node's built-in runner):
+
+```bash
+node --test test/   # or: npm test
+```
+
 ## Featured sequences
 
 Eleven moments worth pausing on, each with a dedicated walkthrough.
@@ -99,6 +105,8 @@ Twelve historically reconstructed continental configurations morph smoothly acro
 | 0 | Present day |
 
 Coastlines are rendered with **deterministic fractal subdivision** plus **smooth Bézier interpolation** — the fractal detail stays consistent across frames, while quadratic curves through midpoints make the shorelines flow rather than zig-zag. A subtle NW-lit highlight + SE shadow inside each continent gives a hint of relief without any heightmap data.
+
+Land surfaces are painted with **procedurally-generated biome textures** keyed to era and climate: the continents are barren rock until plants colonize the land (~470 Ma), green up as forests spread (~385 Ma), and show arid subtropical deserts, lush tropics, and sub-polar tundra near the ice — all driven by the same temperature / O₂ / CO₂ / glaciation curves that feed the rest of the visualization, mottled by the terrain noise. The 2D map and 3D globe share one biome model (`js/util/biome.js`).
 
 ### Species & evolution
 
@@ -254,10 +262,15 @@ Both views share the same timeline state — switching preserves time and playba
 | **Restart** · **R** | Return to 4 billion years ago |
 | **Plates** · **P** | Toggle plate-boundary overlay |
 | **2D Map** / **3D Globe** | Switch between flat map and globe views |
+| **Relief slider** (3D) | Exaggerate globe terrain relief, 0.5× → 3× |
+| **Jump to…** | Dropdown that jumps the timeline to any notable moment |
+| **Share** | Copy a link that reopens the current time, view, plates & relief |
+| **Help** · **?** | Show the keyboard & controls cheat-sheet |
 | **Click a sidebar species** | Open detail modal with close evolutionary relatives (auto-pauses) |
 | **Hover a species marker or sidebar item** | Show quick-info popup |
+| **Drag / scroll / pinch** | Pan & zoom the 2D map or rotate & zoom the 3D globe (touch supported) |
 
-The colored era strip above the scrubber shows geological periods at a glance, using standard ICS colors.
+The colored era strip above the scrubber shows geological periods at a glance, using standard ICS colors. Playback speed, view, relief, plate overlay, and legend visibility persist across reloads, and the URL stays shareable. The visualization honors your OS **reduce-motion** setting (no auto-rotation or marker pulsing).
 
 ## Architecture
 
@@ -311,7 +324,7 @@ gantt
 
 ## Documentation
 
-- **[docs/notable-sequences.md](docs/notable-sequences.md)** — index of the 10 featured sequences with thumbnails
+- **[docs/notable-sequences.md](docs/notable-sequences.md)** — index of the 11 featured sequences with thumbnails
 - **[docs/architecture.md](docs/architecture.md)** — module map, render pipeline, capture pipeline
 - **[docs/data-sources.md](docs/data-sources.md)** — paleo data references for continents, atmosphere, extinctions
 - **[docs/capture.md](docs/capture.md)** — how to regenerate the embedded screenshots and animated clips

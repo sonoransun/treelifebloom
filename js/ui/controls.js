@@ -31,7 +31,7 @@ export class Controls {
     // sliderValue 0 (left) = past, sliderValue max (right) = present.
     this.scrubber.addEventListener('input', () => {
       this._scrubbing = true;
-      const fraction = 1 - parseFloat(this.scrubber.value) / parseFloat(this.scrubber.max);
+      const fraction = Math.max(0, Math.min(1, 1 - parseFloat(this.scrubber.value) / parseFloat(this.scrubber.max)));
       this.clock.setTime(fractionToTimeMa(fraction));
     });
     this.scrubber.addEventListener('change', () => {

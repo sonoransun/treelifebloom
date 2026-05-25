@@ -3,6 +3,7 @@
 
 import { getSpeciesAtTime } from '../data/species.js';
 import { cladeColor } from '../util/taxonomy.js';
+import { TIMING } from '../config.js';
 import {
   getTemperatureAtTime,
   getOxygenAtTime,
@@ -92,7 +93,7 @@ export class Sidebar {
   update(timeMa) {
     // Throttle DOM updates
     const now = performance.now();
-    if (now - this._lastUpdateTime < 80) return;
+    if (now - this._lastUpdateTime < TIMING.sidebarUpdateIntervalMs) return;
     this._lastUpdateTime = now;
 
     // Update atmosphere readouts
