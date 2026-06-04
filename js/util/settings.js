@@ -52,7 +52,7 @@ export function buildShareUrl({ time, view, plates, elevation } = {}) {
   const p = new URLSearchParams();
   if (time != null) p.set('t', String(Math.round(time)));
   if (view) p.set('view', view);
-  if (plates) p.set('plates', '1');
+  if (plates != null) p.set('plates', plates ? '1' : '0'); // encode both states — plates defaults on, so an explicit off must travel
   if (elevation != null && elevation !== 1) p.set('ex', String(elevation));
   const qs = p.toString();
   return `${location.origin}${location.pathname}${qs ? '?' + qs : ''}`;

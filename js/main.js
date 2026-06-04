@@ -29,7 +29,7 @@ const view2d = new View2D(vizContainer);
 let view3d = null; // Lazy-loaded
 let activeView = view2d;
 let currentMode = '2d';
-let showBoundaries = false;
+let showBoundaries = true; // default on; applyInitialState() reconciles with stored/URL prefs
 let loadingView3d = false; // guards against double-import when 3D is clicked rapidly
 
 const sidebar = new Sidebar();
@@ -241,9 +241,14 @@ async function switchView(mode) {
 // keeps CPU near idle once the timeline auto-pauses at t = 0 Ma.
 let lastTimestamp = 0;
 let rafId = null;
+let inFrame = false; // true while animate() runs; blocks tick()'s notify from re-arming
 
 function scheduleFrame() {
-  if (rafId === null) {
+  // While a frame is executing, animate() re-arms itself at the end — so ignore the
+  // re-entrant call that clock.tick()'s _notify() makes mid-frame. Without this guard
+  // that call both resets lastTimestamp (corrupting delta) and queues a second RAF,
+  // doubling the callback count every frame until the page hangs.
+  if (rafId === null && !inFrame) {
     lastTimestamp = 0;
     rafId = requestAnimationFrame(animate);
   }
@@ -261,6 +266,7 @@ function buildAtmoSnapshot(timeMa, nowMs) {
 }
 
 function animate(timestamp) {
+  inFrame = true;
   rafId = null;
   const delta = lastTimestamp ? (timestamp - lastTimestamp) / 1000 : 0;
   lastTimestamp = timestamp;
@@ -294,6 +300,7 @@ function animate(timestamp) {
   if (clock.playing) {
     rafId = requestAnimationFrame(animate);
   }
+  inFrame = false;
 }
 
 // --- Persisted preferences + shareable URL state ---
@@ -334,11 +341,11 @@ document.getElementById('scrubber').addEventListener('change', syncUrl);
     elevationSlider.value = String(init.elevation);
     elevationValue.textContent = init.elevation.toFixed(1) + '×';
   }
-  if (init.plates) {
-    showBoundaries = true;
-    btnPlates.classList.add('active');
-  }
-  if (init.legend) legend.setOpen(true);
+  // Plates + Legend default on; an explicit stored/URL `false` turns them back off.
+  showBoundaries = init.plates !== false;
+  btnPlates.classList.toggle('active', showBoundaries);
+  btnPlates.setAttribute('aria-pressed', String(showBoundaries));
+  legend.setOpen(init.legend !== false);
   if (typeof init.time === 'number') clock.setTime(init.time);
   if (init.view === '3d') switchView('3d'); // async; re-applies elevation + schedules a frame
 })();

@@ -26,8 +26,8 @@
         <option value="">Jump to…</option>
       </select>
       <div class="layer-toggle">
-        <button id="btn-plates" class="toggle-btn" title="Toggle Plate Boundaries" aria-label="Toggle plate boundaries" aria-pressed="false">Plates</button>
-        <button id="btn-legend" class="toggle-btn" title="Toggle Legend" aria-label="Toggle legend" aria-pressed="false">Legend</button>
+        <button id="btn-plates" class="toggle-btn active" title="Toggle Plate Boundaries" aria-label="Toggle plate boundaries" aria-pressed="true">Plates</button>
+        <button id="btn-legend" class="toggle-btn active" title="Toggle Legend" aria-label="Toggle legend" aria-pressed="true">Legend</button>
       </div>
       <div class="relief-control" id="relief-control" style="display:none">
         <label for="elevation-slider" title="Globe terrain relief exaggeration">Relief</label>
@@ -62,7 +62,7 @@
       </div>
 
       <!-- Legend panel (top-left, toggled) -->
-      <div id="legend-panel" class="hidden"></div>
+      <div id="legend-panel"></div>
 
       <!-- Species popup (anchored near cursor) -->
       <div id="species-popup" class="hidden">

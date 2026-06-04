@@ -24,7 +24,7 @@ test('buildShareUrl emits set params and omits defaults', () => {
   assert.match(url, /ex=1\.8/);
 
   const plain = buildShareUrl({ time: 100, view: '2d', plates: false, elevation: 1 });
-  assert.ok(!/plates=/.test(plain), 'plates omitted when false');
+  assert.match(plain, /plates=0/);   // plates defaults on, so an explicit off must travel in the link
   assert.ok(!/ex=/.test(plain), 'ex omitted at 1x');
 });
 
