@@ -43,6 +43,7 @@ export class Legend {
     if (!this.panel) return;
     this.panel.classList.toggle('hidden', !open);
     this.btn.classList.toggle('active', open);
+    this.btn.setAttribute('aria-expanded', String(open));
     // Reset the throttle so the next animate() tick rebuilds immediately.
     this._lastUpdateMs = 0;
     this._lastUpdateMa = null;
@@ -188,6 +189,9 @@ export class Legend {
     const row = document.createElement('div');
     row.className = 'legend-tree-leaf';
     row.dataset.id = sp.id;
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-label', `${sp.name} — details`);
 
     const dot = document.createElement('span');
     dot.className = 'legend-dot';
@@ -201,6 +205,12 @@ export class Legend {
     row.appendChild(name);
 
     row.addEventListener('click', () => this._openSpecies(sp));
+    row.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        this._openSpecies(sp);
+      }
+    });
     row.addEventListener('mouseenter', (e) => {
       if (this._popup) this._popup.show(sp, e.clientX, e.clientY);
     });

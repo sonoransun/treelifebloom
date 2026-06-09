@@ -151,6 +151,11 @@ export class SpeciesModal {
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && this._isOpen) {
         this.close();
+        // Consume the press so document-level Escape handlers registered later
+        // (help overlay, history panel, sidebar drawer) don't close their layer
+        // off the same event — Escape should unwind one layer at a time.
+        e.preventDefault();
+        e.stopImmediatePropagation();
       }
     });
   }

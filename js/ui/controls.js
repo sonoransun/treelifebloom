@@ -17,8 +17,11 @@ export class Controls {
     this.periodLabel = document.getElementById('time-period-label');
     this.maLabel = document.getElementById('time-ma-label');
     this.eraStrip = document.getElementById('era-strip');
+    this.timelineControls = document.getElementById('timeline-controls');
 
     this._scrubbing = false;
+    this._lastAriaMs = 0;
+    this.onTimeJump = null; // fired after an era-strip click jump (main.js syncs the URL)
     this._init();
   }
 
@@ -57,6 +60,10 @@ export class Controls {
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
+      // An element-level handler (species item, legend row, era segment) already
+      // consumed this press — don't also treat it as a global shortcut (Space
+      // would toggle play/pause on top of activating the focused button).
+      if (e.defaultPrevented) return;
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
       switch (e.key) {
         case ' ':
@@ -99,6 +106,22 @@ export class Controls {
       segment.style.width = widthPercent + '%';
       segment.style.background = period.color;
       segment.title = `${period.period} (${period.startMa}–${period.endMa} Ma)`;
+      // Quick-jump: clicking a period lands at its start. Scrub semantics — the
+      // play/pause state is left alone, matching the scrubber's input handler.
+      segment.setAttribute('role', 'button');
+      segment.tabIndex = 0;
+      segment.setAttribute('aria-label', `Jump to ${period.period}, ${period.startMa} million years ago`);
+      const jump = () => {
+        this.clock.setTime(Math.min(period.startMa, TIMING.startTimeMa));
+        if (this.onTimeJump) this.onTimeJump();
+      };
+      segment.addEventListener('click', jump);
+      segment.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          jump();
+        }
+      });
       this.eraStrip.appendChild(segment);
     }
   }
@@ -119,11 +142,16 @@ export class Controls {
   }
 
   updateDisplay(timeMa) {
+    const fraction = timeMaToFraction(timeMa);
+
     // Update scrubber position (unless user is dragging)
     if (!this._scrubbing) {
-      const fraction = timeMaToFraction(timeMa);
       this.scrubber.value = (1 - fraction) * parseFloat(this.scrubber.max);
     }
+
+    // Drive the era-strip playhead and the scrubber's progress fill (CSS var,
+    // one cheap style write — both read var(--scrub-pos) from this container).
+    this.timelineControls.style.setProperty('--scrub-pos', ((1 - fraction) * 100).toFixed(3) + '%');
 
     // Format time
     this.timeDisplay.textContent = formatTimeMa(timeMa);
@@ -136,10 +164,20 @@ export class Controls {
       this.eraName.textContent = period.period;
       this.eraBadge.style.background = period.color;
     }
+
+    // Screen-reader value (throttled to ~4 Hz so AT isn't spammed at 60 fps).
+    const now = performance.now();
+    if (now - this._lastAriaMs > 250) {
+      this._lastAriaMs = now;
+      this.scrubber.setAttribute(
+        'aria-valuetext',
+        period ? `${formatTimeMa(timeMa)} — ${period.period}` : formatTimeMa(timeMa)
+      );
+    }
   }
 }
 
-function formatTimeMa(ma) {
+export function formatTimeMa(ma) {
   if (ma >= 1000) {
     return (ma / 1000).toFixed(1) + ' Ga';
   } else if (ma >= 1) {

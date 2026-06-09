@@ -7,9 +7,22 @@
 // (snow/highland), hot-crust, and extinction tints. Pure + deterministic.
 
 import { RENDER_EXTRA } from '../config.js';
-import { mixColors, clamp } from './colorMix.js';
+import { hexToRgb, clamp } from './colorMix.js';
 import { getTemperatureAtTime, getOxygenAtTime, getCO2AtTime } from '../data/atmosphere.js';
 import { getGlaciation } from '../data/glaciation.js';
+
+// Palette parsed once at module load — biomeColorAt runs per surface point per frame,
+// so the hot path mixes numerically instead of round-tripping rgb() strings.
+const PAL = RENDER_EXTRA.biome
+  ? {
+      rock: hexToRgb(RENDER_EXTRA.biome.rock),
+      desert: hexToRgb(RENDER_EXTRA.biome.desert),
+      grass: hexToRgb(RENDER_EXTRA.biome.grass),
+      forest: hexToRgb(RENDER_EXTRA.biome.forest),
+      boreal: hexToRgb(RENDER_EXTRA.biome.boreal),
+      tundra: hexToRgb(RENDER_EXTRA.biome.tundra),
+    }
+  : null;
 
 function smoothstep(t) {
   t = clamp(t, 0, 1);
@@ -83,13 +96,29 @@ export function biomeColorAt(latDeg, relAlt, climate, mottle = 0) {
   green = clamp(green + mottle * 0.12 * climate.veg, 0, 1);
 
   // Compose: rock → desert (arid) → vegetation (warmth picks shade) → tundra fringe.
-  let color = mixColors(B.rock, B.desert, aridity * (1 - iceProx));
-  const vegColor = warmth > 0.66 ? B.forest : warmth > 0.33 ? B.grass : B.boreal;
-  color = mixColors(color, vegColor, green);
-  color = mixColors(color, B.tundra, iceProx * 0.8);
+  // Numeric mixing rounds each channel per step exactly like mixColors did, so the
+  // output stays byte-identical to the former mixColors chain (pinned in tests).
+  const veg = warmth > 0.66 ? PAL.forest : warmth > 0.33 ? PAL.grass : PAL.boreal;
+  const tArid = aridity * (1 - iceProx);
+  let r = Math.round(PAL.rock.r + (PAL.desert.r - PAL.rock.r) * tArid);
+  let g = Math.round(PAL.rock.g + (PAL.desert.g - PAL.rock.g) * tArid);
+  let b = Math.round(PAL.rock.b + (PAL.desert.b - PAL.rock.b) * tArid);
+  r = Math.round(r + (veg.r - r) * green);
+  g = Math.round(g + (veg.g - g) * green);
+  b = Math.round(b + (veg.b - b) * green);
+  const tIce = iceProx * 0.8;
+  r = Math.round(r + (PAL.tundra.r - r) * tIce);
+  g = Math.round(g + (PAL.tundra.g - g) * tIce);
+  b = Math.round(b + (PAL.tundra.b - b) * tIce);
 
   // Subtle lightness grain for texture.
-  if (mottle !== 0) color = mixColors(color, mottle > 0 ? '#ffffff' : '#000000', Math.abs(mottle) * 0.06);
+  if (mottle !== 0) {
+    const grain = mottle > 0 ? 255 : 0;
+    const tGrain = Math.abs(mottle) * 0.06;
+    r = Math.round(r + (grain - r) * tGrain);
+    g = Math.round(g + (grain - g) * tGrain);
+    b = Math.round(b + (grain - b) * tGrain);
+  }
 
-  return color;
+  return `rgb(${r},${g},${b})`;
 }

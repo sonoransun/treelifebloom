@@ -11,6 +11,7 @@ import { MilestoneOverlay } from './ui/milestoneOverlay.js';
 import { SpeciesPopup } from './ui/speciesPopup.js';
 import { SpeciesModal } from './ui/speciesModal.js';
 import { Legend } from './ui/legend.js';
+import { HistoryExplorer } from './ui/historyExplorer.js';
 import { initCapture } from './capture.js';
 import {
   getTemperatureAtTime,
@@ -19,7 +20,6 @@ import {
 } from './data/atmosphere.js';
 import { species as allSpecies, getSpeciesAtTime } from './data/species.js';
 import { loadSettings, saveSetting, readUrlState, writeUrlState, buildShareUrl } from './util/settings.js';
-import { milestones } from './data/milestones.js';
 
 // --- Initialize ---
 
@@ -41,6 +41,7 @@ const milestoneOverlay = new MilestoneOverlay();
 const popup = new SpeciesPopup();
 const speciesModal = new SpeciesModal(clock, controls);
 const legend = new Legend();
+const historyExplorer = new HistoryExplorer(clock, controls);
 sidebar.attachPopup(popup);
 sidebar.attachModal(speciesModal);
 legend.attachPopup(popup);
@@ -127,9 +128,18 @@ elevationSlider.addEventListener('input', () => {
 const helpOverlay = document.getElementById('help-overlay');
 const btnHelp = document.getElementById('btn-help');
 const helpClose = document.getElementById('help-close');
+let helpLastFocus = null;
 function toggleHelp(force) {
   const show = typeof force === 'boolean' ? force : helpOverlay.classList.contains('hidden');
   helpOverlay.classList.toggle('hidden', !show);
+  // Focus management mirrors the species modal (a11y).
+  if (show) {
+    helpLastFocus = document.activeElement;
+    helpClose.focus();
+  } else if (helpLastFocus && typeof helpLastFocus.focus === 'function') {
+    helpLastFocus.focus();
+    helpLastFocus = null;
+  }
 }
 btnHelp.addEventListener('click', () => toggleHelp());
 helpClose.addEventListener('click', () => toggleHelp(false));
@@ -137,7 +147,12 @@ helpOverlay.addEventListener('click', (e) => { if (e.target === helpOverlay) tog
 document.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === '?') { e.preventDefault(); toggleHelp(); }
-  else if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) toggleHelp(false);
+  else if (e.key === 'Escape' && !helpOverlay.classList.contains('hidden')) {
+    toggleHelp(false);
+    // One layer per press — keep the history/drawer handler from also firing.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }
 });
 
 // --- Share link + jump-to-moment ---
@@ -155,22 +170,42 @@ btnShare.addEventListener('click', async () => {
   setTimeout(() => { btnShare.textContent = 'Share'; btnShare.classList.remove('copied'); }, 1500);
 });
 
-const milestoneJump = document.getElementById('milestone-jump');
-// Oldest → most recent, matching the timeline's left→right past→present.
-for (const m of [...milestones].sort((a, b) => b.timeMa - a.timeMa)) {
-  const opt = document.createElement('option');
-  opt.value = String(m.timeMa);
-  opt.textContent = m.name;
-  milestoneJump.appendChild(opt);
+// --- History of Life explorer (left-docked chapter panel) ---
+
+historyExplorer.onJump = () => syncUrl();
+document.getElementById('btn-history').addEventListener('click', () => historyExplorer.toggle());
+// Era-strip period clicks use scrub semantics; reflect them in the URL too.
+controls.onTimeJump = () => syncUrl();
+
+// --- Mobile sidebar drawer (the off-canvas CSS only engages ≤768px) ---
+
+const sidebarEl = document.getElementById('sidebar');
+const btnSidebar = document.getElementById('btn-sidebar');
+const sidebarScrim = document.getElementById('sidebar-scrim');
+function setSidebarOpen(open) {
+  sidebarEl.classList.toggle('open', open);
+  sidebarScrim.classList.toggle('hidden', !open);
+  btnSidebar.setAttribute('aria-expanded', String(open));
 }
-milestoneJump.addEventListener('change', () => {
-  const ma = Number(milestoneJump.value);
-  if (!milestoneJump.value || !Number.isFinite(ma)) return;
-  clock.pause();
-  controls.syncPlayButton();
-  clock.setTime(ma);
-  syncUrl();
-  milestoneJump.value = ''; // reset to the "Jump to…" placeholder
+btnSidebar.addEventListener('click', () => setSidebarOpen(!sidebarEl.classList.contains('open')));
+sidebarScrim.addEventListener('click', () => setSidebarOpen(false));
+// Returning to the desktop layout puts the sidebar back in the grid — drop drawer state.
+window.matchMedia('(min-width: 769px)').addEventListener('change', (e) => {
+  if (e.matches) setSidebarOpen(false);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === 'h') {
+    historyExplorer.toggle();
+  } else if (e.key === 'Escape') {
+    // Close only the top-most layer: the species modal and help overlay have
+    // their own Escape handlers, so stand down while either is open.
+    if (speciesModal.isOpen()) return;
+    if (!helpOverlay.classList.contains('hidden')) return;
+    if (sidebarEl.classList.contains('open')) setSidebarOpen(false);
+    else if (historyExplorer.isOpen()) historyExplorer.close();
+  }
 });
 
 async function switchView(mode) {
@@ -296,6 +331,7 @@ function animate(timestamp) {
   extinctionOverlay.update(t);
   milestoneOverlay.update(t);
   legend.update(t);
+  historyExplorer.update(t);
 
   if (clock.playing) {
     rafId = requestAnimationFrame(animate);
@@ -341,11 +377,14 @@ document.getElementById('scrubber').addEventListener('change', syncUrl);
     elevationSlider.value = String(init.elevation);
     elevationValue.textContent = init.elevation.toFixed(1) + '×';
   }
-  // Plates + Legend default on; an explicit stored/URL `false` turns them back off.
+  // Plates default on; an explicit stored/URL `false` turns them back off.
   showBoundaries = init.plates !== false;
   btnPlates.classList.toggle('active', showBoundaries);
   btnPlates.setAttribute('aria-pressed', String(showBoundaries));
-  legend.setOpen(init.legend !== false);
+  // Legend defaults open on desktop but closed on small screens (it overlays
+  // most of the map there). A stored preference always wins.
+  const smallScreen = window.matchMedia('(max-width: 768px)').matches;
+  legend.setOpen(init.legend === undefined ? !smallScreen : init.legend !== false);
   if (typeof init.time === 'number') clock.setTime(init.time);
   if (init.view === '3d') switchView('3d'); // async; re-applies elevation + schedules a frame
 })();

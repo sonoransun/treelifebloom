@@ -1,8 +1,20 @@
 // Pure color helpers shared by 2D/3D views, atmosphere haze, and ice caps.
 
+// Memo for hex inputs only — palettes are a small fixed set of hex strings, while
+// rgb(...) strings (mixColors output) are unbounded, so those always parse fresh.
+// Cached objects are shared: callers must treat the result as read-only (they all do).
+const hexCache = new Map();
+const HEX_CACHE_MAX = 512;
+
 export function hexToRgb(hex) {
+  const cached = hexCache.get(hex);
+  if (cached !== undefined) return cached;
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (m) return { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+  if (m) {
+    const rgb = { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) };
+    if (hexCache.size < HEX_CACHE_MAX) hexCache.set(hex, rgb);
+    return rgb;
+  }
   // Also accept rgb(r,g,b) so that mixColors output can be re-mixed.
   const r = /^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i.exec(hex);
   if (r) return { r: parseInt(r[1], 10), g: parseInt(r[2], 10), b: parseInt(r[3], 10) };

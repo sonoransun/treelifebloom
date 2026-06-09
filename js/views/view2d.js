@@ -39,6 +39,20 @@ export class View2D {
     this._reducedMotion = false;
     this._interactionCb = null; // requests a render so pan/zoom is live while paused
 
+    // Render caches — see render(): ocean gradient (keyed on colors + size), per-clade
+    // marker halo sprites, viewport vignette, and the offscreen continent layer.
+    this._oceanGrad = null;
+    this._oceanGradKey = null;
+    this._haloSprites = new Map(); // clade color → sprite canvas (bounded: ~30 clades)
+    this._vignette = null;
+    this._vignetteKey = null;
+    this._layerCanvas = null;
+    this._layerCtx = null;
+    this._layerTimeMa = null; // with _layerW/_layerH/_layerDpr: full layer cache key
+    this._layerW = 0;
+    this._layerH = 0;
+    this._layerDpr = 0;
+
     // Bound handlers for cleanup
     this._onMouseDown = this._onMouseDown.bind(this);
     this._onMouseMove = this._onMouseMove.bind(this);
@@ -92,6 +106,16 @@ export class View2D {
     this.canvas.removeEventListener('touchend', this._onTouchEnd);
     this.canvas.removeEventListener('touchcancel', this._onTouchEnd);
     this.canvas.style.display = 'none';
+
+    // Drop render caches — rebuilt lazily after the next init().
+    this._haloSprites.clear();
+    this._layerCanvas = null;
+    this._layerCtx = null;
+    this._layerTimeMa = null;
+    this._oceanGrad = null;
+    this._oceanGradKey = null;
+    this._vignette = null;
+    this._vignetteKey = null;
   }
 
   resize() {
@@ -104,6 +128,7 @@ export class View2D {
     this.canvas.style.width = this.width + 'px';
     this.canvas.style.height = this.height + 'px';
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this._layerTimeMa = null; // size-dependent caches re-key themselves; force the layer bake
   }
 
   // Convert lon/lat to canvas pixel coordinates
@@ -117,6 +142,13 @@ export class View2D {
     const ctx = this.ctx;
     const w = this.width;
     const h = this.height;
+
+    // Clear the full device canvas in screen space first — at zoom < 1 the
+    // world rect doesn't cover the margins, which would otherwise accumulate
+    // stale content from previous frames.
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(0, 0, w, h);
 
     // Apply pan/zoom transform
     ctx.save();
@@ -144,10 +176,15 @@ export class View2D {
         oceanEdge = mixColors(oceanEdge, tintRgb, haze.alpha * 0.5);
       }
     }
-    const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
-    gradient.addColorStop(0, oceanBase);
-    gradient.addColorStop(1, oceanEdge);
-    ctx.fillStyle = gradient;
+    const oceanKey = oceanBase + '|' + oceanEdge + '|' + w + 'x' + h;
+    if (oceanKey !== this._oceanGradKey) {
+      const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
+      gradient.addColorStop(0, oceanBase);
+      gradient.addColorStop(1, oceanEdge);
+      this._oceanGrad = gradient;
+      this._oceanGradKey = oceanKey;
+    }
+    ctx.fillStyle = this._oceanGrad;
     ctx.fillRect(0, 0, w, h);
 
     // 1.5. Polar ice caps (drawn over ocean, under land — so coastlines win)
@@ -213,64 +250,23 @@ export class View2D {
     }
 
     // 3. Continental polygons — smooth Bezier coastlines with hillshaded relief
-    //    and elevation-threshold contour bands (highland + snow caps).
+    //    and elevation-threshold contour bands (highland + snow caps). The whole
+    //    block is timeMa-pure, so it's baked into an offscreen layer and blitted
+    //    under the live transform; exact `===` on timeMa in the cache key is
+    //    correct because clock.tick() returns early WITHOUT touching currentTimeMa
+    //    while paused, so paused pan/zoom frames see a byte-identical timeMa.
     const terrainProfile = terrainProfileForAge(timeMa);
     const climate = biomeClimate(timeMa);
-    for (const continent of polygons) {
-      if (continent.vertices.length < 3) continue;
-
-      const fractalVerts = fractalSubdivide(continent.vertices);
-      const pixelPts = fractalVerts.map(([lon, lat]) => this._lonLatToXY(lon, lat));
-
-      const buildPath = () => {
-        ctx.beginPath();
-        this._tracePath(ctx, pixelPts);
-      };
-
-      // Fill — blend with latitude palette for tropical green / polar grey
-      const center = this._polygonCentroid(continent.vertices);
-      let baseColor = continentColorAtLatitude(continent.color, center[1]);
-      const centroidBiome = biomeColorAt(center[1], 0, climate, 0);
-      if (centroidBiome) baseColor = mixColors(baseColor, centroidBiome, RENDER_EXTRA.biome.blend);
-      if (extinction) {
-        baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
-      }
-      buildPath();
-      ctx.fillStyle = baseColor;
-      ctx.globalAlpha = RENDER.continentFillAlpha;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Hillshade + contour bands — clipped to the polygon path so blobs can't spill.
-      ctx.save();
-      buildPath();
-      ctx.clip();
-      this._renderHillshade(ctx, pixelPts, terrainProfile, climate, w, h);
-      ctx.restore();
-
-      // Outer glow
-      buildPath();
-      ctx.strokeStyle = COLORS.landStroke;
-      ctx.globalAlpha = 0.25;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // Stroke
-      buildPath();
-      ctx.strokeStyle = COLORS.landStroke;
-      ctx.lineWidth = RENDER.landStrokeWidth;
-      ctx.stroke();
-
-      // Label (only at sufficient zoom)
-      if (this.zoom >= 1) {
-        const [cx, cy] = this._lonLatToXY(center[0], center[1]);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.font = '10px system-ui';
-        ctx.textAlign = 'center';
-        ctx.fillText(continent.name, cx, cy);
-      }
+    // At zoom > 1 the baked layer would be a magnified bitmap (soft coastlines
+    // next to razor-sharp live markers) — draw live there so paths stay vector-crisp.
+    if (RENDER.view2dLayerCacheEnabled && this.zoom <= 1) {
+      const layer = this._getContinentLayer(polygons, timeMa, extinction, terrainProfile, climate, w, h);
+      if (layer) ctx.drawImage(layer, 0, 0, w, h);
+    } else {
+      this._drawContinents(ctx, polygons, extinction, terrainProfile, climate, w, h);
     }
+    // Labels stay live (zoom-gated) — never baked into the cached layer.
+    if (this.zoom >= 1) this._drawContinentLabels(ctx, polygons);
 
     // 3.5. Atmospheric haze overlay (after land, so it tints the whole scene cohesively)
     if (atmo) {
@@ -295,15 +291,9 @@ export class View2D {
       const haloR = radius * 4.5;
       this._markerHits.push({ sp, x, y, r: radius + 4 });
 
-      // Halo — radial gradient, additive feel
-      const haloGrad = ctx.createRadialGradient(x, y, 0, x, y, haloR);
-      haloGrad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`);
-      haloGrad.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`);
-      haloGrad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(x, y, haloR, 0, Math.PI * 2);
-      ctx.fill();
+      // Halo — pre-rendered per-clade radial sprite; drawing it scaled to haloR
+      // keeps the pulse animation while skipping a per-marker gradient build.
+      ctx.drawImage(this._haloSprite(categoryColor, rgb), x - haloR, y - haloR, haloR * 2, haloR * 2);
 
       // Rim ring for mammalian/avian clades resolved to order or deeper
       if (hasRimRing(sp)) {
@@ -314,11 +304,12 @@ export class View2D {
         ctx.stroke();
       }
 
-      // Marker body
+      // Marker body — alpha scales with abundance so thriving species read denser
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = categoryColor;
-      ctx.globalAlpha = 0.92;
+      ctx.globalAlpha = RENDER.speciesMarkerMinAlpha +
+        (0.92 - RENDER.speciesMarkerMinAlpha) * sp.currentAbundance;
       ctx.fill();
       ctx.globalAlpha = 1;
 
@@ -358,6 +349,155 @@ export class View2D {
     }
 
     ctx.restore();
+
+    // 6. Soft viewport vignette — drawn outside the pan/zoom transform so it hugs
+    // the screen edges (config-gated; cached gradient keyed on viewport size).
+    const vignetteAlpha = RENDER.view2dVignetteAlpha;
+    if (vignetteAlpha > 0) {
+      const vKey = w + 'x' + h;
+      if (vKey !== this._vignetteKey) {
+        const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.hypot(w, h) / 2);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(0.6, 'rgba(0,0,0,0)');
+        grad.addColorStop(1, `rgba(0,0,0,${vignetteAlpha})`);
+        this._vignette = grad;
+        this._vignetteKey = vKey;
+      }
+      ctx.fillStyle = this._vignette;
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  // Pre-rendered halo sprite per clade color — same three gradient stops the
+  // per-marker createRadialGradient used. Rendered at a generous radius × dpr so
+  // the scaled-down per-frame drawImage stays crisp.
+  _haloSprite(color, rgb) {
+    let sprite = this._haloSprites.get(color);
+    if (sprite) return sprite;
+    const R = Math.ceil(64 * (this.dpr || 1));
+    sprite = document.createElement('canvas');
+    sprite.width = sprite.height = R * 2;
+    const sctx = sprite.getContext('2d');
+    const grad = sctx.createRadialGradient(R, R, 0, R, R, R);
+    grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`);
+    grad.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`);
+    grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
+    sctx.fillStyle = grad;
+    sctx.fillRect(0, 0, R * 2, R * 2);
+    this._haloSprites.set(color, sprite); // bounded: one entry per clade color
+    return sprite;
+  }
+
+  // Offscreen continent-layer cache (gated on RENDER.view2dLayerCacheEnabled).
+  // Keyed on (timeMa, cssW, cssH, dpr) — everything baked (fill colors, biome
+  // climate, extinction tint, hillshade, strokes) is a pure function of timeMa,
+  // so paused interaction frames (pan/zoom/hover) blit instead of redrawing.
+  _getContinentLayer(polygons, timeMa, extinction, terrainProfile, climate, w, h) {
+    const dpr = this.dpr;
+    if (this._layerCanvas && timeMa === this._layerTimeMa &&
+        w === this._layerW && h === this._layerH && dpr === this._layerDpr) {
+      return this._layerCanvas;
+    }
+    if (!this._layerCanvas) {
+      this._layerCanvas = document.createElement('canvas');
+      this._layerCtx = this._layerCanvas.getContext('2d');
+    }
+    const pxW = Math.max(1, Math.round(w * dpr));
+    const pxH = Math.max(1, Math.round(h * dpr));
+    if (this._layerCanvas.width !== pxW || this._layerCanvas.height !== pxH) {
+      this._layerCanvas.width = pxW;
+      this._layerCanvas.height = pxH;
+    }
+    // Bake at device resolution in the same lon/lat→pixel space the live path
+    // uses (no pan/zoom) — render() composes the transform when blitting.
+    const lctx = this._layerCtx;
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    lctx.clearRect(0, 0, w, h);
+    this._drawContinents(lctx, polygons, extinction, terrainProfile, climate, w, h);
+    this._layerTimeMa = timeMa;
+    this._layerW = w;
+    this._layerH = h;
+    this._layerDpr = dpr;
+    return this._layerCanvas;
+  }
+
+  // Bakeable continent pass: drop shadow + fill + clipped hillshade + glow + stroke,
+  // in the untransformed lon/lat→pixel space (labels are drawn separately, live).
+  _drawContinents(ctx, polygons, extinction, terrainProfile, climate, w, h) {
+    const shadowOn = RENDER.view2dContinentShadowBlur > 0 || RENDER.view2dContinentShadowOffset !== 0;
+    for (const continent of polygons) {
+      if (continent.vertices.length < 3) continue;
+
+      const fractalVerts = fractalSubdivide(continent.vertices);
+      const pixelPts = fractalVerts.map(([lon, lat]) => this._lonLatToXY(lon, lat));
+
+      const buildPath = () => {
+        ctx.beginPath();
+        this._tracePath(ctx, pixelPts);
+      };
+
+      // Fill — blend with latitude palette for tropical green / polar grey
+      const center = this._polygonCentroid(continent.vertices);
+      let baseColor = continentColorAtLatitude(continent.color, center[1]);
+      const centroidBiome = biomeColorAt(center[1], 0, climate, 0);
+      if (centroidBiome) baseColor = mixColors(baseColor, centroidBiome, RENDER_EXTRA.biome.blend);
+      if (extinction) {
+        baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
+      }
+
+      // Drop shadow pass — lifts the landmass off the ocean (config-gated).
+      // Canvas shadow params ignore the transform, so scale by dpr for CSS-px sizing.
+      if (shadowOn) {
+        ctx.save();
+        buildPath();
+        ctx.shadowColor = RENDER.view2dContinentShadowColor;
+        ctx.shadowBlur = RENDER.view2dContinentShadowBlur * this.dpr;
+        ctx.shadowOffsetX = RENDER.view2dContinentShadowOffset * this.dpr;
+        ctx.shadowOffsetY = RENDER.view2dContinentShadowOffset * this.dpr;
+        ctx.fillStyle = baseColor;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      buildPath();
+      ctx.fillStyle = baseColor;
+      ctx.globalAlpha = RENDER.continentFillAlpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Hillshade + contour bands — clipped to the polygon path so blobs can't spill.
+      ctx.save();
+      buildPath();
+      ctx.clip();
+      this._renderHillshade(ctx, pixelPts, terrainProfile, climate, w, h);
+      ctx.restore();
+
+      // Outer glow
+      buildPath();
+      ctx.strokeStyle = COLORS.landStroke;
+      ctx.globalAlpha = 0.25;
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Stroke
+      buildPath();
+      ctx.strokeStyle = COLORS.landStroke;
+      ctx.lineWidth = RENDER.landStrokeWidth;
+      ctx.stroke();
+    }
+  }
+
+  _drawContinentLabels(ctx, polygons) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    for (const continent of polygons) {
+      if (continent.vertices.length < 3) continue;
+      const center = this._polygonCentroid(continent.vertices);
+      const [cx, cy] = this._lonLatToXY(center[0], center[1]);
+      ctx.fillText(continent.name, cx, cy);
+    }
   }
 
   // Hillshaded relief inside a polygon. Caller is responsible for clipping

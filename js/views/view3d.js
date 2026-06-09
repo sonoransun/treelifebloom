@@ -13,6 +13,10 @@ import { fbm3D, terrainProfileForAge } from '../engine/terrainNoise.js';
 import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
 import { cladeColor } from '../util/taxonomy.js';
 
+// Fresnel rim sharpness with no haze; _updateAtmosphereAndLighting softens it
+// (lower power = wider rim) as haze thickens. See ATMOSPHERE.fresnelPowerHazeGain.
+const FRESNEL_BASE_POWER = 2.6;
+
 export class View3D {
   constructor(container) {
     this.containerEl = container.querySelector('#globe-container');
@@ -33,6 +37,29 @@ export class View3D {
     this.elevationExaggeration = 1.0;
     this._reducedMotion = false;
     this._interactionCb = null;
+
+    // Geometry rebuild gating (see render()): keys of the last successful rebuild,
+    // the timeMa seen on the previous frame, and the play-throttle bookkeeping.
+    this._lastGeomTimeMa = null;
+    this._lastGeomElev = null;
+    this._lastBoundaryTimeMa = null;
+    this._lastBoundariesNull = null;
+    this._lastRenderTimeMa = null;
+    this._lastBuildMs = 0;
+    this._rebuildTimer = null;
+
+    // Shared marker resources: one unit sphere scaled per marker, materials cached
+    // per clade color (× a few alpha buckets), meshes pooled and toggled visible.
+    this._markerGeo = null;
+    this._markerMats = new Map(); // `${color}|${alphaBucket}` → solid material
+    this._haloMats = new Map();   // color → additive halo material
+    this._markerPool = [];        // pooled solid meshes; visible subset = speciesMarkers
+    this._haloPool = [];
+
+    // Boundary ribbon caches: per-type cross-sections with parsed THREE.Colors,
+    // plus one material shared by every ribbon.
+    this._crossSections = {};
+    this._ribbonMaterial = null;
   }
 
   onSpeciesHover(cb) {
@@ -107,11 +134,15 @@ export class View3D {
     const globeGeometry = new THREE.SphereGeometry(RENDER.globeRadius, 96, 96);
     const globeMaterial = new THREE.MeshPhongMaterial({
       color: new THREE.Color(COLORS.ocean),
-      shininess: 110,
-      specular: new THREE.Color(0xbbddff),
+      shininess: RENDER.oceanShininess,
+      specular: new THREE.Color(RENDER.oceanSpecular),
     });
     this.globe = new THREE.Mesh(globeGeometry, globeMaterial);
     this.scene.add(this.globe);
+
+    // Shared unit sphere for all species markers + halos, scaled per marker.
+    // Never disposed — destroy() hides the view rather than tearing it down.
+    this._markerGeo = new THREE.SphereGeometry(1, 12, 12);
 
     // Cloud sphere — procedural canvas texture, slow rotation.
     this._createCloudShell();
@@ -154,7 +185,13 @@ export class View3D {
 
   destroy() {
     this.containerEl.style.display = 'none';
-    // Don't actually dispose — keep for reuse when toggling back
+    if (this._rebuildTimer) {
+      clearTimeout(this._rebuildTimer);
+      this._rebuildTimer = null;
+    }
+    // Don't actually dispose — keep for reuse when toggling back. Stale geometry is
+    // safe: the rebuild keys (_lastGeomTimeMa etc.) survive too, so the first render
+    // after re-init rebuilds iff timeMa/elevation actually moved meanwhile.
   }
 
   resize() {
@@ -200,17 +237,60 @@ export class View3D {
     // Update polar ice caps
     this._updateIceCaps(timeMa);
 
-    // Update continental meshes
-    this._updateContinents(polygons, extinction, timeMa);
+    // Geometry rebuild gating. Exact `===` on timeMa is correct: while paused,
+    // clock.tick() returns early WITHOUT touching currentTimeMa, so paused frames
+    // (camera orbit, hover, damping) see a byte-identical timeMa and skip the
+    // expensive rebuilds. Continents, markers, and ribbons are all pure functions
+    // of (timeMa, elevationExaggeration) — extinction tint, biome climate, and
+    // abundance-driven marker size/alpha are timeMa-derived, and 3D markers have
+    // no per-frame pulse. While playing (timeMa moved since the previous frame),
+    // rebuilds throttle to one per terrain3dRebuildIntervalMs; on a throttled-skip
+    // frame the stale geometry renders and NO key is recorded, so the next eligible
+    // frame rebuilds with the then-current timeMa.
+    const now = performance.now();
+    const advancing = this._lastRenderTimeMa !== null && timeMa !== this._lastRenderTimeMa;
+    const throttled = advancing && now - this._lastBuildMs < RENDER.terrain3dRebuildIntervalMs;
 
-    // Update plate boundaries
-    this._updateBoundaries(boundaries);
+    const geomDirty = timeMa !== this._lastGeomTimeMa ||
+      this.elevationExaggeration !== this._lastGeomElev;
+    if (geomDirty && !throttled) {
+      this._updateContinents(polygons, extinction, timeMa);
+      this._updateSpeciesMarkers(timeMa);
+      this._lastGeomTimeMa = timeMa;
+      this._lastGeomElev = this.elevationExaggeration;
+      this._lastBuildMs = now;
+    } else if (geomDirty) {
+      this._scheduleCatchUpFrame();
+    }
 
-    // Update species markers
-    this._updateSpeciesMarkers(timeMa);
+    // Boundaries key separately on (timeMa, boundaries == null). The null transition
+    // (plates toggled off/on) bypasses the throttle so ribbons clear/appear instantly.
+    const noBounds = boundaries == null;
+    const nullChanged = noBounds !== this._lastBoundariesNull;
+    const boundsDirty = nullChanged || (!noBounds && timeMa !== this._lastBoundaryTimeMa);
+    if (boundsDirty && (nullChanged || !throttled)) {
+      this._updateBoundaries(boundaries);
+      this._lastBoundaryTimeMa = timeMa;
+      this._lastBoundariesNull = noBounds;
+    } else if (boundsDirty) {
+      this._scheduleCatchUpFrame();
+    }
+
+    this._lastRenderTimeMa = timeMa;
 
     // Render
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // A throttled skip may have been the last scheduled frame (e.g. the tail of a
+  // paused scrub: setTime fires one frame per input event and nothing after). Arm a
+  // one-shot catch-up render past the throttle window so geometry can't stay stale.
+  _scheduleCatchUpFrame() {
+    if (this._rebuildTimer || !this._interactionCb) return;
+    this._rebuildTimer = setTimeout(() => {
+      this._rebuildTimer = null;
+      if (this._interactionCb) this._interactionCb();
+    }, RENDER.terrain3dRebuildIntervalMs);
   }
 
   _updateAtmosphereAndLighting(atmo) {
@@ -224,7 +304,8 @@ export class View3D {
       Math.sin(sunRad) * sunDist
     );
 
-    // Atmosphere Fresnel shell — color tints by climate, intensity scales with haze.
+    // Atmosphere Fresnel shell — color tints by climate, intensity scales with haze,
+    // and a thick haze widens the rim (lower Fresnel power = denser-looking air).
     const haze = computeHaze(atmo);
     const uniforms = this.atmosphereShell.material.uniforms;
     if (haze) {
@@ -235,6 +316,10 @@ export class View3D {
       uniforms.uColor.value.setRGB(0.45, 0.62, 1.0); // pale blue baseline
       uniforms.uIntensity.value = 0.55;
     }
+    uniforms.uPower.value = Math.max(
+      1.5,
+      FRESNEL_BASE_POWER - (haze ? haze.alpha : 0) * ATMOSPHERE.fresnelPowerHazeGain
+    );
   }
 
   _createAtmosphereShell() {
@@ -245,7 +330,7 @@ export class View3D {
       uniforms: {
         uColor: { value: new THREE.Color(0.45, 0.62, 1.0) },
         uIntensity: { value: 0.7 },
-        uPower: { value: 2.6 },
+        uPower: { value: FRESNEL_BASE_POWER },
       },
       vertexShader: `
         varying vec3 vNormal;
@@ -562,8 +647,7 @@ export class View3D {
   _updateBoundaries(boundaries) {
     for (const obj of this.boundaryLines) {
       this.scene.remove(obj);
-      obj.geometry.dispose();
-      obj.material.dispose();
+      obj.geometry.dispose(); // material is shared (_ribbonMaterial) — keep it
     }
     this.boundaryLines = [];
 
@@ -580,43 +664,52 @@ export class View3D {
   }
 
   _boundaryCrossSection(type) {
-    // Each entry: [sideU in [-1,1], radialV (offset from globeRadius), color hex]
+    // Each entry: [sideU in [-1,1], radialV (offset from globeRadius), THREE.Color].
+    // Built once per type — colors are parsed here instead of per ribbon vertex.
+    const cached = this._crossSections[type];
+    if (cached) return cached;
+
+    let cross;
     if (type === 'convergent') {
       const apex = RENDER.boundaryConvergentApex - RENDER.globeRadius;
-      const base = RENDER.boundaryConvergentBaseColor;
-      const top = RENDER.boundaryConvergentApexColor;
-      const mid = '#' + new THREE.Color(base).lerp(new THREE.Color(top), 0.5).getHexString();
-      return [
+      const base = new THREE.Color(RENDER.boundaryConvergentBaseColor);
+      const top = new THREE.Color(RENDER.boundaryConvergentApexColor);
+      const mid = base.clone().lerp(top, 0.5);
+      cross = [
         [-1.0, 0.0,        base],
         [-0.5, apex * 0.4, mid],
         [ 0.0, apex,       top],
         [ 0.5, apex * 0.4, mid],
         [ 1.0, 0.0,        base],
       ];
-    }
-    if (type === 'divergent') {
+    } else if (type === 'divergent') {
       const lip = RENDER.boundaryDivergentLip - RENDER.globeRadius;
       const trench = RENDER.boundaryDivergentTrench - RENDER.globeRadius;
-      const lipColor = RENDER.boundaryDivergentLipColor;
-      const innerColor = RENDER.boundaryDivergentInnerColor;
+      const lipColor = new THREE.Color(RENDER.boundaryDivergentLipColor);
+      const innerColor = new THREE.Color(RENDER.boundaryDivergentInnerColor);
       // Twin raised ridges with a glowing axial canyon between them; all above ocean.
-      return [
+      cross = [
         [-1.0, 0.0,    lipColor],
         [-0.5, lip,    lipColor],
         [ 0.0, trench, innerColor],
         [ 0.5, lip,    lipColor],
         [ 1.0, 0.0,    lipColor],
       ];
+    } else {
+      // transform: stepped offset cliff
+      const upper = RENDER.boundaryTransformUpper - RENDER.globeRadius;
+      const lower = RENDER.boundaryTransformLower - RENDER.globeRadius;
+      const upperColor = new THREE.Color(RENDER.boundaryTransformUpperColor);
+      const lowerColor = new THREE.Color(RENDER.boundaryTransformLowerColor);
+      cross = [
+        [-1.0, lower, lowerColor],
+        [ 0.0, lower, lowerColor],
+        [ 0.0, upper, upperColor],
+        [ 1.0, upper, upperColor],
+      ];
     }
-    // transform: stepped offset cliff
-    const upper = RENDER.boundaryTransformUpper - RENDER.globeRadius;
-    const lower = RENDER.boundaryTransformLower - RENDER.globeRadius;
-    return [
-      [-1.0, lower, RENDER.boundaryTransformLowerColor],
-      [ 0.0, lower, RENDER.boundaryTransformLowerColor],
-      [ 0.0, upper, RENDER.boundaryTransformUpperColor],
-      [ 1.0, upper, RENDER.boundaryTransformUpperColor],
-    ];
+    this._crossSections[type] = cross;
+    return cross;
   }
 
   _buildBoundaryRibbon(boundary) {
@@ -666,11 +759,10 @@ export class View3D {
     for (let i = 0; i < m; i++) {
       const { N, S } = frames[i];
       for (let j = 0; j < cs; j++) {
-        const [sideU, radialV, hex] = cross[j];
+        const [sideU, radialV, c] = cross[j];
         const r = radius + radialV;
         const off = halfWidth * sideU * radius;
         positions.push(N.x * r + S.x * off, N.y * r + S.y * off, N.z * r + S.z * off);
-        const c = new THREE.Color(hex);
         colors.push(c.r, c.g, c.b);
       }
     }
@@ -694,35 +786,22 @@ export class View3D {
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
 
-    const material = new THREE.MeshPhongMaterial({
-      vertexColors: true,
-      side: THREE.DoubleSide,
-      shininess: 20,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -2,
-    });
+    // All ribbons share identical material parameters (vertex colors carry the look).
+    if (!this._ribbonMaterial) {
+      this._ribbonMaterial = new THREE.MeshPhongMaterial({
+        vertexColors: true,
+        side: THREE.DoubleSide,
+        shininess: 20,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -2,
+      });
+    }
 
-    return new THREE.Mesh(geometry, material);
+    return new THREE.Mesh(geometry, this._ribbonMaterial);
   }
 
   _updateSpeciesMarkers(timeMa) {
-    // Remove old markers + halos
-    for (const marker of this.speciesMarkers) {
-      this.scene.remove(marker);
-      marker.geometry.dispose();
-      marker.material.dispose();
-    }
-    this.speciesMarkers = [];
-    if (this.markerHalos) {
-      for (const halo of this.markerHalos) {
-        this.scene.remove(halo);
-        halo.geometry.dispose();
-        halo.material.dispose();
-      }
-    }
-    this.markerHalos = [];
-
     // Float markers above the tallest possible terrain at this time/exaggeration so
     // they never bury (max local peak = continentElevation + amplitude * exaggeration).
     const prof = terrainProfileForAge(timeMa);
@@ -731,44 +810,89 @@ export class View3D {
       RENDER.continentElevation + prof.amplitude * (this.elevationExaggeration ?? 1) + RENDER.markerTerrainClearance
     );
 
+    // speciesMarkers holds ONLY the live pooled meshes — it is the raycast hit list
+    // (_handlePointerMove intersects it directly), so parked pool entries can never
+    // be hovered even though the raycaster itself ignores `visible`-ness.
+    this.speciesMarkers = [];
     const alive = getSpeciesAtTime(timeMa);
+    let used = 0;
     for (const sp of alive) {
       if (!sp.taxonomy) continue;
 
-      const pos = this._lonLatToVector3(
-        sp.location.lon, sp.location.lat, markerR
-      );
-
+      const pos = this._lonLatToVector3(sp.location.lon, sp.location.lat, markerR);
       const color = cladeColor(sp);
       const size = 0.012 + sp.currentAbundance * 0.008;
+      // Solid marker body alpha tracks abundance (bucketed; see _markerMaterial).
+      const solidMat = this._markerMaterial(color, sp.currentAbundance);
+      const haloMat = this._haloMaterial(color);
 
-      // Solid marker — kept in hover hit list.
-      const geometry = new THREE.SphereGeometry(size, 12, 12);
-      const material = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(color),
-        transparent: true,
-        opacity: 0.95,
-      });
-      const marker = new THREE.Mesh(geometry, material);
+      let marker = this._markerPool[used];
+      let halo = this._haloPool[used];
+      if (!marker) {
+        marker = new THREE.Mesh(this._markerGeo, solidMat);
+        this.scene.add(marker);
+        this._markerPool.push(marker);
+        halo = new THREE.Mesh(this._markerGeo, haloMat);
+        this.scene.add(halo);
+        this._haloPool.push(halo);
+      }
+
+      marker.material = solidMat;
+      marker.scale.setScalar(size);
       marker.position.copy(pos);
-      marker.userData.species = sp;
-      this.scene.add(marker);
+      marker.userData.species = sp; // kept fresh on reuse — read by the hover raycaster
+      marker.visible = true;
       this.speciesMarkers.push(marker);
 
       // Additive glow halo — larger sphere, soft, not raycasted.
-      const haloGeo = new THREE.SphereGeometry(size * 2.6, 12, 12);
-      const haloMat = new THREE.MeshBasicMaterial({
+      halo.material = haloMat;
+      halo.scale.setScalar(size * 2.6);
+      halo.position.copy(pos);
+      halo.visible = true;
+
+      used++;
+    }
+
+    // Park surplus pool entries (hidden + out of the hit list above).
+    for (let i = used; i < this._markerPool.length; i++) {
+      this._markerPool[i].visible = false;
+      this._markerPool[i].userData.species = null;
+      this._haloPool[i].visible = false;
+    }
+  }
+
+  // Cached solid marker material per (clade color, abundance bucket). Four opacity
+  // buckets mirror the 2D abundance alpha while keeping the cache bounded
+  // (~30 clade colors × 4 buckets). Cached materials are never disposed per rebuild.
+  _markerMaterial(color, abundance) {
+    const bucket = Math.max(0, Math.min(3, Math.round(abundance * 3)));
+    const key = color + '|' + bucket;
+    let mat = this._markerMats.get(key);
+    if (!mat) {
+      const minA = RENDER.speciesMarkerMinAlpha;
+      mat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(color),
+        transparent: true,
+        opacity: minA + (0.92 - minA) * (bucket / 3),
+      });
+      this._markerMats.set(key, mat);
+    }
+    return mat;
+  }
+
+  _haloMaterial(color) {
+    let mat = this._haloMats.get(color);
+    if (!mat) {
+      mat = new THREE.MeshBasicMaterial({
         color: new THREE.Color(color),
         transparent: true,
         opacity: 0.22,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       });
-      const halo = new THREE.Mesh(haloGeo, haloMat);
-      halo.position.copy(pos);
-      this.scene.add(halo);
-      this.markerHalos.push(halo);
+      this._haloMats.set(color, mat);
     }
+    return mat;
   }
 
   _lonLatToVector3(lon, lat, radius) {

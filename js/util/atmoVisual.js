@@ -40,7 +40,9 @@ export function computeHaze(atmo) {
   const rgb = hexToRgb(baseColor);
   return {
     color: `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha.toFixed(3)})`,
-    rgb,
+    // Copy — hexToRgb may return a shared cached object; leaking it would let
+    // a mutating caller corrupt the color cache.
+    rgb: { r: rgb.r, g: rgb.g, b: rgb.b },
     alpha,
   };
 }

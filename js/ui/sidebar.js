@@ -36,11 +36,23 @@ export class Sidebar {
     this.listEl.addEventListener('click', (e) => {
       const li = e.target.closest('.species-item');
       if (!li) return;
-      const sp = this._spById(li.dataset.id);
-      if (!sp || !this._modal) return;
-      if (this._popup) this._popup.hide();
-      this._modal.open(sp, this._lastAlive || []);
+      this._openItem(li);
     });
+    // Keyboard parity: items are focusable role=button (see _createSpeciesElement).
+    this.listEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const li = e.target.closest('.species-item');
+      if (!li) return;
+      e.preventDefault();
+      this._openItem(li);
+    });
+  }
+
+  _openItem(li) {
+    const sp = this._spById(li.dataset.id);
+    if (!sp || !this._modal) return;
+    if (this._popup) this._popup.hide();
+    this._modal.open(sp, this._lastAlive || []);
   }
 
   /** Wire a SpeciesPopup so hovering a sidebar entry shows the popup card. */
@@ -69,6 +81,14 @@ export class Sidebar {
       for (const s of this._lastAlive) if (s.id === id) return s;
     }
     return null;
+  }
+
+  // Items are keyboard-focusable; removing the focused one would silently drop
+  // focus to <body>. Hand it to a neighbor first.
+  _rescueFocus(el) {
+    if (!el.contains(document.activeElement)) return;
+    const next = el.nextElementSibling || el.previousElementSibling;
+    if (next) next.focus();
   }
 
   _initSparklines() {
@@ -132,6 +152,7 @@ export class Sidebar {
         if (el) {
           el.classList.add('exiting');
           el.addEventListener('animationend', () => {
+            this._rescueFocus(el);
             el.remove();
             this._elements.delete(id);
           }, { once: true });
@@ -181,6 +202,9 @@ export class Sidebar {
     const li = document.createElement('li');
     li.className = 'species-item';
     li.dataset.id = sp.id;
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    li.setAttribute('aria-label', `${sp.name} — details`);
 
     const color = cladeColor(sp);
     li.style.borderLeftColor = color;
@@ -224,6 +248,7 @@ export class Sidebar {
       if (el) {
         el.classList.add('extinction-exit');
         el.addEventListener('animationend', () => {
+          this._rescueFocus(el);
           el.remove();
           this._elements.delete(id);
           this._currentIds.delete(id);

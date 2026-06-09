@@ -184,12 +184,38 @@ export const RENDER = {
   view2dDivergentCoreWidth: 2.0,
   view2dTransformRailWidth: 4,
   view2dTransformRailOffset: 4,
+
+  // --- Perf: geometry rebuild gating (see views/view3d.js dirty-check) ---
+  // While playing, 3D continent/marker/boundary geometry rebuilds at most once
+  // per this interval (renderer still draws every frame). 0 = rebuild every frame.
+  terrain3dRebuildIntervalMs: 40,
+  // 2D offscreen continent-layer cache (fills + hillshade + stroke baked once
+  // per time step, blitted under the pan/zoom transform). Disable if compositing
+  // artifacts appear.
+  view2dLayerCacheEnabled: true,
+
+  // --- 2D visual polish ---
+  view2dContinentShadowColor: 'rgba(2, 8, 18, 0.45)',
+  view2dContinentShadowBlur: 10,
+  view2dContinentShadowOffset: 3,
+  view2dVignetteAlpha: 0.16,       // edge darkening; 0 disables
+  speciesMarkerMinAlpha: 0.55,     // marker body alpha lerps minAlpha→0.92 by abundance
+
+  // --- 3D ocean response (previously hard-coded in view3d.js) ---
+  oceanShininess: 110,
+  oceanSpecular: '#bbddff',
 };
 
 export const LAYOUT = {
   sidebarWidth: 280,
   toolbarHeight: 48,
   controlsHeight: 96,
+};
+
+// "Explore the History of Life" panel (js/ui/historyExplorer.js).
+export const EXPLORER = {
+  maxSpeciesChips: 6,        // species first-appearance chips shown before "+N more"
+  mobileBreakpointPx: 900,   // ≤ this: panel is full-screen and closes after a jump
 };
 
 // Atmospheric visual response (haze, sky tint).
@@ -209,6 +235,9 @@ export const ATMOSPHERE = {
   // Day/night terminator (3D)
   ambientLow: 0.22,             // dimmer ambient lets terminator show
   rimLightStrength: 0.18,
+  // Fresnel rim sharpness response to haze: uPower = basePower - haze.alpha * gain,
+  // so a thick (high-CO₂/hot) atmosphere reads as a denser, wider rim.
+  fresnelPowerHazeGain: 0.8,
 };
 
 // Polar glaciation rendering.

@@ -2,9 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Life's Tree Blooms!</title>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script type="importmap">
   {
     "imports": {
@@ -22,12 +25,10 @@
       <div id="era-badge">
         <span id="era-name">Hadean</span>
       </div>
-      <select id="milestone-jump" aria-label="Jump to a notable moment" title="Jump to a notable moment">
-        <option value="">Jump to…</option>
-      </select>
+      <button id="btn-history" class="toggle-btn" title="Explore the history of life (H)" aria-label="Explore the history of life" aria-controls="history-panel" aria-expanded="false">History</button>
       <div class="layer-toggle">
         <button id="btn-plates" class="toggle-btn active" title="Toggle Plate Boundaries" aria-label="Toggle plate boundaries" aria-pressed="true">Plates</button>
-        <button id="btn-legend" class="toggle-btn active" title="Toggle Legend" aria-label="Toggle legend" aria-pressed="true">Legend</button>
+        <button id="btn-legend" class="toggle-btn active" title="Toggle Legend" aria-label="Toggle legend" aria-controls="legend-panel" aria-expanded="true">Legend</button>
       </div>
       <div class="relief-control" id="relief-control" style="display:none">
         <label for="elevation-slider" title="Globe terrain relief exaggeration">Relief</label>
@@ -42,6 +43,7 @@
         <button id="btn-share" class="toggle-btn" title="Copy a shareable link to this moment" aria-label="Copy shareable link">Share</button>
         <button id="btn-help" class="toggle-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
       </div>
+      <button id="btn-sidebar" class="toggle-btn" title="Toggle the life panel" aria-label="Toggle life panel" aria-controls="sidebar" aria-expanded="false">Life</button>
     </header>
 
     <!-- Main visualization area -->
@@ -50,13 +52,13 @@
       <div id="globe-container"></div>
 
       <!-- Extinction overlay (DOM element over both views) -->
-      <div id="extinction-overlay" class="hidden">
+      <div id="extinction-overlay" class="hidden" role="status" aria-live="polite">
         <div id="extinction-text"></div>
         <div id="extinction-subtext"></div>
       </div>
 
       <!-- Milestone callout (top-center, lighter than extinction) -->
-      <div id="milestone-overlay" class="hidden">
+      <div id="milestone-overlay" class="hidden" aria-live="polite">
         <div id="milestone-title"></div>
         <div id="milestone-body"></div>
       </div>
@@ -86,6 +88,17 @@
         <ul id="species-modal-relatives"></ul>
       </div>
 
+      <!-- History of Life explorer (left-docked; chapters built by js/ui/historyExplorer.js) -->
+      <div id="history-backdrop" class="hidden"></div>
+      <aside id="history-panel" class="hidden" aria-labelledby="history-title">
+        <header id="history-head">
+          <h3 id="history-title">Explore the History of Life</h3>
+          <button id="history-close" aria-label="Close">&times;</button>
+        </header>
+        <p id="history-hint">Jumps pause the clock — press <strong>Space</strong> or ▶ to resume.</p>
+        <div id="history-chapters"></div>
+      </aside>
+
       <!-- Time label overlay -->
       <div id="time-overlay">
         <span id="time-period-label">Hadean</span>
@@ -93,7 +106,8 @@
       </div>
     </main>
 
-    <!-- Species sidebar -->
+    <!-- Species sidebar (off-canvas drawer ≤768px; scrim closes it) -->
+    <div id="sidebar-scrim" class="hidden"></div>
     <aside id="sidebar">
       <div id="atmosphere-panel">
         <div class="atmo-row">
@@ -156,11 +170,13 @@
           <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> Step back / forward in time</li>
           <li><kbd>R</kbd> Restart at 4 Ga</li>
           <li><kbd>P</kbd> Toggle plate boundaries</li>
+          <li><kbd>H</kbd> Explore the history of life</li>
           <li><kbd>?</kbd> Toggle this help</li>
           <li><kbd>Esc</kbd> Close dialogs</li>
           <li>2D map: drag to pan, scroll or pinch to zoom</li>
           <li>3D globe: drag to rotate, scroll or pinch to zoom</li>
           <li>Click a species (sidebar or legend) for details</li>
+          <li>Click the colored era strip to jump to a period</li>
         </ul>
       </div>
     </div>

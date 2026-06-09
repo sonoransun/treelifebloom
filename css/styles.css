@@ -1,4 +1,81 @@
-/* Life's Tree Blooms — Main Stylesheet */
+/* Life's Tree Blooms — Main Stylesheet
+   Design language: "deep-time observatory instrument" — near-black blue space
+   backdrop, glass panels floating over the living canvas, a serif display face
+   (Fraunces) for era/species names, and a monospaced instrument face
+   (IBM Plex Mono) for every numeric/time readout. Red is reserved for
+   extinction. All raw values live in the :root tokens below. */
+
+/* ===== Design tokens ===== */
+
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --color-bg: #0a0e1a;
+  --color-surface: #111628;
+  --color-surface-sunken: #0d1220;
+  --color-surface-raised: #0f1628;
+  --color-inset: #1a1e30;
+  --color-inset-deep: #1a2040;
+  --color-overlay: rgba(15, 22, 40, 0.92);
+  --color-overlay-soft: rgba(15, 22, 40, 0.85);
+  --color-overlay-solid: rgba(15, 22, 40, 0.95);
+  --color-glass: rgba(13, 19, 36, 0.68);
+  --color-scrim: rgba(4, 8, 20, 0.6);
+
+  /* lines */
+  --color-border: #1e2540;
+  --color-border-strong: #2a3050;
+  --color-hairline: rgba(122, 150, 210, 0.16);
+  --color-glass-edge: rgba(136, 170, 204, 0.18);
+
+  /* text */
+  --color-text: #e0e0e0;
+  --color-text-2: #c8d4e8;
+  --color-text-heading: #b8c4e0;
+  --color-text-muted: #99a;
+  --color-text-dim: #98a2c0;   /* italic scientific names (was #778) */
+  --color-text-faint: #8a93b0; /* readable small text (was #666/#667) */
+  --color-text-micro: #7c87a8; /* uppercase micro-labels (was #667) */
+
+  /* accent + status */
+  --color-accent: #5588cc;
+  --color-accent-bright: #66aaff;
+  --color-accent-soft: #88aacc;
+  --color-danger: #ff4444;
+  --color-success: #6fdc8c;
+
+  /* type */
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 18px;
+  --fs-2xl: 28px;
+
+  /* radii */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 12px;
+
+  /* shadows */
+  --shadow-panel: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --shadow-popup: 0 6px 24px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 18px 60px rgba(0, 0, 0, 0.75);
+  --shadow-help: 0 12px 40px rgba(0, 0, 0, 0.5);
+
+  /* layout (mirrors js/config.js LAYOUT) */
+  --toolbar-h: 48px;
+  --controls-h: 96px;
+  --sidebar-w: 280px;
+}
 
 * {
   margin: 0;
@@ -7,11 +84,12 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  background: #0a0e1a;
-  color: #e0e0e0;
+  font-family: var(--font-ui);
+  background: var(--color-bg);
+  color: var(--color-text);
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 
@@ -19,13 +97,14 @@ body {
 
 #app {
   display: grid;
-  grid-template-rows: 48px 1fr 96px;
-  grid-template-columns: 1fr 280px;
+  grid-template-rows: var(--toolbar-h) 1fr var(--controls-h);
+  grid-template-columns: 1fr var(--sidebar-w);
   grid-template-areas:
     "toolbar  toolbar"
     "viz      sidebar"
     "controls controls";
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
 }
 
@@ -36,54 +115,58 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 16px;
-  background: #111628;
-  border-bottom: 1px solid #1e2540;
+  padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
+  background: linear-gradient(180deg, #141b33 0%, #101527 100%);
+  border-bottom: 1px solid var(--color-hairline);
   z-index: 10;
 }
 
 #app-title {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: clamp(13px, 0.9vw + 9px, 17px);
   font-weight: 600;
-  color: #b8c4e0;
+  letter-spacing: 0.01em;
+  color: #d3def3;
   white-space: nowrap;
 }
 
 #era-badge {
   padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
   font-weight: 600;
   background: #333;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
   transition: background-color 0.5s ease;
 }
 
 #era-name {
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .layer-toggle {
   margin-left: auto;
   display: flex;
   gap: 2px;
-  background: #1a1e30;
-  border-radius: 6px;
+  background: var(--color-inset);
+  border-radius: var(--radius-md);
   padding: 2px;
 }
 
 .view-toggle {
   display: flex;
   gap: 2px;
-  background: #1a1e30;
-  border-radius: 6px;
+  background: var(--color-inset);
+  border-radius: var(--radius-md);
   padding: 2px;
 }
 
 .toggle-btn {
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: #888;
   cursor: pointer;
@@ -91,12 +174,19 @@ body {
 }
 
 .toggle-btn.active {
-  background: #2a3050;
-  color: #e0e0e0;
+  background: linear-gradient(180deg, #2e3a63, #27304f);
+  color: #dbe6ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .toggle-btn:hover:not(.active) {
-  color: #bbb;
+  color: #c4cfe8;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Mobile-only sidebar drawer toggle (shown ≤768px). */
+#btn-sidebar {
+  display: none;
 }
 
 /* Relief exaggeration slider (3D only). Range thumb/track mirror #scrubber. */
@@ -104,7 +194,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: #888;
 }
 
@@ -114,7 +204,8 @@ body {
 
 #elevation-value {
   min-width: 34px;
-  color: #b8c4e0;
+  color: var(--color-text-heading);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -123,29 +214,28 @@ body {
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #1a2040;
-  border-radius: 3px;
-  outline: none;
+  background: var(--color-inset-deep);
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 
 #elevation-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #5588cc;
+  background: #7fb1ec;
   cursor: pointer;
-  border: 2px solid #0a0e1a;
+  border: 2px solid var(--color-bg);
 }
 
 #elevation-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #5588cc;
+  background: #7fb1ec;
   cursor: pointer;
-  border: 2px solid #0a0e1a;
+  border: 2px solid var(--color-bg);
 }
 
 /* ===== Visualization Container ===== */
@@ -185,15 +275,18 @@ body {
 }
 
 #time-period-label {
-  font-size: 18px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: clamp(16px, 2.4vw, 22px);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
 }
 
 #time-ma-label {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.4vw, 13px);
+  color: rgba(255, 255, 255, 0.55);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
@@ -223,16 +316,17 @@ body {
 }
 
 #extinction-text {
-  font-size: 28px;
-  font-weight: 800;
-  color: #ff4444;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 4.5vw, 30px);
+  font-weight: 700;
+  color: var(--color-danger);
   text-shadow: 0 0 20px rgba(255, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.8);
   text-align: center;
   padding: 0 20px;
 }
 
 #extinction-subtext {
-  font-size: 16px;
+  font-size: clamp(12px, 2vw, 16px);
   color: rgba(255, 150, 150, 0.9);
   margin-top: 8px;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
@@ -246,12 +340,13 @@ body {
   transform: translateX(-50%);
   max-width: 540px;
   padding: 12px 18px;
-  background: rgba(15, 22, 40, 0.85);
-  border-left: 3px solid #88aacc;
-  border-radius: 6px;
+  background: var(--color-overlay-soft);
+  border: 1px solid var(--color-glass-edge);
+  border-left: 3px solid var(--color-accent-soft);
+  border-radius: var(--radius-md);
   pointer-events: none;
   z-index: 6;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-panel);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
@@ -266,16 +361,17 @@ body {
 }
 
 #milestone-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #88aacc;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-accent-soft);
   letter-spacing: 0.3px;
   margin-bottom: 4px;
 }
 
 #milestone-body {
-  font-size: 12px;
-  color: #c8d4e8;
+  font-size: var(--fs-sm);
+  color: var(--color-text-2);
   line-height: 1.45;
 }
 
@@ -288,12 +384,12 @@ body {
   max-height: calc(100% - 36px);
   overflow-y: auto;
   padding: 12px 14px;
-  background: rgba(15, 22, 40, 0.92);
-  border: 1px solid #2a3050;
-  border-radius: 6px;
+  background: var(--color-overlay);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
   z-index: 8;
   transition: opacity 0.2s ease;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-panel);
 }
 
 #legend-panel.hidden {
@@ -309,10 +405,10 @@ body {
 }
 
 .legend-title {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: #667;
+  color: var(--color-text-faint);
   margin-bottom: 6px;
   font-weight: 600;
 }
@@ -322,8 +418,8 @@ body {
   align-items: center;
   gap: 8px;
   padding: 3px 0;
-  font-size: 11px;
-  color: #c8d4e8;
+  font-size: var(--fs-xs);
+  color: var(--color-text-2);
 }
 
 .legend-dot {
@@ -348,8 +444,8 @@ body {
 }
 
 .legend-tip {
-  font-size: 11px;
-  color: #99a;
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
   line-height: 1.4;
   padding: 2px 0;
 }
@@ -358,8 +454,8 @@ body {
 
 /* --- Legend tree-of-life --- */
 .legend-tree {
-  font-size: 11px;
-  color: #c8d4e8;
+  font-size: var(--fs-xs);
+  color: var(--color-text-2);
 }
 .legend-tree details {
   margin-left: 4px;
@@ -373,24 +469,24 @@ body {
   list-style: none;
   user-select: none;
   font-weight: 600;
-  color: #c8d4e8;
+  color: var(--color-text-2);
 }
 .legend-tree summary::-webkit-details-marker { display: none; }
 .legend-tree summary::before {
   content: '▸';
   display: inline-block;
   width: 11px;
-  color: #667;
+  color: var(--color-text-micro);
   transition: transform 0.12s ease;
   font-size: 9px;
 }
 .legend-tree details[open] > summary::before {
   transform: rotate(90deg);
 }
-.legend-tree-domain > summary { font-size: 11px; color: #a9b8d0; }
-.legend-tree-kingdom > summary { font-size: 11px; color: #a9b8d0; padding-left: 4px; }
+.legend-tree-domain > summary { font-size: var(--fs-xs); color: #a9b8d0; }
+.legend-tree-kingdom > summary { font-size: var(--fs-xs); color: #a9b8d0; padding-left: 4px; }
 .legend-tree-kingdom { padding-left: 10px; border-left: 1px solid #1f2540; }
-.legend-tree-class > summary { font-size: 10px; color: #8898b8; font-weight: 500; padding-left: 4px; }
+.legend-tree-class > summary { font-size: var(--fs-2xs); color: #8898b8; font-weight: 500; padding-left: 4px; }
 .legend-tree-class { padding-left: 10px; border-left: 1px solid #1f2540; }
 .legend-tree-leaf {
   display: flex;
@@ -398,29 +494,35 @@ body {
   gap: 7px;
   padding: 2px 4px 2px 16px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-weight: 400;
-  color: #c8d4e8;
+  color: var(--color-text-2);
+  transition: transform 0.12s ease, background 0.12s ease;
 }
-.legend-tree-leaf:hover { background: rgba(255, 255, 255, 0.05); }
+.legend-tree-leaf:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateX(2px);
+}
 .legend-tree-leaf-name {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* ===== Species popup ===== */
+/* NOTE: only border-left here — js/ui/speciesPopup.js sets style.borderColor
+   for the clade accent, which colors every border edge it finds. */
 #species-popup {
   position: fixed;
   max-width: 280px;
   padding: 10px 14px;
-  background: rgba(15, 22, 40, 0.95);
-  border-left: 3px solid #88aacc;
-  border-radius: 6px;
+  background: var(--color-overlay-solid);
+  border-left: 3px solid var(--color-accent-soft);
+  border-radius: var(--radius-md);
   z-index: 100;
   pointer-events: none;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-popup);
   transition: opacity 0.15s ease;
 }
 
@@ -430,22 +532,25 @@ body {
 }
 
 #species-popup-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #88aacc;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-accent-soft);
   margin-bottom: 2px;
 }
 
 #species-popup-sci {
-  font-size: 10px;
+  font-family: var(--font-display);
+  font-size: var(--fs-xs);
   font-style: italic;
-  color: #778;
+  color: var(--color-text-dim);
   margin-bottom: 4px;
 }
 
 #species-popup-meta {
-  font-size: 10px;
-  color: #99a;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.4px;
   margin-bottom: 6px;
@@ -453,8 +558,8 @@ body {
 }
 
 #species-popup-lineage {
-  font-size: 10px;
-  color: #778;
+  font-size: var(--fs-2xs);
+  color: var(--color-text-dim);
   margin-bottom: 5px;
   white-space: nowrap;
   overflow: hidden;
@@ -469,12 +574,14 @@ body {
 }
 
 #species-popup-body {
-  font-size: 12px;
-  color: #c8d4e8;
+  font-size: var(--fs-sm);
+  color: var(--color-text-2);
   line-height: 1.45;
 }
 
 /* ===== Species modal (click a sidebar entry to open) ===== */
+/* Stays opaque (no glass): it is the subject of the capture-pipeline modal
+   showcases and needs crisp screenshots. */
 #species-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -493,22 +600,23 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(1);
   width: min(480px, 92vw);
   max-height: 80vh;
   overflow-y: auto;
   padding: 20px 24px 22px;
-  background: #0f1628;
-  border-left: 3px solid #88aacc;
-  border-radius: 8px;
-  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.75);
+  background: var(--color-surface-raised);
+  border-left: 3px solid var(--color-accent-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
   z-index: 102;
   opacity: 1;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #species-modal.hidden {
   opacity: 0;
+  transform: translate(-50%, -50%) scale(0.97);
   pointer-events: none;
 }
 
@@ -518,7 +626,7 @@ body {
   right: 10px;
   background: transparent;
   border: none;
-  color: #99a;
+  color: var(--color-text-muted);
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
@@ -530,22 +638,25 @@ body {
 }
 
 #species-modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #88aacc;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-accent-soft);
   margin: 0 0 4px;
 }
 
 #species-modal-sci {
-  font-size: 12px;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
   font-style: italic;
-  color: #778;
+  color: var(--color-text-dim);
   margin-bottom: 6px;
 }
 
 #species-modal-meta {
-  font-size: 11px;
-  color: #99a;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 12px;
@@ -556,7 +667,7 @@ body {
   list-style: none;
   margin: 0 0 14px;
   padding: 2px 0 2px 8px;
-  border-left: 1px solid #2a3050;
+  border-left: 1px solid var(--color-border-strong);
 }
 #species-modal-lineage li {
   display: flex;
@@ -564,26 +675,26 @@ body {
   gap: 10px;
   padding: 3px 8px 3px 10px;
   position: relative;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 #species-modal-lineage li::before {
   content: '';
   position: absolute;
   left: 0; top: 50%;
   width: 6px; height: 1px;
-  background: #2a3050;
+  background: var(--color-border-strong);
 }
 #species-modal-lineage .rank-label {
   flex: 0 0 90px;
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: #667;
+  color: var(--color-text-micro);
   font-weight: 600;
 }
 #species-modal-lineage .rank-value {
-  font-size: 13px;
-  color: #c8d4e8;
+  font-size: var(--fs-md);
+  color: var(--color-text-2);
   font-variant-numeric: tabular-nums;
 }
 #species-modal-lineage li.self {
@@ -594,16 +705,16 @@ body {
 }
 
 #species-modal-body {
-  font-size: 13px;
-  color: #c8d4e8;
+  font-size: var(--fs-md);
+  color: var(--color-text-2);
   line-height: 1.55;
   margin: 0 0 16px;
 }
 
 .species-modal-section {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
-  color: #667;
+  color: var(--color-text-micro);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin: 8px 0 8px;
@@ -623,7 +734,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
   transition: background 0.12s ease;
@@ -641,8 +752,8 @@ body {
 }
 
 .species-modal-relative-name {
-  font-size: 13px;
-  color: #c8d4e8;
+  font-size: var(--fs-md);
+  color: var(--color-text-2);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -656,18 +767,19 @@ body {
   color: #6cc080;
   padding: 1px 5px;
   border: 1px solid rgba(108, 192, 128, 0.4);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
 }
 
 .species-modal-relative-range {
-  font-size: 10px;
-  color: #778;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-dim);
   font-variant-numeric: tabular-nums;
 }
 
 .species-modal-empty {
-  font-size: 12px;
-  color: #667;
+  font-size: var(--fs-sm);
+  color: var(--color-text-faint);
   font-style: italic;
   padding: 4px 10px;
 }
@@ -676,21 +788,36 @@ body {
 
 #sidebar {
   grid-area: sidebar;
-  background: #0d1220;
-  border-left: 1px solid #1e2540;
+  background: var(--color-surface-sunken);
+  border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+/* Scrim behind the mobile sidebar drawer (JS only opens it ≤768px). */
+#sidebar-scrim {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--toolbar-h);
+  bottom: var(--controls-h);
+  background: var(--color-scrim);
+  z-index: 19;
+}
+
+#sidebar-scrim.hidden {
+  display: none;
+}
+
 /* Atmosphere panel */
 #atmosphere-panel {
   padding: 10px 16px;
-  border-bottom: 1px solid #1e2540;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 12px;
   justify-content: space-between;
-  background: #0f1628;
+  background: var(--color-surface-raised);
 }
 
 .atmo-row {
@@ -702,38 +829,41 @@ body {
 }
 
 .atmo-label {
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
-  color: #667;
+  color: var(--color-text-micro);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .atmo-value {
-  font-size: 13px;
-  font-weight: 700;
-  color: #c8d4e8;
+  font-family: var(--font-mono);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--color-text-2);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .sidebar-header {
   padding: 12px 16px 8px;
-  border-bottom: 1px solid #1e2540;
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
 }
 
 .sidebar-header h2 {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 600;
-  color: #b8c4e0;
+  color: var(--color-text-heading);
 }
 
 #species-count {
-  font-size: 11px;
-  color: #666;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-faint);
 }
 
 #species-list {
@@ -741,19 +871,6 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 4px 0;
-}
-
-#species-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-#species-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#species-list::-webkit-scrollbar-thumb {
-  background: #2a3050;
-  border-radius: 3px;
 }
 
 /* Species list items */
@@ -764,6 +881,10 @@ body {
   padding: 6px 16px;
   transition: all 0.4s ease;
   border-left: 3px solid transparent;
+}
+
+.species-item:hover {
+  background: rgba(255, 255, 255, 0.045);
 }
 
 .species-item.entering {
@@ -812,7 +933,7 @@ body {
 
 .species-name {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: #d0d0d0;
   white-space: nowrap;
@@ -822,8 +943,8 @@ body {
 
 .species-desc {
   display: block;
-  font-size: 10px;
-  color: #666;
+  font-size: var(--fs-xs);
+  color: var(--color-text-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -850,7 +971,7 @@ body {
 .abundance-bar-container {
   width: 40px;
   height: 4px;
-  background: #1a1e30;
+  background: var(--color-inset);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -865,23 +986,40 @@ body {
 
 #timeline-controls {
   grid-area: controls;
-  background: #111628;
-  border-top: 1px solid #1e2540;
-  padding: 8px 16px;
+  background: linear-gradient(0deg, #141b33 0%, #101527 100%);
+  border-top: 1px solid var(--color-hairline);
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 #era-strip {
-  height: 8px;
-  border-radius: 4px;
+  position: relative;
+  height: 12px;
+  border-radius: var(--radius-sm);
   display: flex;
   overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+/* Playhead — tracks --scrub-pos set by Controls.updateDisplay(). */
+#era-strip::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--scrub-pos, 0%);
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(160, 200, 255, 0.9);
+  pointer-events: none;
 }
 
 .era-segment {
   height: 100%;
+  cursor: pointer;
   transition: opacity 0.3s;
 }
 
@@ -896,8 +1034,9 @@ body {
 }
 
 .time-label-end {
-  font-size: 10px;
-  color: #666;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-faint);
   white-space: nowrap;
 }
 
@@ -906,29 +1045,39 @@ body {
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: #1a2040;
-  border-radius: 3px;
-  outline: none;
+  /* progress fill up to the playhead, inset track beyond it */
+  background: linear-gradient(to right, var(--color-accent) var(--scrub-pos, 0%), var(--color-inset-deep) 0);
+  border-radius: var(--radius-xs);
   cursor: pointer;
 }
 
 #scrubber::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #5588cc;
+  background: #7fb1ec;
   cursor: pointer;
-  border: 2px solid #0a0e1a;
+  border: 2px solid var(--color-bg);
+  transition: box-shadow 0.15s ease;
 }
 
 #scrubber::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: #5588cc;
+  background: #7fb1ec;
   cursor: pointer;
-  border: 2px solid #0a0e1a;
+  border: 2px solid var(--color-bg);
+  transition: box-shadow 0.15s ease;
+}
+
+#scrubber:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.22);
+}
+
+#scrubber:hover::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.22);
 }
 
 .transport-row {
@@ -941,157 +1090,373 @@ body {
   width: 32px;
   height: 32px;
   border: none;
-  border-radius: 6px;
-  background: #1a2040;
-  color: #b8c4e0;
+  border-radius: var(--radius-md);
+  background: var(--color-inset-deep);
+  color: var(--color-text-heading);
   font-size: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.1s ease;
 }
 
 .transport-btn:hover {
   background: #2a3060;
 }
 
+.transport-btn:active {
+  transform: scale(0.93);
+}
+
 .transport-btn.playing {
   background: #2a4060;
-  color: #66aaff;
+  color: var(--color-accent-bright);
+  box-shadow: 0 0 0 1px rgba(102, 170, 255, 0.35), 0 0 12px rgba(102, 170, 255, 0.25);
 }
 
 #speed-select {
-  padding: 4px 8px;
-  background: #1a2040;
-  border: 1px solid #2a3050;
-  border-radius: 4px;
-  color: #b8c4e0;
-  font-size: 12px;
+  padding: 4px 24px 4px 8px;
+  background-color: var(--color-inset-deep);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%237c87a8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  -webkit-appearance: none;
+  appearance: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-heading);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
 #current-time-display {
   margin-left: auto;
-  font-size: 13px;
-  font-weight: 600;
-  color: #b8c4e0;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-text-heading);
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== Responsive ===== */
+/* ===== History of Life explorer panel ===== */
 
-@media (max-width: 900px) {
-  #app {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "toolbar"
-      "viz"
-      "controls";
-  }
-
-  #sidebar {
-    position: fixed;
-    right: -280px;
-    top: 48px;
-    bottom: 96px;
-    width: 280px;
-    z-index: 20;
-    transition: right 0.3s ease;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-  }
-
-  #sidebar.open {
-    right: 0;
-  }
+#history-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--color-scrim);
+  z-index: 29;
 }
 
-@media (max-width: 600px) {
-  #toolbar {
-    padding: 0 8px;
-    gap: 8px;
-  }
-
-  #app-title {
-    font-size: 13px;
-  }
-
-  .toggle-btn {
-    font-size: 11px;
-    padding: 3px 8px;
-  }
-
-  #extinction-text {
-    font-size: 20px;
-  }
-
-  #extinction-subtext {
-    font-size: 13px;
-  }
+#history-backdrop.hidden {
+  display: none;
 }
 
-/* ========================================================================== */
-/* Capture mode — activated via ?capture=1 (see js/capture.js).               */
-/* Hides chrome so external screen-recording scripts get a clean frame.       */
-/* ========================================================================== */
-
-body.capture-mode #toolbar,
-body.capture-mode #timeline-controls,
-body.capture-mode #sidebar,
-body.capture-mode #legend-panel,
-body.capture-mode #time-overlay,
-body.capture-mode #species-popup,
-body.capture-mode #species-modal,
-body.capture-mode #species-modal-backdrop {
-  display: none !important;
+#history-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(460px, 46vw);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: rgba(13, 18, 36, 0.96);
+  border-right: 1px solid var(--color-glass-edge);
+  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.45);
+  visibility: visible;
+  transform: translateX(0);
+  /* visibility is NOT transitioned in the open state, so the panel is
+     focusable the instant it opens (open() focuses the close button). */
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-body.capture-mode #app {
-  grid-template-rows: 1fr;
-  grid-template-columns: 1fr;
-  grid-template-areas: "viz";
+#history-panel.hidden {
+  transform: translateX(-103%);
+  visibility: hidden;
+  /* Delay the hide until the slide-out finishes. */
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s;
 }
 
-body.capture-mode #viz-container {
-  grid-area: viz;
+#history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 10px;
+  border-bottom: 1px solid var(--color-border);
 }
 
-/* Variant: keep the species sidebar visible (sequences highlighting life). */
-body.capture-mode.capture-mode-with-sidebar #sidebar {
-  display: flex !important;
-}
-body.capture-mode.capture-mode-with-sidebar #app {
-  grid-template-columns: 1fr 280px;
-  grid-template-areas: "viz sidebar";
-}
-
-/* Variant: keep the time/period overlay visible. */
-body.capture-mode.capture-mode-with-clock #time-overlay {
-  display: block !important;
+#history-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: #dce6f8;
 }
 
-/* ===== Toolbar additions: jump dropdown, action group ===== */
+#history-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+#history-close:hover {
+  color: #e0e8f5;
+}
+
+#history-hint {
+  padding: 8px 18px;
+  font-size: var(--fs-xs);
+  color: var(--color-text-faint);
+  border-bottom: 1px solid var(--color-border);
+}
+
+#history-chapters {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-chapter {
+  position: relative;
+  border-left: 4px solid var(--ch-accent, var(--color-accent-soft));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 12px 11px 14px;
+  transition: background 0.2s ease, box-shadow 0.3s ease;
+}
+
+.history-chapter.current {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(136, 170, 204, 0.22), 0 0 18px rgba(80, 130, 210, 0.12);
+}
+
+.history-now {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--ch-accent, var(--color-accent-soft));
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.history-chapter.current .history-now {
+  display: inline-block;
+}
+
+.history-chapter-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.history-chapter-jump {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  color: inherit;
+}
+
+.history-chapter-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ch-accent, var(--color-text-2));
+}
+
+.history-chapter-range {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.history-play-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-inset-deep);
+  color: var(--color-text-heading);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.1s ease;
+}
+
+.history-play-btn:hover {
+  background: #2a3060;
+  color: var(--color-accent-bright);
+}
+
+.history-play-btn:active {
+  transform: scale(0.93);
+}
+
+.history-chapter-body {
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: #c0cce2;
+  margin: 6px 0 8px;
+}
+
+.history-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.history-link {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #aebbd6;
+  font-size: var(--fs-sm);
+  padding: 3px 6px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  text-align: left;
+}
+
+.history-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #dbe5f6;
+}
+
+.history-link-kind {
+  flex: 0 0 58px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-faint);
+}
+
+.history-link-extinction .history-link-kind {
+  color: #d86a5a;
+}
+
+.history-link-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-severity {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: #ff8866;
+}
+
+.history-link-ma {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--color-text-faint);
+  white-space: nowrap;
+}
+
+.history-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.history-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: var(--fs-xs);
+  color: #c2cee6;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(136, 170, 204, 0.14);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.history-chip:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.history-chip .history-link-ma {
+  margin-left: 2px;
+}
+
+.history-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.history-more {
+  width: 100%;
+}
+
+.history-more summary {
+  cursor: pointer;
+  font-size: var(--fs-2xs);
+  color: var(--color-text-faint);
+  padding: 3px 4px;
+  list-style: none;
+  user-select: none;
+}
+
+.history-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-more summary:hover {
+  color: var(--color-text-2);
+}
+
+.history-more .history-chips {
+  margin-top: 5px;
+}
+
+/* ===== Toolbar additions: action group ===== */
 .action-group {
   display: flex;
   gap: 2px;
-  background: #1a1e30;
-  border-radius: 6px;
+  background: var(--color-inset);
+  border-radius: var(--radius-md);
   padding: 2px;
 }
 
-#milestone-jump {
-  padding: 4px 8px;
-  background: #1a2040;
-  border: 1px solid #2a3050;
-  border-radius: 4px;
-  color: #b8c4e0;
-  font-size: 12px;
-  cursor: pointer;
-  max-width: 170px;
-}
-
 #btn-share.copied {
-  color: #6fdc8c;
+  color: var(--color-success);
 }
 
 /* ===== Keyboard / controls help overlay ===== */
@@ -1113,17 +1478,18 @@ body.capture-mode.capture-mode-with-clock #time-overlay {
   position: relative;
   max-width: 440px;
   width: calc(100% - 48px);
-  background: #111628;
-  border: 1px solid #2a3050;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
   border-radius: 10px;
   padding: 20px 24px;
   color: #c8d2ec;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-help);
 }
 
 #help-panel h3 {
+  font-family: var(--font-display);
   margin: 0 0 12px;
-  font-size: 16px;
+  font-size: 17px;
   color: #e0e8ff;
 }
 
@@ -1133,7 +1499,7 @@ body.capture-mode.capture-mode-with-clock #time-overlay {
   padding: 0;
   display: grid;
   gap: 8px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 #help-list kbd {
@@ -1143,9 +1509,9 @@ body.capture-mode.capture-mode-with-clock #time-overlay {
   margin-right: 6px;
   background: #20284a;
   border: 1px solid #38426e;
-  border-radius: 4px;
-  font-family: inherit;
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
   text-align: center;
   color: #d8e0ff;
 }
@@ -1166,15 +1532,327 @@ body.capture-mode.capture-mode-with-clock #time-overlay {
   color: #d0d8f0;
 }
 
-/* ===== Reduced-motion: calm transitions/animations on request ===== */
-@media (prefers-reduced-motion: reduce) {
-  #era-badge,
-  .toggle-btn,
-  #extinction-overlay,
+/* ===== Glass treatment (floating panels only; opaque fallbacks above) =====
+   Never on #species-modal (capture showcase subject) or #extinction-overlay
+   (full-viewport blur over an animating canvas tanks FPS). */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  #legend-panel,
   #milestone-overlay,
-  #species-modal,
-  #species-modal-backdrop {
-    transition: none !important;
-    animation: none !important;
+  #species-popup,
+  #help-panel,
+  #history-panel {
+    background: var(--color-glass);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+}
+
+/* ===== Scrollbars (scroll containers) ===== */
+#species-list,
+#legend-panel,
+#species-modal,
+#history-chapters,
+#toolbar {
+  scrollbar-width: thin;
+  scrollbar-color: #2e3a63 transparent;
+}
+
+#species-list::-webkit-scrollbar,
+#legend-panel::-webkit-scrollbar,
+#species-modal::-webkit-scrollbar,
+#history-chapters::-webkit-scrollbar {
+  width: 8px;
+}
+
+#species-list::-webkit-scrollbar-track,
+#legend-panel::-webkit-scrollbar-track,
+#species-modal::-webkit-scrollbar-track,
+#history-chapters::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#species-list::-webkit-scrollbar-thumb,
+#legend-panel::-webkit-scrollbar-thumb,
+#species-modal::-webkit-scrollbar-thumb,
+#history-chapters::-webkit-scrollbar-thumb {
+  background: #2e3a63;
+  border-radius: var(--radius-sm);
+}
+
+#species-list::-webkit-scrollbar-thumb:hover,
+#legend-panel::-webkit-scrollbar-thumb:hover,
+#species-modal::-webkit-scrollbar-thumb:hover,
+#history-chapters::-webkit-scrollbar-thumb:hover {
+  background: #3c4a7a;
+}
+
+/* ===== Focus visibility (keyboard navigation) ===== */
+:focus-visible {
+  outline: 2px solid var(--color-accent-bright);
+  outline-offset: 2px;
+}
+
+/* Range inputs: ring on the thumb, not the track. */
+#scrubber:focus-visible,
+#elevation-slider:focus-visible {
+  outline: none;
+}
+
+#scrubber:focus-visible::-webkit-slider-thumb,
+#elevation-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.35);
+}
+
+#scrubber:focus-visible::-moz-range-thumb,
+#elevation-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.35);
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 1200px) {
+  :root {
+    --sidebar-w: 248px;
+  }
+
+  #toolbar {
+    gap: 10px;
+  }
+}
+
+/* History panel goes full-screen between toolbar and footer. Breakpoint
+   mirrors EXPLORER.mobileBreakpointPx in js/config.js. */
+@media (min-width: 901px) {
+  #history-backdrop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  #history-panel {
+    position: fixed;
+    top: var(--toolbar-h);
+    left: 0;
+    right: 0;
+    bottom: var(--controls-h);
+    width: auto;
+    border-right: none;
+  }
+}
+
+@media (max-width: 768px) {
+  #app {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "toolbar"
+      "viz"
+      "controls";
+  }
+
+  #toolbar {
+    padding: 0 10px;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  #toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  #btn-sidebar {
+    display: flex;
+  }
+
+  #sidebar {
+    position: fixed;
+    right: calc(-1 * var(--sidebar-w));
+    top: var(--toolbar-h);
+    bottom: var(--controls-h);
+    width: var(--sidebar-w);
+    z-index: 20;
+    visibility: hidden;
+    /* Hide is delayed until the slide-out ends; show flips instantly so the
+       drawer contents are focusable as soon as it opens. */
+    transition: right 0.3s ease, visibility 0s linear 0.3s;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  #sidebar.open {
+    right: 0;
+    visibility: visible;
+    transition: right 0.3s ease;
+  }
+
+  #legend-panel {
+    width: min(220px, 58vw);
+    max-height: 42%;
+  }
+
+  #milestone-overlay {
+    max-width: min(540px, calc(100vw - 24px));
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --controls-h: 88px;
+  }
+
+  #era-badge,
+  .time-label-end {
+    display: none;
+  }
+
+  .toggle-btn {
+    font-size: var(--fs-xs);
+    padding: 3px 8px;
+  }
+
+  /* Species modal becomes a bottom sheet. */
+  #species-modal {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-height: 78vh;
+    max-height: 78dvh;
+    border-radius: 14px 14px 0 0;
+    border-left: none;
+    border-top: 3px solid var(--color-accent-soft);
+  }
+
+  #species-modal.hidden {
+    transform: translateY(12px);
+  }
+
+  #help-panel {
+    width: calc(100% - 24px);
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  :root {
+    --toolbar-h: 40px;
+    --controls-h: 64px;
+  }
+
+  #timeline-controls {
+    padding: 4px 12px calc(4px + env(safe-area-inset-bottom));
+    gap: 4px;
+  }
+
+  #era-strip {
+    height: 6px;
+  }
+
+  .transport-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  #time-overlay {
+    bottom: 8px;
+  }
+}
+
+@media (pointer: coarse) {
+  .transport-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .toggle-btn {
+    min-height: 38px;
+  }
+
+  #scrubber,
+  #elevation-slider {
+    height: 10px;
+  }
+
+  #scrubber::-webkit-slider-thumb,
+  #elevation-slider::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  #scrubber::-moz-range-thumb,
+  #elevation-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  .species-item {
+    padding: 10px 16px;
+  }
+
+  .legend-tree-leaf {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  /* Hover-only artifact — tap goes straight to the modal. */
+  #species-popup {
+    display: none !important;
+  }
+}
+
+/* ========================================================================== */
+/* Capture mode — activated via ?capture=1 (see js/capture.js).               */
+/* Hides chrome so external screen-recording scripts get a clean frame.       */
+/* The species modal stays visible: it is the subject of the modal showcases  */
+/* (scripts/capture/capture.js opens it via window.__capture).                */
+/* ========================================================================== */
+
+body.capture-mode #toolbar,
+body.capture-mode #timeline-controls,
+body.capture-mode #sidebar,
+body.capture-mode #sidebar-scrim,
+body.capture-mode #legend-panel,
+body.capture-mode #time-overlay,
+body.capture-mode #species-popup,
+body.capture-mode #history-panel,
+body.capture-mode #history-backdrop {
+  display: none !important;
+}
+
+body.capture-mode #app {
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas: "viz";
+}
+
+body.capture-mode #viz-container {
+  grid-area: viz;
+}
+
+/* Variant: keep the species sidebar visible (sequences highlighting life). */
+body.capture-mode.capture-mode-with-sidebar #sidebar {
+  display: flex !important;
+}
+body.capture-mode.capture-mode-with-sidebar #app {
+  grid-template-columns: 1fr var(--sidebar-w);
+  grid-template-areas: "viz sidebar";
+}
+
+/* Variant: keep the time/period overlay visible. */
+body.capture-mode.capture-mode-with-clock #time-overlay {
+  display: block !important;
+}
+
+/* ===== Reduced-motion: calm all transitions/animations on request =====
+   Durations are forced to ~0 (rather than animation: none) so JS that relies
+   on animationend/transitionend — e.g. the sidebar's exit-animation cleanup —
+   still fires. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -10,6 +10,9 @@ export class ExtinctionOverlay {
     this.subtextEl = document.getElementById('extinction-subtext');
     this._activeId = null;
     this._shakeEl = document.getElementById('viz-container');
+    // Screen shake is set imperatively, so the CSS reduced-motion block can't
+    // suppress it — honor the OS preference here (mirrors main.js's view wiring).
+    this._reduceMq = window.matchMedia('(prefers-reduced-motion: reduce)');
   }
 
   update(timeMa) {
@@ -36,10 +39,14 @@ export class ExtinctionOverlay {
       this.overlay.classList.add('active');
 
       // Screen shake based on severity and progress
-      const shakeIntensity = Math.sin(extinction.progress * Math.PI) * (extinction.severityPercent / 100) * 3;
-      const shakeX = (Math.random() - 0.5) * shakeIntensity;
-      const shakeY = (Math.random() - 0.5) * shakeIntensity;
-      this._shakeEl.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+      if (!this._reduceMq.matches) {
+        const shakeIntensity = Math.sin(extinction.progress * Math.PI) * (extinction.severityPercent / 100) * 3;
+        const shakeX = (Math.random() - 0.5) * shakeIntensity;
+        const shakeY = (Math.random() - 0.5) * shakeIntensity;
+        this._shakeEl.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+      } else if (this._shakeEl.style.transform) {
+        this._shakeEl.style.transform = '';
+      }
     } else {
       if (this._activeId) {
         this._activeId = null;

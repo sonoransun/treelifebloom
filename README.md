@@ -264,7 +264,8 @@ Both views share the same timeline state — switching preserves time and playba
 | **Plates** · **P** | Toggle plate-boundary overlay |
 | **2D Map** / **3D Globe** | Switch between flat map and globe views |
 | **Relief slider** (3D) | Exaggerate globe terrain relief, 0.5× → 3× |
-| **Jump to…** | Dropdown that jumps the timeline to any notable moment |
+| **History** · **H** | Open the History of Life explorer — 13 narrative chapters with jump links to every milestone, mass extinction, and species first appearance |
+| **Click the era strip** | Jump straight to the start of any geological period |
 | **Share** | Copy a link that reopens the current time, view, plates & relief |
 | **Help** · **?** | Show the keyboard & controls cheat-sheet |
 | **Click a sidebar species** | Open detail modal with close evolutionary relatives (auto-pauses) |
