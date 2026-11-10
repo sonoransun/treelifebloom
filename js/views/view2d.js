@@ -1,17 +1,44 @@
-// 2D Canvas equirectangular map renderer.
+// Map view — the planet as an Equal Earth world map floating on the dark backdrop.
+//
+// The surface (oceans, shelves, ice, land, plate boundaries, place names, crisis effects) is
+// painted by js/views/planetPainter.js; this view owns everything around it: fitting the planet
+// into the container, pan and zoom (drag, wheel, pinch, double-click, HUD buttons), species
+// markers with their labels, arrival blooms and departure embers, and hover / click picking.
+//
+// While nothing changes (paused, no crisis, no magma) the painted planet is kept in an offscreen
+// bitmap and only the markers are redrawn.
+//
+// Renderer interface: init(), render(polygons, timeMa, boundaries, atmo, frame), resize(),
+// destroy(), onSpeciesHover(cb), onSpeciesClick(cb). Extras: setViewport(), getViewport().
 
-import { COLORS, RENDER, RENDER_EXTRA } from '../config.js';
-import { getPeriodAtTime } from '../data/timeline.js';
-import { getActiveExtinction } from '../data/extinctions.js';
-import { getSpeciesAtTime } from '../data/species.js';
-import { getGlaciation } from '../data/glaciation.js';
-import { fractalSubdivide } from '../engine/fractal.js';
-import { fbm3D, terrainProfileForAge } from '../engine/terrainNoise.js';
-import { mixColors, hexToRgb } from '../util/colorMix.js';
-import { computeHaze, continentColorAtLatitude } from '../util/atmoVisual.js';
-import { biomeColorAt, biomeClimate } from '../util/biome.js';
-import { cladeColor, hasRimRing } from '../util/taxonomy.js';
-import { GLACIATION } from '../config.js';
+import { COLORS, FONTS, getCategoryInfo } from '../config.js';
+import { paintPlanet, paintKey, projectPoint, unprojectPoint, fitScale, equalEarth } from './planetPainter.js';
+import { drawMarker } from './glyphs.js';
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 8;
+const TAU = Math.PI * 2;
+const ARRIVAL_SEC = 2.6;
+const DEPARTURE_SEC = 1.6;
+const EMBER = '#9aa3b5';
+const LABEL_FONT = `600 12px ${FONTS.ui}`;
+const LABEL_H = 16;
+
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+const easeOut = (t) => 1 - (1 - t) * (1 - t) * (1 - t);
+
+const ICONS = {
+  in: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3.2v9.6M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  out: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8h9.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  reset: '<svg viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 6V2.9h3.1M13.4 10v3.1h-3.1M13.4 6V2.9h-3.1M2.6 10v3.1h3.1"/></g><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>',
+};
+
+/** Stable 0..1 number from a string (phase offsets, so markers do not breathe in unison). */
+function hash01(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return ((h >>> 0) % 1000) / 1000;
+}
 
 export class View2D {
   constructor(container) {
@@ -21,913 +48,890 @@ export class View2D {
     this.width = 0;
     this.height = 0;
     this.dpr = 1;
+    this.active = false;
+    this.colors = { accent: '#f2b84b', accentStrong: '#ffd27a', text: COLORS.text, muted: '#b9c2d6', ink: COLORS.background };
 
-    // Pan/zoom state
+    // Viewport: zoom relative to the fitted planet, pan = offset of the planet centre (CSS px).
+    this.zoom = 1;
     this.panX = 0;
     this.panY = 0;
-    this.zoom = 1;
-    this._dragging = false;
-    this._lastMouse = null;
-
-    // Touch state (single-finger pan + two-finger pinch).
-    this._touchLast = null;
-    this._pinchDist = null;
-
-    // Hover state — recorded per-frame so hit-test can find species under cursor.
-    this._markerHits = []; // [{sp, x, y, r}]
-    this._hoverCb = null;
+    this.baseScale = 100;
+    this.pad = 28;
+    this.insetBottom = 0;        // CSS px at the bottom of the stage covered by other UI (portrait)
+    this.home = { zoom: 1, panX: 0, panY: 0 };
+    this._zoomAnim = null;       // { from, to, x, y, … } about a point, or { glide, from, to, … }
+    this._nowSec = 0;
     this._reducedMotion = false;
-    this._interactionCb = null; // requests a render so pan/zoom is live while paused
 
-    // Render caches — see render(): ocean gradient (keyed on colors + size), per-clade
-    // marker halo sprites, viewport vignette, and the offscreen continent layer.
-    this._oceanGrad = null;
-    this._oceanGradKey = null;
-    this._haloSprites = new Map(); // clade color → sprite canvas (bounded: ~30 clades)
-    this._vignette = null;
-    this._vignetteKey = null;
-    this._layerCanvas = null;
-    this._layerCtx = null;
-    this._layerTimeMa = null; // with _layerW/_layerH/_layerDpr: full layer cache key
-    this._layerW = 0;
-    this._layerH = 0;
-    this._layerDpr = 0;
+    // The view object handed to the painter (mutated in place every frame).
+    this.view = {
+      projection: equalEarth,
+      scale: 100, cx: 0, cy: 0, width: 0, height: 0, pixelRatio: 1,
+      outline: true,
+      zoom: 1,
+      layers: { graticule: true, labels: true, features: true, boundaries: false },
+      avoid: [],
+    };
 
-    // Bound handlers for cleanup
-    this._onMouseDown = this._onMouseDown.bind(this);
-    this._onMouseMove = this._onMouseMove.bind(this);
-    this._onMouseUp = this._onMouseUp.bind(this);
+    // Painted-planet cache.
+    this._cache = null;
+    this._cacheKey = null;
+    this._lastKey = null;
+    /** Diagnostics of the last frame: ms spent painting the planet (0 when blitted from cache). */
+    this.stats = { paintMs: 0, cached: false };
+
+    // Markers of the current frame and the bookkeeping for blooms / embers.
+    this._markers = [];
+    this._markerPool = [];
+    this._byId = new Map();
+    this._prev = new Map();      // id → { lon, lat, name, color, glyph, r, labelled } from the last frame
+    this._fx = [];               // arrival / departure animations
+    this._labels = [];           // species labels laid out for this frame
+    this._labelPool = [];
+    this._labelled = new Set();
+    this._haloSprites = new Map();
+    this._textWidths = new Map();
+
+    // Pointer state.
+    this._pointers = new Map();  // pointerId → { x, y }
+    this._drag = null;           // { x, y, startX, startY, moved, type }
+    this._pinch = null;          // { dist, zoom, mx, my }
+    this._lastTap = null;        // { x, y, time }
+    this._hoverPoint = null;     // { x, y, clientX, clientY } of a resting mouse / pen
+    this._hoverMoved = false;
+    this._hoverSp = null;
+    this._hoverCb = null;
+    this._clickCb = null;
+    this._cursor = '';
+
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+    this._onPointerLeave = this._onPointerLeave.bind(this);
     this._onWheel = this._onWheel.bind(this);
-    this._onTouchStart = this._onTouchStart.bind(this);
-    this._onTouchMove = this._onTouchMove.bind(this);
-    this._onTouchEnd = this._onTouchEnd.bind(this);
+
+    this._buildHud();
   }
 
   onSpeciesHover(cb) {
     this._hoverCb = cb;
   }
 
-  /** Register a callback to request a render after pan/zoom (so it updates while paused). */
-  onInteraction(cb) {
-    this._interactionCb = cb;
+  onSpeciesClick(cb) {
+    this._clickCb = cb;
   }
 
-  /** Disable marker pulsing when the user prefers reduced motion. */
-  setReducedMotion(b) {
-    this._reducedMotion = b;
-  }
+  // ---- lifecycle ----------------------------------------------------------------------------
 
   init() {
     this.ctx = this.canvas.getContext('2d');
-    this.dpr = window.devicePixelRatio || 1;
     this.canvas.style.display = 'block';
+    this.hud.hidden = false;
+    this.active = true;
+    const style = getComputedStyle(document.documentElement);
+    const token = (name, fallback) => style.getPropertyValue(name).trim() || fallback;
+    this.colors = {
+      accent: token('--accent', '#f2b84b'),
+      accentStrong: token('--accent-strong', '#ffd27a'),
+      text: token('--text-1', COLORS.text),
+      muted: token('--text-2', '#b9c2d6'),
+      ink: token('--bg-0', COLORS.background),
+    };
     this.resize();
 
-    // Interaction
-    this.canvas.addEventListener('mousedown', this._onMouseDown);
-    this.canvas.addEventListener('mousemove', this._onMouseMove);
-    this.canvas.addEventListener('mouseup', this._onMouseUp);
-    this.canvas.addEventListener('mouseleave', this._onMouseUp);
-    this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
-    this.canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
-    this.canvas.addEventListener('touchmove', this._onTouchMove, { passive: false });
-    this.canvas.addEventListener('touchend', this._onTouchEnd);
-    this.canvas.addEventListener('touchcancel', this._onTouchEnd);
+    const c = this.canvas;
+    c.addEventListener('pointerdown', this._onPointerDown);
+    c.addEventListener('pointermove', this._onPointerMove);
+    c.addEventListener('pointerup', this._onPointerUp);
+    c.addEventListener('pointercancel', this._onPointerUp);
+    c.addEventListener('pointerleave', this._onPointerLeave);
+    c.addEventListener('wheel', this._onWheel, { passive: false });
   }
 
   destroy() {
-    this.canvas.removeEventListener('mousedown', this._onMouseDown);
-    this.canvas.removeEventListener('mousemove', this._onMouseMove);
-    this.canvas.removeEventListener('mouseup', this._onMouseUp);
-    this.canvas.removeEventListener('mouseleave', this._onMouseUp);
-    this.canvas.removeEventListener('wheel', this._onWheel);
-    this.canvas.removeEventListener('touchstart', this._onTouchStart);
-    this.canvas.removeEventListener('touchmove', this._onTouchMove);
-    this.canvas.removeEventListener('touchend', this._onTouchEnd);
-    this.canvas.removeEventListener('touchcancel', this._onTouchEnd);
-    this.canvas.style.display = 'none';
-
-    // Drop render caches — rebuilt lazily after the next init().
-    this._haloSprites.clear();
-    this._layerCanvas = null;
-    this._layerCtx = null;
-    this._layerTimeMa = null;
-    this._oceanGrad = null;
-    this._oceanGradKey = null;
-    this._vignette = null;
-    this._vignetteKey = null;
+    const c = this.canvas;
+    c.removeEventListener('pointerdown', this._onPointerDown);
+    c.removeEventListener('pointermove', this._onPointerMove);
+    c.removeEventListener('pointerup', this._onPointerUp);
+    c.removeEventListener('pointercancel', this._onPointerUp);
+    c.removeEventListener('pointerleave', this._onPointerLeave);
+    c.removeEventListener('wheel', this._onWheel);
+    c.style.display = 'none';
+    this._setCursor('');
+    this.hud.hidden = true;
+    this.active = false;
+    this._pointers.clear();
+    this._drag = null;
+    this._pinch = null;
+    this._zoomAnim = null;
+    this._hoverPoint = null;
+    this._setHover(null, 0, 0);
+    this._fx.length = 0;
+    this._prev.clear();
   }
 
   resize() {
+    if (!this.ctx) return;
     const rect = this.container.getBoundingClientRect();
-    this.width = rect.width;
-    this.height = rect.height;
-    if (this.width < 1 || this.height < 1) return; // container hidden mid-switch
-    this.canvas.width = this.width * this.dpr;
-    this.canvas.height = this.height * this.dpr;
-    this.canvas.style.width = this.width + 'px';
-    this.canvas.style.height = this.height + 'px';
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    this._layerTimeMa = null; // size-dependent caches re-key themselves; force the layer bake
+    const w = Math.max(1, rect.width), h = Math.max(1, rect.height);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const oldBase = this.baseScale;
+    const wasHome = !this._isTransformed();
+    this.width = w;
+    this.height = h;
+    this.dpr = dpr;
+    const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+    if (this.canvas.width !== bw || this.canvas.height !== bh) {
+      this.canvas.width = bw;
+      this.canvas.height = bh;
+    }
+    this.pad = Math.min(w, h) < 520 ? 14 : 28;
+    this.baseScale = fitScale(equalEarth, w, h, this.pad);
+    // Portrait layouts stack the context card and the zoom buttons over the bottom of the stage:
+    // keep that strip out of the planet's home position and out of the pan limits.
+    const portrait = w / h < 1.05;
+    this.insetBottom = portrait ? Math.round(h * 0.18) : 0;
+
+    // Home view. Landscape and tablets: the whole planet. Phones: fitting by width would leave a
+    // sliver, so open zoomed until the planet fills most of the free height, centred on the
+    // Atlantic–Africa side where most of the story happens; the viewer pans sideways.
+    const b = equalEarth.bounds;
+    let homeZoom = 1;
+    let homePanX = 0;
+    if (portrait && w < 600) {
+      const free = h - 2 * this.pad - this.insetBottom;
+      homeZoom = clamp((0.8 * free) / (2 * b.yMax * this.baseScale), 1, 3.2);
+      homePanX = -equalEarth.project(12, 0)[0] * this.baseScale * homeZoom;
+    }
+    this.home = { zoom: homeZoom, panX: homePanX, panY: -this.insetBottom / 2 };
+    if (wasHome) {
+      this.zoom = this.home.zoom;
+      this.panX = this.home.panX;
+      this.panY = this.home.panY;
+    } else if (oldBase > 0) {
+      // keep the same spot of the planet under the centre of the container
+      this.panX *= this.baseScale / oldBase;
+      this.panY *= this.baseScale / oldBase;
+    }
+    this._clampPan();
+    this._cacheKey = null;
+    this._lastKey = null;
+    this._syncHud();
   }
 
-  // Convert lon/lat to canvas pixel coordinates
-  _lonLatToXY(lon, lat) {
-    const x = ((lon + 180) / 360) * this.width;
-    const y = ((90 - lat) / 180) * this.height;
-    return [x, y];
+  // ---- viewport -----------------------------------------------------------------------------
+
+  /** { zoom, lon, lat }: zoom factor and the coordinate at the centre of the visible stage. */
+  getViewport() {
+    this._syncView();
+    const centre = unprojectPoint(this.view, this.width / 2, (this.height - this.insetBottom) / 2);
+    return { zoom: this.zoom, lon: centre ? centre[0] : 0, lat: centre ? centre[1] : 0 };
   }
 
-  render(polygons, timeMa, boundaries = null, atmo = null) {
-    const ctx = this.ctx;
-    const w = this.width;
-    const h = this.height;
-
-    // Clear the full device canvas in screen space first — at zoom < 1 the
-    // world rect doesn't cover the margins, which would otherwise accumulate
-    // stale content from previous frames.
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    ctx.fillStyle = COLORS.background;
-    ctx.fillRect(0, 0, w, h);
-
-    // Apply pan/zoom transform
-    ctx.save();
-    ctx.setTransform(this.dpr * this.zoom, 0, 0, this.dpr * this.zoom,
-      this.dpr * (this.panX + w * (1 - this.zoom) / 2),
-      this.dpr * (this.panY + h * (1 - this.zoom) / 2));
-
-    // Get current period for coloring
-    const period = getPeriodAtTime(timeMa);
-    const extinction = getActiveExtinction(timeMa);
-
-    // 1. Ocean background with depth gradient
-    let oceanBase = extinction
-      ? mixColors(COLORS.ocean, '#3a1010', extinction.progress * 0.4)
-      : COLORS.ocean;
-    let oceanEdge = extinction
-      ? mixColors(COLORS.oceanDeep, '#2a0808', extinction.progress * 0.4)
-      : COLORS.oceanDeep;
-    // Atmospheric tint on the ocean too (subtle: half the haze magnitude)
-    if (atmo) {
-      const haze = computeHaze(atmo);
-      if (haze) {
-        const tintRgb = `rgb(${haze.rgb.r},${haze.rgb.g},${haze.rgb.b})`;
-        oceanBase = mixColors(oceanBase, tintRgb, haze.alpha * 0.5);
-        oceanEdge = mixColors(oceanEdge, tintRgb, haze.alpha * 0.5);
-      }
-    }
-    const oceanKey = oceanBase + '|' + oceanEdge + '|' + w + 'x' + h;
-    if (oceanKey !== this._oceanGradKey) {
-      const gradient = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
-      gradient.addColorStop(0, oceanBase);
-      gradient.addColorStop(1, oceanEdge);
-      this._oceanGrad = gradient;
-      this._oceanGradKey = oceanKey;
-    }
-    ctx.fillStyle = this._oceanGrad;
-    ctx.fillRect(0, 0, w, h);
-
-    // 1.5. Polar ice caps (drawn over ocean, under land — so coastlines win)
-    const glaciation = getGlaciation(timeMa);
-    if (glaciation.alpha > 0.02) {
-      this._renderIceCaps(ctx, w, h, glaciation);
-    }
-
-    // 2. Graticule — base grid + emphasized equator + tropics & polar circles
-    ctx.strokeStyle = COLORS.gridLine;
-    ctx.lineWidth = 0.5;
-    ctx.setLineDash([]);
-    for (let lon = -180; lon <= 180; lon += RENDER.gridSpacingDeg) {
-      if (lon === 0) continue; // prime meridian drawn emphasized below
-      const [x] = this._lonLatToXY(lon, 0);
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-    for (let lat = -90; lat <= 90; lat += RENDER.gridSpacingDeg) {
-      if (lat === 0) continue;
-      const [, y] = this._lonLatToXY(0, lat);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    // Tropics & polar circles — subtle dashed bands of climate zones
-    ctx.setLineDash([4, 6]);
-    ctx.strokeStyle = 'rgba(255, 230, 180, 0.10)';
-    for (const lat of [23.5, -23.5, 66.5, -66.5]) {
-      const [, y] = this._lonLatToXY(0, lat);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
-    // Equator — slightly brighter solid
-    {
-      const [, y] = this._lonLatToXY(0, 0);
-      ctx.strokeStyle = 'rgba(255, 240, 200, 0.18)';
-      ctx.lineWidth = 0.8;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    // Prime meridian — same emphasis
-    {
-      const [x] = this._lonLatToXY(0, 0);
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-    ctx.lineWidth = 0.5;
-
-    // 2.5. Tectonic plate boundaries
-    if (boundaries) {
-      this._renderBoundaries(ctx, boundaries);
-    }
-
-    // 3. Continental polygons — smooth Bezier coastlines with hillshaded relief
-    //    and elevation-threshold contour bands (highland + snow caps). The whole
-    //    block is timeMa-pure, so it's baked into an offscreen layer and blitted
-    //    under the live transform; exact `===` on timeMa in the cache key is
-    //    correct because clock.tick() returns early WITHOUT touching currentTimeMa
-    //    while paused, so paused pan/zoom frames see a byte-identical timeMa.
-    const terrainProfile = terrainProfileForAge(timeMa);
-    const climate = biomeClimate(timeMa);
-    // At zoom > 1 the baked layer would be a magnified bitmap (soft coastlines
-    // next to razor-sharp live markers) — draw live there so paths stay vector-crisp.
-    if (RENDER.view2dLayerCacheEnabled && this.zoom <= 1) {
-      const layer = this._getContinentLayer(polygons, timeMa, extinction, terrainProfile, climate, w, h);
-      if (layer) ctx.drawImage(layer, 0, 0, w, h);
+  /**
+   * Move the viewport. Any of zoom (1–8), lon / lat (coordinate to centre) may be given;
+   * `animate: false` jumps. `home: true` returns to the fitted view.
+   */
+  setViewport({ zoom, lon, lat, home = false, animate = true } = {}) {
+    let target;
+    if (home) {
+      target = { ...this.home };
     } else {
-      this._drawContinents(ctx, polygons, extinction, terrainProfile, climate, w, h);
-    }
-    // Labels stay live (zoom-gated) — never baked into the cached layer.
-    if (this.zoom >= 1) this._drawContinentLabels(ctx, polygons);
-
-    // 3.5. Atmospheric haze overlay (after land, so it tints the whole scene cohesively)
-    if (atmo) {
-      const haze = computeHaze(atmo);
-      if (haze) {
-        ctx.fillStyle = haze.color;
-        ctx.fillRect(0, 0, w, h);
+      const z = clamp(zoom ?? this.zoom, MIN_ZOOM, MAX_ZOOM);
+      target = { zoom: z, panX: this.panX * (z / this.zoom), panY: this.panY * (z / this.zoom) };
+      if (Number.isFinite(lon) && Number.isFinite(lat)) {
+        const p = equalEarth.project(lon, lat);
+        target.panX = -p[0] * this.baseScale * z;
+        target.panY = p[1] * this.baseScale * z - this.insetBottom / 2;
       }
     }
-
-    // 4. Species markers — soft halo + inner highlight, with rim ring for advanced clades
-    const aliveSpecies = getSpeciesAtTime(timeMa);
-    const now = performance.now() / 1000;
-    this._markerHits.length = 0;
-    for (const sp of aliveSpecies) {
-      if (!sp.taxonomy) continue;
-      const [x, y] = this._lonLatToXY(sp.location.lon, sp.location.lat);
-      const categoryColor = cladeColor(sp);
-      const rgb = hexToRgb(categoryColor);
-      const pulse = (this._reducedMotion ? 0 : Math.sin(now * 2 + sp.location.lon)) * RENDER.speciesMarkerPulseAmplitude;
-      const radius = Math.max(2, RENDER.speciesMarkerRadius + pulse);
-      const haloR = radius * 4.5;
-      this._markerHits.push({ sp, x, y, r: radius + 4 });
-
-      // Halo — pre-rendered per-clade radial sprite; drawing it scaled to haloR
-      // keeps the pulse animation while skipping a per-marker gradient build.
-      ctx.drawImage(this._haloSprite(categoryColor, rgb), x - haloR, y - haloR, haloR * 2, haloR * 2);
-
-      // Rim ring for mammalian/avian clades resolved to order or deeper
-      if (hasRimRing(sp)) {
-        ctx.beginPath();
-        ctx.arc(x, y, radius + 1.2, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},0.85)`;
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-      }
-
-      // Marker body — alpha scales with abundance so thriving species read denser
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = categoryColor;
-      ctx.globalAlpha = RENDER.speciesMarkerMinAlpha +
-        (0.92 - RENDER.speciesMarkerMinAlpha) * sp.currentAbundance;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Inner highlight — tiny offset spec dot
-      ctx.beginPath();
-      ctx.arc(x - radius * 0.3, y - radius * 0.3, Math.max(0.6, radius * 0.35), 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.fill();
+    if (animate && !this._reducedMotion && this.active) {
+      this._zoomAnim = { glide: true, from: { zoom: this.zoom, panX: this.panX, panY: this.panY }, to: target, start: this._nowSec, duration: 0.42 };
+    } else {
+      this._zoomAnim = null;
+      this.zoom = target.zoom;
+      this.panX = target.panX;
+      this.panY = target.panY;
+      this._clampPan();
     }
+    this._syncHud();
+  }
 
-    // 5. Extinction flash — per-event color, with K-Pg asteroid streak at entry
-    if (extinction) {
-      const flashRgb = hexToRgb(extinction.color);
-      const flashIntensity = Math.sin(extinction.progress * Math.PI) * 0.22 * (extinction.severityPercent / 100);
-      ctx.fillStyle = `rgba(${flashRgb.r}, ${flashRgb.g}, ${flashRgb.b}, ${flashIntensity})`;
-      ctx.fillRect(0, 0, w, h);
+  /**
+   * Keep the planet findable: once it is larger than the stage its edges may not come inside the
+   * padding (nor, at the bottom, above the inset); while it is smaller it stays centred.
+   */
+  _clampPan() {
+    const b = equalEarth.bounds;
+    const k = this.baseScale * this.zoom;
+    const limX = Math.max(0, b.xMax * k - (this.width / 2 - this.pad));
+    const midY = -this.insetBottom / 2;
+    const limY = Math.max(0, b.yMax * k - (this.height - 2 * this.pad - this.insetBottom) / 2);
+    this.panX = clamp(this.panX, -limX, limX);
+    this.panY = clamp(this.panY, midY - limY, midY + limY);
+  }
 
-      // K-Pg asteroid streak — bright diagonal flash during the first slice of the event
-      if (extinction.id === 'end-cretaceous' && extinction.progress < 0.18) {
-        const streakAlpha = (1 - extinction.progress / 0.18) * 0.9;
-        const streakGrad = ctx.createLinearGradient(w * 0.05, h * 0.0, w * 0.6, h * 0.85);
-        streakGrad.addColorStop(0, `rgba(255, 255, 255, 0)`);
-        streakGrad.addColorStop(0.5, `rgba(255, 240, 200, ${streakAlpha})`);
-        streakGrad.addColorStop(0.85, `rgba(255, 140, 60, ${streakAlpha * 0.7})`);
-        streakGrad.addColorStop(1, `rgba(255, 60, 20, 0)`);
-        ctx.save();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = streakGrad;
-        ctx.shadowColor = `rgba(255, 200, 120, ${streakAlpha})`;
-        ctx.shadowBlur = 18;
-        ctx.beginPath();
-        ctx.moveTo(w * 0.05, h * 0.0);
-        ctx.lineTo(w * 0.62, h * 0.85);
-        ctx.stroke();
-        ctx.restore();
-      }
+  /** Zoom to `zoom`, keeping the planet point under (x, y) (CSS px in the container) where it is. */
+  _zoomAt(x, y, zoom) {
+    const z = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+    const ratio = z / this.zoom;
+    const cx = this.width / 2 + this.panX, cy = this.height / 2 + this.panY;
+    this.panX = x - (x - cx) * ratio - this.width / 2;
+    this.panY = y - (y - cy) * ratio - this.height / 2;
+    this.zoom = z;
+    this._clampPan();
+  }
+
+  _zoomBy(factor, x = this.width / 2, y = this.height / 2) {
+    const from = this._zoomAnim && !this._zoomAnim.glide ? this._zoomAnim.to : this.zoom;
+    const to = clamp(from * factor, MIN_ZOOM, MAX_ZOOM);
+    if (this._reducedMotion) {
+      this._zoomAnim = null;
+      this._zoomAt(x, y, to);
+    } else {
+      this._zoomAnim = { from: this.zoom, to, x, y, start: this._nowSec, duration: 0.24 };
     }
+    this._syncHud();
+  }
 
-    ctx.restore();
-
-    // 6. Soft viewport vignette — drawn outside the pan/zoom transform so it hugs
-    // the screen edges (config-gated; cached gradient keyed on viewport size).
-    const vignetteAlpha = RENDER.view2dVignetteAlpha;
-    if (vignetteAlpha > 0) {
-      const vKey = w + 'x' + h;
-      if (vKey !== this._vignetteKey) {
-        const grad = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.hypot(w, h) / 2);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.6, 'rgba(0,0,0,0)');
-        grad.addColorStop(1, `rgba(0,0,0,${vignetteAlpha})`);
-        this._vignette = grad;
-        this._vignetteKey = vKey;
-      }
-      ctx.fillStyle = this._vignette;
-      ctx.fillRect(0, 0, w, h);
+  _stepZoomAnimation() {
+    const a = this._zoomAnim;
+    if (!a) return;
+    const t = clamp((this._nowSec - a.start) / a.duration, 0, 1);
+    const e = easeOut(t);
+    if (a.glide) {
+      this.zoom = a.from.zoom * Math.pow(a.to.zoom / a.from.zoom, e);
+      this.panX = a.from.panX + (a.to.panX - a.from.panX) * e;
+      this.panY = a.from.panY + (a.to.panY - a.from.panY) * e;
+      this._clampPan();
+    } else {
+      this._zoomAt(a.x, a.y, a.from * Math.pow(a.to / a.from, e));
+    }
+    if (t >= 1) {
+      this._zoomAnim = null;
+      this._syncHud();
     }
   }
 
-  // Pre-rendered halo sprite per clade color — same three gradient stops the
-  // per-marker createRadialGradient used. Rendered at a generous radius × dpr so
-  // the scaled-down per-frame drawImage stays crisp.
-  _haloSprite(color, rgb) {
+  _isTransformed() {
+    if (this._zoomAnim) return true;
+    return Math.abs(this.zoom - this.home.zoom) > 0.002
+      || Math.abs(this.panX - this.home.panX) > 0.5 || Math.abs(this.panY - this.home.panY) > 0.5;
+  }
+
+  _syncView() {
+    const v = this.view;
+    v.scale = this.baseScale * this.zoom;
+    v.cx = this.width / 2 + this.panX;
+    v.cy = this.height / 2 + this.panY;
+    v.width = this.width;
+    v.height = this.height;
+    v.pixelRatio = this.dpr;
+    v.zoom = this.zoom;
+    return v;
+  }
+
+  // ---- HUD ----------------------------------------------------------------------------------
+
+  _buildHud() {
+    const hud = document.createElement('div');
+    hud.className = 'map-hud';
+    hud.setAttribute('role', 'group');
+    hud.setAttribute('aria-label', 'Map zoom');
+    hud.hidden = true;
+    const button = (name, label, icon) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `map-hud-btn map-hud-${name}`;
+      b.setAttribute('aria-label', label);
+      b.title = label;
+      b.innerHTML = icon;
+      hud.appendChild(b);
+      return b;
+    };
+    this.btnIn = button('in', 'Zoom in', ICONS.in);
+    this.btnOut = button('out', 'Zoom out', ICONS.out);
+    this.btnReset = button('reset', 'Reset the map view', ICONS.reset);
+    this.btnIn.addEventListener('click', () => this._zoomBy(1.6));
+    this.btnOut.addEventListener('click', () => this._zoomBy(1 / 1.6));
+    this.btnReset.addEventListener('click', () => this.setViewport({ home: true }));
+    this.container.appendChild(hud);
+    this.hud = hud;
+  }
+
+  _syncHud() {
+    if (!this.hud) return;
+    const target = this._zoomAnim && !this._zoomAnim.glide ? this._zoomAnim.to : this.zoom;
+    const transformed = this._isTransformed();
+    if (this.btnReset.disabled === transformed) this.btnReset.disabled = !transformed;
+    const maxed = target >= MAX_ZOOM - 1e-3, mined = target <= MIN_ZOOM + 1e-3;
+    if (this.btnIn.disabled !== maxed) this.btnIn.disabled = maxed;
+    if (this.btnOut.disabled !== mined) this.btnOut.disabled = mined;
+  }
+
+  // ---- render -------------------------------------------------------------------------------
+
+  render(polygons, timeMa, boundaries, atmo, frame) {
+    const ctx = this.ctx;
+    if (!ctx || !frame || !frame.look) return;
+    this._nowSec = frame.nowSec;
+    this._reducedMotion = !!frame.reducedMotion;
+    this._stepZoomAnimation();
+
+    const view = this._syncView();
+    const layers = frame.layers || {};
+    view.layers.labels = layers.labels !== false;
+    view.layers.features = layers.labels !== false;
+    view.layers.boundaries = !!frame.boundaries;
+
+    // Lay out markers and their labels first: place names on the planet then keep clear of them.
+    this._layoutMarkers(frame, view);
+    this._layoutLabels(frame);
+
+    // Planet: repaint only when the picture changed; a picture that holds still for two frames
+    // moves into the offscreen cache and is blitted from then on.
+    const key = paintKey(frame, view);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const started = performance.now();
+    const cached = key === this._cacheKey && !!this._cache;
+    if (cached) {
+      ctx.drawImage(this._cache, 0, 0);
+    } else if (key === this._lastKey) {
+      const cache = this._cacheCanvas();
+      const cctx = cache.getContext('2d');
+      cctx.setTransform(1, 0, 0, 1, 0, 0);
+      cctx.clearRect(0, 0, cache.width, cache.height);
+      paintPlanet(cctx, frame, view);
+      this._cacheKey = key;
+      ctx.drawImage(cache, 0, 0);
+    } else {
+      paintPlanet(ctx, frame, view);
+      this._cacheKey = null;
+    }
+    this._lastKey = key;
+    this.stats.paintMs = cached ? 0 : performance.now() - started;
+    this.stats.cached = cached;
+
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this._drawMarkers(frame);
+    this._drawLabels();
+    this._pickHover();
+    if (!this._zoomAnim && this.btnReset.disabled === this._isTransformed()) this._syncHud();
+  }
+
+  _cacheCanvas() {
+    if (!this._cache) this._cache = document.createElement('canvas');
+    if (this._cache.width !== this.canvas.width || this._cache.height !== this.canvas.height) {
+      this._cache.width = this.canvas.width;
+      this._cache.height = this.canvas.height;
+    }
+    return this._cache;
+  }
+
+  // ---- markers ------------------------------------------------------------------------------
+
+  _layoutMarkers(frame, view) {
+    const markers = this._markers;
+    const pool = this._markerPool;
+    const alive = frame.alive || [];
+    const positions = frame.positions;
+    const small = Math.min(this.width, this.height) < 520;
+    const sizeK = small ? 0.86 : 1;
+    const t = frame.nowSec;
+    let n = 0;
+    this._byId.clear();
+    for (let i = 0; i < alive.length; i++) {
+      const sp = alive[i];
+      if (sp.category === 'event') continue;                  // legacy pseudo-species
+      const pos = (positions && positions.get(sp.id)) || sp.location;
+      if (!pos) continue;
+      const p = projectPoint(view, pos.lon, pos.lat);
+      let m = pool[n];
+      if (!m) {
+        m = {};
+        pool[n] = m;
+      }
+      const info = getCategoryInfo(sp.category);
+      const abundance = clamp(sp.currentAbundance || 0, 0, 1);
+      const breath = frame.reducedMotion ? 1 : 1 + 0.06 * Math.sin(t * 1.7 + hash01(sp.id) * TAU);
+      m.sp = sp;
+      m.id = sp.id;
+      m.lon = pos.lon;
+      m.lat = pos.lat;
+      m.x = p[0];
+      m.y = p[1];
+      m.baseR = (4 + 4 * Math.pow(abundance, 0.7)) * sizeK;
+      m.r = m.baseR * breath;
+      m.color = info.color;
+      m.glyph = info.group.glyph;
+      m.lit = sp.id === frame.hoverId || sp.id === frame.focusId;
+      markers[n++] = m;
+      this._byId.set(sp.id, m);
+    }
+    markers.length = n;
+
+    // arrivals bloom, departures leave an ember
+    const fx = this._fx;
+    if (frame.jumped) {
+      fx.length = 0;
+    } else {
+      for (const id of frame.arrivals || []) {
+        const m = this._byId.get(id);
+        if (m) fx.push({ kind: 'arrive', id, start: t, name: m.sp.name });
+      }
+      for (const id of frame.departures || []) {
+        const last = this._prev.get(id);
+        if (last) fx.push({ kind: 'depart', id, start: t, ...last });
+      }
+    }
+    for (let i = fx.length - 1; i >= 0; i--) {
+      const f = fx[i];
+      const life = f.kind === 'arrive' ? ARRIVAL_SEC : DEPARTURE_SEC;
+      if (t - f.start > life || (f.kind === 'arrive' && !this._byId.has(f.id))) {
+        fx.splice(i, 1);
+        continue;
+      }
+      if (f.kind === 'depart') {
+        const p = projectPoint(view, f.lon, f.lat);
+        f.x = p[0];
+        f.y = p[1];
+        f.alpha = Math.pow(1 - clamp((t - f.start) / DEPARTURE_SEC, 0, 1), 1.4);
+      }
+    }
+    if (fx.length > 60) fx.splice(0, fx.length - 60);
+  }
+
+  _textWidth(text) {
+    let w = this._textWidths.get(text);
+    if (w == null) {
+      this.ctx.font = LABEL_FONT;
+      w = this.ctx.measureText(text).width;
+      if (this._textWidths.size > 2000) this._textWidths.clear();
+      this._textWidths.set(text, w);
+    }
+    return w;
+  }
+
+  /**
+   * Decide which species get a name this frame and where: the hovered and focused ones always,
+   * then newcomers, the just-departed, and as many of the most abundant as fit. Greedy, four
+   * candidate spots per marker, never over another label or marker. The result also goes into
+   * view.avoid, so the painter keeps its place names out of the way.
+   */
+  _layoutLabels(frame) {
+    const markers = this._markers;
+    const labels = this._labels;
+    const pool = this._labelPool;
+    const labelled = this._labelled;
+    const t = frame.nowSec;
+    const W = this.width, H = this.height;
+    const { text, muted, accentStrong } = this.colors;
+    let n = 0;
+    labelled.clear();
+
+    const overlapsLabel = (x, y, w, h) => {
+      for (let i = 0; i < n; i++) {
+        const b = labels[i];
+        if (x < b.x + b.w && x + w > b.x && y < b.y + LABEL_H && y + h > b.y) return true;
+      }
+      return false;
+    };
+    const overlapsMarker = (x, y, w, h, own) => {
+      for (const m of markers) {
+        if (m === own) continue;
+        const nx = clamp(m.x, x, x + w), ny = clamp(m.y, y, y + h);
+        const r = m.baseR + 2;
+        if ((m.x - nx) ** 2 + (m.y - ny) ** 2 < r * r) return true;
+      }
+      return false;
+    };
+    const place = (x, y, r, name, own, forced, alpha, fill, mark) => {
+      const markW = mark ? this._textWidth(`${mark} `) : 0;
+      const w = this._textWidth(name) + markW;
+      const gap = r + 6;
+      let bx = 0, by = 0, found = false;
+      // right, left, above, below
+      for (let spot = 0; spot < 4 && !found; spot++) {
+        bx = spot === 0 ? x + gap : spot === 1 ? x - gap - w : x - w / 2;
+        by = spot === 2 ? y - gap - LABEL_H + 2 : spot === 3 ? y + gap - 2 : y - LABEL_H / 2;
+        if (bx < 4 || bx + w > W - 4 || by < 4 || by + LABEL_H > H - 4) continue;
+        if (overlapsLabel(bx - 3, by - 1, w + 6, LABEL_H + 2)) continue;
+        if (overlapsMarker(bx - 1, by, w + 2, LABEL_H, own)) continue;
+        found = true;
+      }
+      if (!found) {
+        if (!forced) return false;
+        bx = clamp(x + gap, 4, Math.max(4, W - 4 - w));
+        by = clamp(y - LABEL_H / 2, 4, Math.max(4, H - 4 - LABEL_H));
+      }
+      const label = pool[n] || (pool[n] = {});
+      label.x = bx;
+      label.y = by;
+      label.w = w;
+      label.h = LABEL_H;
+      label.name = name;
+      label.mark = mark;
+      label.markW = markW;
+      label.alpha = alpha;
+      label.fill = fill;
+      label.markFill = mark === '+' ? accentStrong : fill;
+      labels[n++] = label;
+      return true;
+    };
+
+    // 1. hovered / focused — always
+    for (const m of markers) {
+      if (m.lit && place(m.x, m.y, m.baseR * 1.18 + 4, m.sp.name, m, true, 1, text, null)) labelled.add(m.id);
+    }
+    // 2. newcomers
+    for (const f of this._fx) {
+      if (f.kind !== 'arrive' || labelled.has(f.id)) continue;
+      const m = this._byId.get(f.id);
+      if (!m) continue;
+      const alpha = 1 - clamp((t - f.start - (ARRIVAL_SEC - 0.5)) / 0.5, 0, 1);
+      if (place(m.x, m.y, m.baseR, f.name, m, false, alpha, text, '+')) labelled.add(f.id);
+    }
+    // 3. the just-departed, if they had a name on screen
+    for (const f of this._fx) {
+      if (f.kind === 'depart' && f.labelled) place(f.x, f.y, f.r, f.name, null, false, 0.9 * f.alpha, muted, '†');
+    }
+    // 4. the dominant forms, as many as fit (more when zoomed in)
+    const room = Math.max(3, Math.round(((equalEarth.bounds.xMax * 2 * this.baseScale) / 150) * Math.pow(this.zoom, 1.15)));
+    let named = labelled.size;
+    for (let i = 0; i < markers.length && named < room; i++) {
+      const m = markers[i];
+      if (labelled.has(m.id)) continue;
+      if (m.x < -20 || m.x > W + 20 || m.y < -20 || m.y > H + 20) continue;
+      if (place(m.x, m.y, m.baseR, m.sp.name, m, false, 0.96, text, null)) {
+        labelled.add(m.id);
+        named++;
+      }
+    }
+    labels.length = n;
+
+    // what the painter's place names must keep clear of: marker discs, then label boxes
+    const avoid = this.view.avoid;
+    let a = 0;
+    for (const m of markers) {
+      const disc = avoid[a] && avoid[a].r != null ? avoid[a] : (avoid[a] = { x: 0, y: 0, r: 0 });
+      disc.x = m.x;
+      disc.y = m.y;
+      disc.r = m.baseR + 5;
+      a++;
+    }
+    for (let i = 0; i < n; i++) {
+      const box = avoid[a] && avoid[a].w != null ? avoid[a] : (avoid[a] = { x: 0, y: 0, w: 0, h: 0 });
+      box.x = labels[i].x - 4;
+      box.y = labels[i].y - 2;
+      box.w = labels[i].w + 8;
+      box.h = LABEL_H + 4;
+      a++;
+    }
+    avoid.length = a;
+  }
+
+  _halo(color) {
     let sprite = this._haloSprites.get(color);
-    if (sprite) return sprite;
-    const R = Math.ceil(64 * (this.dpr || 1));
-    sprite = document.createElement('canvas');
-    sprite.width = sprite.height = R * 2;
-    const sctx = sprite.getContext('2d');
-    const grad = sctx.createRadialGradient(R, R, 0, R, R, R);
-    grad.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`);
-    grad.addColorStop(0.35, `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`);
-    grad.addColorStop(1, `rgba(${rgb.r},${rgb.g},${rgb.b},0)`);
-    sctx.fillStyle = grad;
-    sctx.fillRect(0, 0, R * 2, R * 2);
-    this._haloSprites.set(color, sprite); // bounded: one entry per clade color
+    if (!sprite) {
+      sprite = document.createElement('canvas');
+      sprite.width = 64;
+      sprite.height = 64;
+      const c = sprite.getContext('2d');
+      const rgb = [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16));
+      const g = c.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.55)`);
+      g.addColorStop(0.4, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.2)`);
+      g.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+      c.fillStyle = g;
+      c.fillRect(0, 0, 64, 64);
+      this._haloSprites.set(color, sprite);
+    }
     return sprite;
   }
 
-  // Offscreen continent-layer cache (gated on RENDER.view2dLayerCacheEnabled).
-  // Keyed on (timeMa, cssW, cssH, dpr) — everything baked (fill colors, biome
-  // climate, extinction tint, hillshade, strokes) is a pure function of timeMa,
-  // so paused interaction frames (pan/zoom/hover) blit instead of redrawing.
-  _getContinentLayer(polygons, timeMa, extinction, terrainProfile, climate, w, h) {
-    const dpr = this.dpr;
-    if (this._layerCanvas && timeMa === this._layerTimeMa &&
-        w === this._layerW && h === this._layerH && dpr === this._layerDpr) {
-      return this._layerCanvas;
-    }
-    if (!this._layerCanvas) {
-      this._layerCanvas = document.createElement('canvas');
-      this._layerCtx = this._layerCanvas.getContext('2d');
-    }
-    const pxW = Math.max(1, Math.round(w * dpr));
-    const pxH = Math.max(1, Math.round(h * dpr));
-    if (this._layerCanvas.width !== pxW || this._layerCanvas.height !== pxH) {
-      this._layerCanvas.width = pxW;
-      this._layerCanvas.height = pxH;
-    }
-    // Bake at device resolution in the same lon/lat→pixel space the live path
-    // uses (no pan/zoom) — render() composes the transform when blitting.
-    const lctx = this._layerCtx;
-    lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    lctx.clearRect(0, 0, w, h);
-    this._drawContinents(lctx, polygons, extinction, terrainProfile, climate, w, h);
-    this._layerTimeMa = timeMa;
-    this._layerW = w;
-    this._layerH = h;
-    this._layerDpr = dpr;
-    return this._layerCanvas;
+  _arrival(id) {
+    for (const f of this._fx) if (f.kind === 'arrive' && f.id === id) return f;
+    return null;
   }
 
-  // Bakeable continent pass: drop shadow + fill + clipped hillshade + glow + stroke,
-  // in the untransformed lon/lat→pixel space (labels are drawn separately, live).
-  _drawContinents(ctx, polygons, extinction, terrainProfile, climate, w, h) {
-    const shadowOn = RENDER.view2dContinentShadowBlur > 0 || RENDER.view2dContinentShadowOffset !== 0;
-    for (const continent of polygons) {
-      if (continent.vertices.length < 3) continue;
+  _drawMarkers(frame) {
+    const ctx = this.ctx;
+    const markers = this._markers;
+    const t = frame.nowSec;
+    const still = !!frame.reducedMotion;
+    const { accent, accentStrong, ink } = this.colors;
 
-      const fractalVerts = fractalSubdivide(continent.vertices);
-      const pixelPts = fractalVerts.map(([lon, lat]) => this._lonLatToXY(lon, lat));
+    // departures first: grey embers under the living
+    for (const f of this._fx) {
+      if (f.kind !== 'depart') continue;
+      const age = clamp((t - f.start) / DEPARTURE_SEC, 0, 1);
+      drawMarker(ctx, f.glyph, f.x, f.y, f.r * (still ? 1 : 1 - 0.25 * age), EMBER, { ring: ink, highlight: false, alpha: 0.85 * f.alpha });
+    }
 
-      const buildPath = () => {
+    // halos, then bodies — least abundant first so the dominant forms sit on top
+    for (let i = markers.length - 1; i >= 0; i--) {
+      const m = markers[i];
+      const hr = m.r * (m.lit ? 3.6 : 2.7);
+      ctx.drawImage(this._halo(m.color), m.x - hr, m.y - hr, hr * 2, hr * 2);
+    }
+    for (let i = markers.length - 1; i >= 0; i--) {
+      const m = markers[i];
+      if (m.lit) continue;
+      let r = m.r;
+      const bloom = still ? null : this._arrival(m.id);
+      if (bloom) r *= 0.35 + 0.65 * easeOut(clamp((t - bloom.start) / 0.5, 0, 1));
+      drawMarker(ctx, m.glyph, m.x, m.y, r, m.color, { ring: ink });
+    }
+
+    // arrival blooms: two rings opening outward
+    for (const f of this._fx) {
+      if (f.kind !== 'arrive') continue;
+      const m = this._byId.get(f.id);
+      if (!m) continue;
+      const age = t - f.start;
+      ctx.lineWidth = 1.6;
+      if (still) {
+        ctx.strokeStyle = accentStrong;
+        ctx.globalAlpha = 0.8 * (1 - clamp((age - (ARRIVAL_SEC - 0.6)) / 0.6, 0, 1));
         ctx.beginPath();
-        this._tracePath(ctx, pixelPts);
-      };
-
-      // Fill — blend with latitude palette for tropical green / polar grey
-      const center = this._polygonCentroid(continent.vertices);
-      let baseColor = continentColorAtLatitude(continent.color, center[1]);
-      const centroidBiome = biomeColorAt(center[1], 0, climate, 0);
-      if (centroidBiome) baseColor = mixColors(baseColor, centroidBiome, RENDER_EXTRA.biome.blend);
-      if (extinction) {
-        baseColor = mixColors(baseColor, '#4a2020', extinction.progress * 0.3);
-      }
-
-      // Drop shadow pass — lifts the landmass off the ocean (config-gated).
-      // Canvas shadow params ignore the transform, so scale by dpr for CSS-px sizing.
-      if (shadowOn) {
-        ctx.save();
-        buildPath();
-        ctx.shadowColor = RENDER.view2dContinentShadowColor;
-        ctx.shadowBlur = RENDER.view2dContinentShadowBlur * this.dpr;
-        ctx.shadowOffsetX = RENDER.view2dContinentShadowOffset * this.dpr;
-        ctx.shadowOffsetY = RENDER.view2dContinentShadowOffset * this.dpr;
-        ctx.fillStyle = baseColor;
-        ctx.fill();
-        ctx.restore();
-      }
-
-      buildPath();
-      ctx.fillStyle = baseColor;
-      ctx.globalAlpha = RENDER.continentFillAlpha;
-      ctx.fill();
-      ctx.globalAlpha = 1;
-
-      // Hillshade + contour bands — clipped to the polygon path so blobs can't spill.
-      ctx.save();
-      buildPath();
-      ctx.clip();
-      this._renderHillshade(ctx, pixelPts, terrainProfile, climate, w, h);
-      ctx.restore();
-
-      // Outer glow
-      buildPath();
-      ctx.strokeStyle = COLORS.landStroke;
-      ctx.globalAlpha = 0.25;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // Stroke
-      buildPath();
-      ctx.strokeStyle = COLORS.landStroke;
-      ctx.lineWidth = RENDER.landStrokeWidth;
-      ctx.stroke();
-    }
-  }
-
-  _drawContinentLabels(ctx, polygons) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.font = '10px system-ui';
-    ctx.textAlign = 'center';
-    for (const continent of polygons) {
-      if (continent.vertices.length < 3) continue;
-      const center = this._polygonCentroid(continent.vertices);
-      const [cx, cy] = this._lonLatToXY(center[0], center[1]);
-      ctx.fillText(continent.name, cx, cy);
-    }
-  }
-
-  // Hillshaded relief inside a polygon. Caller is responsible for clipping
-  // to the polygon path. Reuses the same fbm3D field used by the 3D globe so
-  // peaks/valleys appear in matching lat/lon when toggling views.
-  _renderHillshade(ctx, pixelPts, profile, climate, w, h) {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (const [x, y] of pixelPts) {
-      if (x < minX) minX = x;
-      if (x > maxX) maxX = x;
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-    }
-
-    const spacing = RENDER.view2dHillshadeSpacing;
-    const blobR   = RENDER.view2dHillshadeBlobRadius;
-    const baseA   = RENDER.view2dHillshadeAlpha;
-    const highT   = RENDER.view2dHighlandThreshold;
-    const highR   = RENDER.view2dHighlandBlobRadius;
-    const highA   = RENDER.view2dHighlandAlpha;
-    const snowT   = RENDER.view2dSnowThreshold;
-    const snowR   = RENDER.view2dSnowBlobRadius;
-    const snowA   = RENDER.view2dSnowAlpha;
-
-    const snow      = RENDER.terrainSnowColor;
-    const highland  = RENDER.terrainHighlandColor;
-    const hotPeak   = RENDER.view2dHotPeakColor;
-    const hot       = profile.hotTint;
-    const freq      = profile.freq;
-    const jaggExp   = 1 + profile.jaggedness;
-    const octaves   = profile.octaves;
-
-    // Precompute hot-tinted band/peak colors once per polygon.
-    const peakColor = hot > 0 ? mixColors(snow, hotPeak, Math.min(1, hot * 1.6)) : snow;
-    const bandColor = hot > 0 ? mixColors(highland, hotPeak, hot) : highland;
-    const snowColor = hot > 0 ? mixColors(snow, hotPeak, hot * 1.2) : snow;
-
-    let row = 0;
-    for (let py = minY; py <= maxY; py += spacing) {
-      const offX = (row & 1) ? spacing * 0.5 : 0;
-      for (let px = minX + offX; px <= maxX; px += spacing) {
-        // Pixel -> lon/lat -> unit-sphere xyz (matches 3D _lonLatToVector3).
-        const lon = (px / w) * 360 - 180;
-        const lat = 90 - (py / h) * 180;
-        const phi = (90 - lat) * (Math.PI / 180);
-        const theta = (lon + 180) * (Math.PI / 180);
-        const sinPhi = Math.sin(phi);
-        const ux = -sinPhi * Math.cos(theta);
-        const uy = Math.cos(phi);
-        const uz = sinPhi * Math.sin(theta);
-
-        let n = fbm3D(ux * freq, uy * freq, uz * freq, octaves);
-        if (n > 1) n = 1; else if (n < -1) n = -1;
-        const sign = n >= 0 ? 1 : -1;
-        const relAlt = sign * Math.pow(Math.abs(n), jaggExp);
-
-        // Procedural biome tint (vegetation/desert/tundra/rock), under the relief.
-        if (climate) {
-          const biome = biomeColorAt(lat, relAlt, climate, n);
-          if (biome) {
-            ctx.fillStyle = biome;
-            ctx.globalAlpha = RENDER_EXTRA.biome.blend * 0.5;
-            ctx.beginPath();
-            ctx.arc(px, py, blobR, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        // Hillshade base: light on positive relAlt, dark on negative.
-        if (relAlt >= 0) {
-          ctx.fillStyle = peakColor;
-          ctx.globalAlpha = baseA * Math.min(1, relAlt + 0.15);
-        } else {
-          ctx.fillStyle = '#000000';
-          ctx.globalAlpha = baseA * Math.min(1, -relAlt + 0.10);
-        }
-        ctx.beginPath();
-        ctx.arc(px, py, blobR, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Highland contour band.
-        if (relAlt > highT) {
-          const t = (relAlt - highT) / Math.max(0.001, snowT - highT);
-          ctx.fillStyle = bandColor;
-          ctx.globalAlpha = highA * Math.min(1, t + 0.3);
-          ctx.beginPath();
-          ctx.arc(px, py, highR, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // Snow-cap peak band.
-        if (relAlt > snowT) {
-          ctx.fillStyle = snowColor;
-          ctx.globalAlpha = snowA * Math.min(1, (relAlt - snowT) / 0.4 + 0.5);
-          ctx.beginPath();
-          ctx.arc(px, py, snowR, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      row++;
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  _renderBoundaries(ctx, boundaries) {
-    for (const boundary of boundaries) {
-      if (boundary.vertices.length < 2) continue;
-      const segments = this._boundarySegments(boundary);
-      if (segments.length === 0) continue;
-
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.globalAlpha = RENDER.view2dBoundaryAlpha;
-
-      if (boundary.type === 'convergent') {
-        this._renderConvergentBoundary(ctx, segments);
-      } else if (boundary.type === 'divergent') {
-        this._renderDivergentBoundary(ctx, segments);
+        ctx.arc(m.x, m.y, m.baseR + 6, 0, TAU);
+        ctx.stroke();
       } else {
-        this._renderTransformBoundary(ctx, segments);
+        for (const delay of [0, 0.38]) {
+          const p = clamp((age - delay) / 1.25, 0, 1);
+          if (p <= 0 || p >= 1) continue;
+          ctx.strokeStyle = delay ? m.color : accentStrong;
+          ctx.globalAlpha = 0.9 * (1 - p) * (1 - p);
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.baseR + 3 + 24 * easeOut(p), 0, TAU);
+          ctx.stroke();
+        }
       }
-
-      ctx.restore();
+      ctx.globalAlpha = 1;
     }
-    ctx.shadowBlur = 0;
-    ctx.setLineDash([]);
+
+    // hovered / focused markers on top, ringed in the accent colour
+    for (const m of markers) {
+      if (!m.lit) continue;
+      drawMarker(ctx, m.glyph, m.x, m.y, m.r * 1.18, m.color, { ring: ink });
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.baseR * 1.18 + 5, 0, TAU);
+      ctx.stroke();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // remember where everyone was, for embers on the next frame
+    const prev = this._prev;
+    prev.clear();
+    for (const m of markers) {
+      prev.set(m.id, { lon: m.lon, lat: m.lat, name: m.sp.name, color: m.color, glyph: m.glyph, r: m.baseR, labelled: this._labelled.has(m.id) });
+    }
+  }
+
+  _drawLabels() {
+    const ctx = this.ctx;
+    ctx.font = LABEL_FONT;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(7,11,20,0.8)';
+    for (const label of this._labels) {
+      const y = label.y + LABEL_H / 2;
+      let x = label.x;
+      ctx.globalAlpha = label.alpha;
+      if (label.mark) {
+        ctx.strokeText(label.mark, x, y);
+        ctx.fillStyle = label.markFill;
+        ctx.fillText(label.mark, x, y);
+        x += label.markW;
+      }
+      ctx.strokeText(label.name, x, y);
+      ctx.fillStyle = label.fill;
+      ctx.fillText(label.name, x, y);
+    }
     ctx.globalAlpha = 1;
   }
 
-  // Pixel-space line segments, dropping any antimeridian-crossing segment.
-  _boundarySegments(boundary) {
-    const segs = [];
-    for (let i = 0; i < boundary.vertices.length - 1; i++) {
-      const lon1 = boundary.vertices[i][0];
-      const lat1 = boundary.vertices[i][1];
-      const lon2 = boundary.vertices[i + 1][0];
-      const lat2 = boundary.vertices[i + 1][1];
-      if (Math.abs(lon2 - lon1) > 180) continue;
-      const [x1, y1] = this._lonLatToXY(lon1, lat1);
-      const [x2, y2] = this._lonLatToXY(lon2, lat2);
-      segs.push({ x1, y1, x2, y2 });
-    }
-    return segs;
-  }
+  // ---- picking ------------------------------------------------------------------------------
 
-  _strokePolyline(ctx, segments) {
-    ctx.beginPath();
-    for (const { x1, y1, x2, y2 } of segments) {
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-    }
-    ctx.stroke();
-  }
-
-  // Stroke each segment shifted perpendicularly by `offset` pixels.
-  // Adjacent segments don't perfectly miter at the offset, but at thin widths
-  // the gaps are invisible and the round lineCap hides them further.
-  _strokeOffsetPolyline(ctx, segments, offset) {
-    ctx.beginPath();
-    for (const { x1, y1, x2, y2 } of segments) {
-      const dx = x2 - x1, dy = y2 - y1;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len < 0.5) continue;
-      const ox = (-dy / len) * offset;
-      const oy = ( dx / len) * offset;
-      ctx.moveTo(x1 + ox, y1 + oy);
-      ctx.lineTo(x2 + ox, y2 + oy);
-    }
-    ctx.stroke();
-  }
-
-  _renderConvergentBoundary(ctx, segments) {
-    // Layered ridge: dark drop shadow → mid-tone base body → bright snow centerline.
-    // Then oversized teeth pointing perpendicular, suggesting overriding plate.
-    ctx.shadowBlur = 0;
-
-    // Drop shadow for depth illusion (offset DOWN-RIGHT).
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-    ctx.lineWidth = RENDER.view2dConvergentShadowWidth;
-    this._strokeOffsetPolyline(ctx, segments, 1.6);
-
-    // Main ridge body with halo glow.
-    ctx.shadowColor = RENDER.boundaryConvergentBaseColor;
-    ctx.shadowBlur = RENDER.view2dBoundaryGlow;
-    ctx.strokeStyle = RENDER.boundaryConvergentBaseColor;
-    ctx.lineWidth = RENDER.view2dConvergentBaseWidth;
-    this._strokePolyline(ctx, segments);
-
-    // Snow-cap centerline.
-    ctx.shadowColor = RENDER.boundaryConvergentApexColor;
-    ctx.shadowBlur = RENDER.view2dBoundaryGlow * 0.6;
-    ctx.strokeStyle = RENDER.boundaryConvergentApexColor;
-    ctx.lineWidth = RENDER.view2dConvergentSnowWidth;
-    this._strokePolyline(ctx, segments);
-
-    ctx.shadowBlur = 0;
-
-    // Big teeth.
-    this._drawConvergentTeeth(
-      ctx, segments,
-      RENDER.view2dConvergentToothSize,
-      RENDER.view2dConvergentToothSpacing,
-      RENDER.boundaryConvergentBaseColor
-    );
-  }
-
-  _renderDivergentBoundary(ctx, segments) {
-    // Twin parallel ridge rails with a glowing red axial rift between them.
-    const railOff = RENDER.view2dDivergentRailOffset;
-    ctx.shadowBlur = 0;
-
-    // Outer dark halo to suggest mass under the ridges.
-    ctx.strokeStyle = 'rgba(20,28,42,0.7)';
-    ctx.lineWidth = RENDER.view2dDivergentRailWidth + 4;
-    this._strokePolyline(ctx, segments);
-
-    // Twin ridge rails (one each side of the centerline).
-    ctx.strokeStyle = RENDER.boundaryDivergentLipColor;
-    ctx.lineWidth = RENDER.view2dDivergentRailWidth;
-    this._strokeOffsetPolyline(ctx, segments,  railOff);
-    this._strokeOffsetPolyline(ctx, segments, -railOff);
-
-    // Glowing axial rift core.
-    ctx.shadowColor = RENDER.boundaryDivergentInnerColor;
-    ctx.shadowBlur = RENDER.view2dBoundaryGlow + 2;
-    ctx.strokeStyle = RENDER.boundaryDivergentInnerColor;
-    ctx.lineWidth = RENDER.view2dDivergentCoreWidth;
-    this._strokePolyline(ctx, segments);
-
-    ctx.shadowBlur = 0;
-  }
-
-  _renderTransformBoundary(ctx, segments) {
-    // Twin offset cliff: upper rail bright, lower rail dark, suggesting strike-slip step.
-    const off = RENDER.view2dTransformRailOffset;
-    ctx.shadowBlur = 0;
-
-    // Lower (shadow) rail.
-    ctx.strokeStyle = RENDER.boundaryTransformLowerColor;
-    ctx.lineWidth = RENDER.view2dTransformRailWidth;
-    ctx.setLineDash([8, 5]);
-    this._strokeOffsetPolyline(ctx, segments, -off);
-
-    // Upper (lit) rail with halo glow.
-    ctx.shadowColor = RENDER.boundaryTransformUpperColor;
-    ctx.shadowBlur = RENDER.view2dBoundaryGlow * 0.7;
-    ctx.strokeStyle = RENDER.boundaryTransformUpperColor;
-    ctx.lineWidth = RENDER.view2dTransformRailWidth;
-    this._strokeOffsetPolyline(ctx, segments,  off);
-
-    ctx.setLineDash([]);
-    ctx.shadowBlur = 0;
-  }
-
-  _drawConvergentTeeth(ctx, segments, size, spacing, color) {
-    ctx.fillStyle = color;
-    for (const { x1, y1, x2, y2 } of segments) {
-      const dx = x2 - x1, dy = y2 - y1;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len < spacing * 0.5) continue;
-      const tx = dx / len, ty = dy / len;
-      const px = -ty * size, py = tx * size;
-      const nTeeth = Math.max(1, Math.floor(len / spacing));
-      for (let k = 1; k <= nTeeth; k++) {
-        const t = k / (nTeeth + 1);
-        const mx = x1 + dx * t;
-        const my = y1 + dy * t;
-        ctx.beginPath();
-        ctx.moveTo(mx - tx * size * 0.5, my - ty * size * 0.5);
-        ctx.lineTo(mx + px, my + py);
-        ctx.lineTo(mx + tx * size * 0.5, my + ty * size * 0.5);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-  }
-
-  _renderIceCaps(ctx, w, h, glaciation) {
-    const { northCapLatRadius, southCapLatRadius, alpha } = glaciation;
-    const capRgb = hexToRgb(GLACIATION.capColor);
-
-    // North cap: lat 90 down to 90 - northCapLatRadius → y=0 to y at that lat
-    if (northCapLatRadius > 0) {
-      const [, yEdge] = this._lonLatToXY(0, 90 - northCapLatRadius);
-      const grad = ctx.createLinearGradient(0, 0, 0, yEdge);
-      grad.addColorStop(0, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},${alpha.toFixed(3)})`);
-      grad.addColorStop(1, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, w, yEdge);
-    }
-
-    // South cap: lat -90 up to -90 + southCapLatRadius
-    if (southCapLatRadius > 0) {
-      const [, yEdge] = this._lonLatToXY(0, -90 + southCapLatRadius);
-      const grad = ctx.createLinearGradient(0, h, 0, yEdge);
-      grad.addColorStop(0, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},${alpha.toFixed(3)})`);
-      grad.addColorStop(1, `rgba(${capRgb.r},${capRgb.g},${capRgb.b},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, yEdge, w, h - yEdge);
-    }
-  }
-
-  // Trace a closed smooth path through the given pixel points using
-  // quadratic Beziers passing through midpoints — gives soft coastlines.
-  _tracePath(ctx, points) {
-    const n = points.length;
-    if (n === 0) return;
-    if (n < 3) {
-      ctx.moveTo(points[0][0], points[0][1]);
-      for (let i = 1; i < n; i++) ctx.lineTo(points[i][0], points[i][1]);
-      ctx.closePath();
-      return;
-    }
-    const last = points[n - 1];
-    const first = points[0];
-    ctx.moveTo((last[0] + first[0]) / 2, (last[1] + first[1]) / 2);
-    for (let i = 0; i < n; i++) {
-      const cur = points[i];
-      const next = points[(i + 1) % n];
-      ctx.quadraticCurveTo(cur[0], cur[1], (cur[0] + next[0]) / 2, (cur[1] + next[1]) / 2);
-    }
-    ctx.closePath();
-  }
-
-  _polygonCentroid(vertices) {
-    let sumLon = 0, sumLat = 0;
-    for (const [lon, lat] of vertices) {
-      sumLon += lon;
-      sumLat += lat;
-    }
-    return [sumLon / vertices.length, sumLat / vertices.length];
-  }
-
-  // Pan/zoom interaction handlers
-  _onMouseDown(e) {
-    this._dragging = true;
-    this._lastMouse = { x: e.clientX, y: e.clientY };
-  }
-
-  _onMouseMove(e) {
-    if (this._dragging && this._lastMouse) {
-      this.panX += (e.clientX - this._lastMouse.x) / this.zoom;
-      this.panY += (e.clientY - this._lastMouse.y) / this.zoom;
-      this._lastMouse = { x: e.clientX, y: e.clientY };
-      if (this._interactionCb) this._interactionCb();
-      return;
-    }
-    // Hover hit-test in canvas-local coords.
-    if (!this._hoverCb) return;
-    const rect = this.canvas.getBoundingClientRect();
-    const cx = (e.clientX - rect.left);
-    const cy = (e.clientY - rect.top);
-    // Account for pan/zoom — markers are drawn in zoomed space.
-    const halfW = this.width / 2;
-    const halfH = this.height / 2;
-    const localX = (cx - this.panX - halfW * (1 - this.zoom)) / this.zoom;
-    const localY = (cy - this.panY - halfH * (1 - this.zoom)) / this.zoom;
-
+  _markerAt(x, y, reach = 12) {
     let best = null;
-    let bestDist = Infinity;
-    for (const hit of this._markerHits) {
-      const dx = hit.x - localX;
-      const dy = hit.y - localY;
-      const d2 = dx * dx + dy * dy;
-      const r = hit.r + 4; // generous hit area
-      if (d2 <= r * r && d2 < bestDist) {
-        bestDist = d2;
-        best = hit;
+    let bestD = Infinity;
+    for (const m of this._markers) {
+      const d = Math.hypot(m.x - x, m.y - y);
+      if (d <= Math.max(reach, m.baseR + 5) && d < bestD) {
+        bestD = d;
+        best = m;
       }
     }
-    this.canvas.style.cursor = best ? 'pointer' : '';
-    this._hoverCb(best ? best.sp : null, e.clientX, e.clientY);
+    return best;
   }
 
-  _onMouseUp() {
-    this._dragging = false;
-    this._lastMouse = null;
+  /** Once per frame: what is under the resting pointer? (Markers move and appear under it.) */
+  _pickHover() {
+    const hp = this._hoverPoint;
+    if (!hp || this._drag || this._pinch) {
+      if (!hp && this._hoverSp) this._setHover(null, 0, 0);
+      return;
+    }
+    const m = this._markerAt(hp.x, hp.y);
+    const sp = m ? m.sp : null;
+    const changed = (sp ? sp.id : null) !== (this._hoverSp ? this._hoverSp.id : null);
+    if (changed || (sp && this._hoverMoved)) this._setHover(sp, hp.clientX, hp.clientY);
+    this._hoverMoved = false;
+    this._setCursor(sp ? 'pointer' : 'grab');
+  }
+
+  _setHover(sp, clientX, clientY) {
+    const was = this._hoverSp;
+    this._hoverSp = sp;
+    if (!sp && !was) return;
+    if (this._hoverCb) this._hoverCb(sp, clientX, clientY);
+  }
+
+  _setCursor(cursor) {
+    if (this._cursor !== cursor) {
+      this._cursor = cursor;
+      this.canvas.style.cursor = cursor;
+    }
+  }
+
+  // ---- pointer input ------------------------------------------------------------------------
+
+  _local(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  _onPointerDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const p = this._local(e);
+    this._pointers.set(e.pointerId, p);
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* synthetic events */ }
+    this._zoomAnim = null;
+    if (this._pointers.size === 1) {
+      this._drag = { x: p.x, y: p.y, startX: p.x, startY: p.y, moved: false, type: e.pointerType };
+      this._pinch = null;
+    } else if (this._pointers.size === 2) {
+      const [a, b] = [...this._pointers.values()];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      // the planet point under the fingers, in zoom-1 pixels from the planet centre
+      this._pinch = {
+        dist: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        zoom: this.zoom,
+        ux: (mx - this.width / 2 - this.panX) / this.zoom,
+        uy: (my - this.height / 2 - this.panY) / this.zoom,
+      };
+      this._drag = null;
+      this._setHover(null, 0, 0);
+    }
+  }
+
+  _onPointerMove(e) {
+    const p = this._local(e);
+    if (this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId, p);
+
+    if (this._pinch && this._pointers.size >= 2) {
+      const [a, b] = [...this._pointers.values()];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      const dist = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      // two fingers: the point that was under them stays under their midpoint as they spread,
+      // close or move together (exact, whichever finger's event arrives first)
+      const z = clamp(this._pinch.zoom * (dist / this._pinch.dist), MIN_ZOOM, MAX_ZOOM);
+      this.zoom = z;
+      this.panX = mx - this.width / 2 - this._pinch.ux * z;
+      this.panY = my - this.height / 2 - this._pinch.uy * z;
+      this._clampPan();
+      this._syncHud();
+      return;
+    }
+
+    const d = this._drag;
+    if (d && this._pointers.has(e.pointerId)) {
+      const slop = d.type === 'mouse' ? 4 : 8;
+      if (!d.moved && Math.hypot(p.x - d.startX, p.y - d.startY) > slop) {
+        d.moved = true;
+        this._setCursor('grabbing');
+        if (this._hoverSp) this._setHover(null, 0, 0);
+      }
+      if (d.moved) {
+        // the map follows the pointer 1:1 at any zoom
+        this.panX += p.x - d.x;
+        this.panY += p.y - d.y;
+        this._clampPan();
+        this._syncHud();
+      }
+      d.x = p.x;
+      d.y = p.y;
+      return;
+    }
+
+    if (e.pointerType !== 'touch') {
+      this._hoverPoint = { x: p.x, y: p.y, clientX: e.clientX, clientY: e.clientY };
+      this._hoverMoved = true;
+    }
+  }
+
+  _onPointerUp(e) {
+    const had = this._pointers.delete(e.pointerId);
+    try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* not captured */ }
+    if (this._pinch) {
+      if (this._pointers.size < 2) this._pinch = null;
+      // a finger that stays down carries on as a drag, without a jump
+      if (this._pointers.size === 1) {
+        const [rest] = [...this._pointers.values()];
+        this._drag = { x: rest.x, y: rest.y, startX: rest.x, startY: rest.y, moved: true, type: 'touch' };
+      }
+      return;
+    }
+    const d = this._drag;
+    this._drag = null;
+    if (!d || !had || e.type === 'pointercancel') return;
+    this._setCursor('grab');
+    if (d.moved) return;
+
+    // A press that did not move is a click / tap.
+    const p = this._local(e);
+    const now = performance.now();
+    const m = this._markerAt(p.x, p.y, d.type === 'mouse' ? 12 : 20);
+    if (m) {
+      this._lastTap = null;
+      if (this._clickCb) this._clickCb(m.sp);
+      return;
+    }
+    const last = this._lastTap;
+    if (last && now - last.time < 340 && Math.hypot(p.x - last.x, p.y - last.y) < 28) {
+      // double-click / double-tap on open map: zoom in on that spot (or back out at the limit)
+      this._lastTap = null;
+      if (this.zoom >= MAX_ZOOM - 0.01) this.setViewport({ home: true });
+      else this._zoomBy(2, p.x, p.y);
+    } else {
+      this._lastTap = { x: p.x, y: p.y, time: now };
+    }
+  }
+
+  _onPointerLeave(e) {
+    if (e.pointerType === 'touch') return;
+    this._hoverPoint = null;
+    if (!this._drag) this._setHover(null, 0, 0);
   }
 
   _onWheel(e) {
     e.preventDefault();
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-    this.zoom = Math.max(0.5, Math.min(5, this.zoom * zoomFactor));
-    if (this._interactionCb) this._interactionCb();
-  }
-
-  // --- Touch: one finger pans, two fingers pinch-zoom (reuses pan/zoom state). ---
-
-  _onTouchStart(e) {
-    e.preventDefault();
-    if (e.touches.length === 1) {
-      this._touchLast = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      this._pinchDist = null;
-    } else if (e.touches.length === 2) {
-      this._pinchDist = this._touchDistance(e.touches);
-      this._touchLast = null;
-    }
-  }
-
-  _onTouchMove(e) {
-    e.preventDefault();
-    if (e.touches.length === 1 && this._touchLast) {
-      const t = e.touches[0];
-      this.panX += (t.clientX - this._touchLast.x) / this.zoom;
-      this.panY += (t.clientY - this._touchLast.y) / this.zoom;
-      this._touchLast = { x: t.clientX, y: t.clientY };
-    } else if (e.touches.length === 2 && this._pinchDist != null) {
-      const d = this._touchDistance(e.touches);
-      if (this._pinchDist > 0) {
-        this.zoom = Math.max(0.5, Math.min(5, this.zoom * (d / this._pinchDist)));
-      }
-      this._pinchDist = d;
-    }
-    if (this._interactionCb) this._interactionCb();
-  }
-
-  _onTouchEnd(e) {
-    if (e.touches.length === 0) {
-      this._touchLast = null;
-      this._pinchDist = null;
-    } else if (e.touches.length === 1) {
-      this._touchLast = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      this._pinchDist = null;
-    }
-  }
-
-  _touchDistance(touches) {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.hypot(dx, dy);
+    // deltaY only: a sideways trackpad swipe must not zoom. ctrlKey marks a trackpad pinch.
+    let dy = e.deltaY;
+    if (!dy) return;
+    if (e.deltaMode === 1) dy *= 16;
+    else if (e.deltaMode === 2) dy *= 400;
+    const p = this._local(e);
+    this._zoomAnim = null;
+    this._zoomAt(p.x, p.y, this.zoom * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)));
+    this._syncHud();
   }
 }

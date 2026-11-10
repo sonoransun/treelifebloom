@@ -1,0 +1,938 @@
+/* Timeline & transport (js/ui/controls.js)
+ *
+ * Top to bottom inside <footer id="timeline">:
+ *   .tl-track       event rail · eon band · period band · climate stripe, crossed by the playhead
+ *   .tl-lower       climate caption (top right) over the transport row
+ *   .tl-tip         the one shared tooltip, floating above the footer
+ *
+ * Everything on the track is positioned in px by Controls._layout() on resize; per frame only the
+ * playhead, the dimming veil and the two label clips move.
+ * Height: 131px on desktop, 107px at ≤ 720px (the visualization needs the room).
+ */
+
+#timeline {
+  --tl-rail-h: 16px;
+  --tl-eon-h: 14px;
+  --tl-band-gap: 1px;
+  --tl-period-h: 24px;
+  --tl-climate-h: 6px;
+  /* label inks on the period colours: pure black/white keep every ICS fill ≥ 4.5:1 */
+  --tl-ink-dark: #000;
+  --tl-ink-light: #fff;
+  --tl-divider: rgba(255, 255, 255, 0.28);   /* era hairlines inside an eon block */
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-2) var(--s-4);
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#timeline [hidden] {
+  display: none !important;
+}
+
+/* ========================================================================== */
+/* Track: rails + playhead                                                    */
+/* ========================================================================== */
+
+.tl-track {
+  position: relative;
+  cursor: pointer;
+  touch-action: none;
+}
+
+#timeline.is-scrubbing .tl-track {
+  cursor: grabbing;
+}
+
+/* The real slider: invisible, focusable, laid over the bands so assistive tech finds it there. */
+.tl-range {
+  position: absolute;
+  left: 0;
+  top: calc(var(--tl-rail-h) + 2px);
+  width: 100%;
+  height: calc(var(--tl-eon-h) + var(--tl-band-gap) + var(--tl-period-h));
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* ---- Event rail ------------------------------------------------------------ */
+
+.tl-rail {
+  position: relative;
+  height: var(--tl-rail-h);
+}
+
+/* the thread the events are strung on */
+.tl-rail::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  margin-top: -0.5px;
+  background: var(--line);
+}
+
+/* Each marker is a real button the size of its glyph. Near misses are caught by the track,
+   which resolves the pointer to the nearest marker (see Controls._nearestMark). */
+.tl-mark {
+  --size: 9px;
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: opacity var(--dur-2) var(--ease);
+}
+
+.tl-mark-crisis {
+  --size: 11px;
+}
+
+.tl-mark-extinction {
+  --size: 13px;
+}
+
+.tl-mark::before {
+  content: '';
+  display: block;
+  background: var(--c, var(--text-2));
+  /* surface ring keeps neighbours apart where they touch */
+  box-shadow: 0 0 0 1.5px var(--bg-1);
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.tl-mark-milestone::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.tl-mark-extinction::before {
+  width: 9px;
+  height: 9px;
+  border-radius: 1.5px;
+  transform: rotate(45deg);
+}
+
+.tl-mark-crisis::before {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: var(--bg-1);
+  box-shadow: inset 0 0 0 1.5px var(--c, var(--text-2)), 0 0 0 1.5px var(--bg-1);
+  transform: rotate(45deg);
+}
+
+.tl-mark.is-ahead {
+  opacity: 0.62;
+}
+
+.tl-mark-extinction.is-ahead {
+  opacity: 0.85;
+}
+
+.tl-mark.is-hover,
+.tl-mark.is-active,
+.tl-mark:focus-visible {
+  opacity: 1;
+  z-index: 200 !important;
+}
+
+.tl-mark.is-hover::before,
+.tl-mark:focus-visible::before {
+  transform: scale(1.4);
+  box-shadow: 0 0 0 1.5px var(--bg-1), 0 0 0 3px var(--text-1);
+}
+
+.tl-mark-extinction.is-hover::before,
+.tl-mark-extinction:focus-visible::before {
+  transform: rotate(45deg) scale(1.3);
+}
+
+.tl-mark-crisis.is-hover::before,
+.tl-mark-crisis:focus-visible::before {
+  transform: rotate(45deg) scale(1.35);
+  box-shadow: inset 0 0 0 1.5px var(--c, var(--text-2)), 0 0 0 1.5px var(--bg-1), 0 0 0 3px var(--text-1);
+}
+
+.tl-mark:focus-visible {
+  outline: none;
+}
+
+/* The event on stage right now (its card or toast is up) */
+.tl-mark.is-active::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1.5px solid var(--c, var(--accent));
+  border-radius: 50%;
+  animation: tl-pulse 1.8s var(--ease) infinite;
+}
+
+@keyframes tl-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* How long the hovered event lasts on screen */
+.tl-window {
+  position: absolute;
+  left: 0;
+  top: var(--tl-rail-h);
+  height: 2px;
+  border-radius: 1px;
+  background: var(--c, var(--accent));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tl-window.is-on {
+  opacity: 0.9;
+}
+
+/* ---- Eon + period bands ------------------------------------------------------ */
+
+.tl-bands {
+  position: relative;
+  margin-top: 2px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+
+.tl-eons {
+  position: relative;
+  height: var(--tl-eon-h);
+}
+
+.tl-periods {
+  position: relative;
+  height: var(--tl-period-h);
+  margin-top: var(--tl-band-gap);
+}
+
+.tl-block {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+/* Eras inside one eon: a hairline, not a gap */
+.tl-eon-sub {
+  box-shadow: inset 1px 0 0 var(--tl-divider);
+}
+
+.tl-eon.is-hover {
+  filter: brightness(1.35);
+}
+
+.tl-period.is-hover {
+  filter: brightness(1.12) saturate(1.08);
+}
+
+/* Everything ahead of the playhead: dimmed and a little greyer, so the bands read as progress. */
+.tl-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: saturate(0.85);
+  backdrop-filter: saturate(0.85);
+  will-change: transform;
+}
+
+.tl-veil::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg-0);
+  opacity: 0.6;
+}
+
+/* Labels sit above the veil in two copies — ink for the lit side, ink for the dimmed side —
+   each clipped at the playhead, so a name stays readable while the playhead crosses it. */
+.tl-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tl-plabel,
+.tl-elabel {
+  position: absolute;
+  white-space: nowrap;
+}
+
+.tl-plabel {
+  top: calc(var(--tl-eon-h) + var(--tl-band-gap));
+  height: var(--tl-period-h);
+  line-height: var(--tl-period-h);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.tl-plabel.is-abbr {
+  font-size: var(--fs-small);
+  letter-spacing: 0;
+}
+
+.tl-elabel {
+  top: 0;
+  height: var(--tl-eon-h);
+  line-height: var(--tl-eon-h);
+  text-align: center;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* a name that only just misses its block closes up its tracking (see _layoutBands) */
+.tl-elabel.is-tight {
+  letter-spacing: 0.04em;
+}
+
+.tl-labels-lit .ink-dark { color: var(--tl-ink-dark); }
+.tl-labels-lit .ink-light { color: var(--tl-ink-light); }
+.tl-labels-dim .tl-plabel { color: var(--text-1); }
+.tl-labels-lit .tl-elabel { color: var(--text-1); }
+.tl-labels-dim .tl-elabel { color: var(--text-2); }
+
+.tl-measure {
+  left: 0;
+  width: auto !important;
+  visibility: hidden;
+}
+
+/* ---- Climate stripe ---------------------------------------------------------- */
+
+.tl-climate {
+  display: block;
+  width: 100%;
+  height: var(--tl-climate-h);
+  margin-top: 3px;
+  border-radius: 3px;
+}
+
+/* ---- Playhead ---------------------------------------------------------------- */
+
+.tl-playhead,
+.tl-ghost {
+  position: absolute;
+  left: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+.tl-playhead {
+  top: -7px;
+  bottom: -3px;
+  z-index: 2;
+  will-change: transform;
+}
+
+.tl-playhead::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 9px;
+  bottom: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent-strong);
+  /* dark edge so the hairline holds on the pale ICS yellows; soft bloom everywhere else */
+  box-shadow: 0 0 0 1px var(--glass), 0 0 9px 1px var(--accent-line);
+}
+
+.tl-grip {
+  position: absolute;
+  left: -6.5px;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  fill: var(--accent);
+  stroke: var(--bg-0);
+  stroke-width: 1;
+  paint-order: stroke;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  transform-origin: 50% 0;
+  transition: transform var(--dur-1) var(--ease);
+}
+
+#timeline.is-scrubbing .tl-grip,
+.tl-track.is-focus .tl-grip {
+  transform: scale(1.25);
+  fill: var(--accent-strong);
+}
+
+/* Keyboard focus is on the hidden slider: show it on the bands it controls. */
+.tl-track.is-focus .tl-bands {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Where the pointer is aiming */
+.tl-ghost {
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  opacity: 0;
+}
+
+.tl-ghost::before {
+  content: '';
+  position: absolute;
+  left: -0.5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--text-1);
+  box-shadow: 0 0 0 0.5px var(--glass);
+}
+
+.tl-ghost.is-on {
+  opacity: 0.75;
+}
+
+/* ========================================================================== */
+/* Lower row: climate caption + transport                                     */
+/* ========================================================================== */
+
+.tl-lower {
+  position: relative;
+}
+
+.tl-caption {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  line-height: 14px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.tl-key {
+  width: 28px;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.tl-transport {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  height: 40px;
+  margin-top: var(--s-2);
+}
+
+.tl-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.tl-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+
+.tl-btn:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+
+.tl-btn:active {
+  transform: scale(0.94);
+}
+
+.tl-btn:focus-visible {
+  border-radius: 50%;
+}
+
+.tl-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.tl-restart {
+  margin-left: var(--s-1);
+}
+
+/* Play: the one filled amber control. It steps back to an outline while the story runs. */
+.tl-play {
+  width: 40px;
+  height: 40px;
+  margin: 0 var(--s-1);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.tl-play:hover {
+  background: var(--accent-strong);
+  color: var(--accent-ink);
+}
+
+.tl-play .tl-icon {
+  display: none;
+}
+
+.tl-play[data-state='play'] .tl-icon-play,
+.tl-play[data-state='hold'] .tl-icon-play,
+.tl-play[data-state='pause'] .tl-icon-pause,
+.tl-play[data-state='replay'] .tl-icon-replay {
+  display: block;
+}
+
+.tl-play[data-state='pause'],
+.tl-play[data-state='hold'] {
+  background: var(--bg-2);
+  border-color: var(--accent-line);
+  color: var(--accent-strong);
+}
+
+.tl-play[data-state='pause']:hover,
+.tl-play[data-state='hold']:hover {
+  background: var(--bg-3);
+  border-color: var(--accent);
+}
+
+/* Extinction hold: a ring that drains as the hold runs out */
+.tl-ring {
+  position: absolute;
+  inset: -3px;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  transform: rotate(-90deg);
+  fill: none;
+  stroke-width: 2;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease);
+}
+
+.tl-ring-track {
+  stroke: var(--line-strong);
+}
+
+.tl-ring-value {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+}
+
+.tl-play.has-ring {
+  border-color: transparent;
+}
+
+.tl-play.has-ring .tl-ring {
+  opacity: 1;
+}
+
+/* Speed: segmented on desktop, a native select on phones */
+.tl-speed {
+  margin-left: var(--s-2);
+  flex: none;
+}
+
+.tl-speed .seg-btn {
+  min-width: 42px;
+  padding: 0 var(--s-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-speed-select {
+  position: relative;
+  display: none;
+  flex: none;
+}
+
+.tl-speed-select::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -5px;
+  border: solid var(--text-3);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+#speed-select {
+  min-height: 36px;
+  padding: 0 28px 0 var(--s-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tl-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Readouts: running time · long-form age · the age itself, on one baseline */
+.tl-readout {
+  display: flex;
+  align-items: baseline;
+  align-self: flex-end;
+  flex: none;
+  gap: var(--s-3);
+  padding-bottom: 2px;
+  white-space: nowrap;
+}
+
+.tl-elapsed {
+  margin-right: var(--s-3);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+
+.tl-age-long {
+  min-width: 132px;
+  text-align: right;
+  font-size: var(--fs-body);
+  color: var(--text-3);
+}
+
+.tl-age-now {
+  min-width: 94px;
+  text-align: right;
+  font-size: var(--fs-h2);
+  line-height: 1;
+  color: var(--text-1);
+}
+
+/* ========================================================================== */
+/* Tooltip                                                                    */
+/* ========================================================================== */
+
+.tl-tip {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  z-index: 5;
+  width: max-content;
+  max-width: min(312px, calc(100vw - 16px));
+  padding: 10px var(--s-3) var(--s-3);
+  border-radius: var(--r-2);
+  background: var(--glass-strong);
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-1) var(--ease), visibility 0s linear var(--dur-1);
+}
+
+.tl-tip.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-1) var(--ease);
+}
+
+/* caret pointing at the anchor, even when the tip is pushed in from a viewport edge */
+.tl-tip::after {
+  content: '';
+  position: absolute;
+  left: var(--caret-x, 50%);
+  top: 100%;
+  width: 12px;
+  height: 6px;
+  margin-left: -6px;
+  background: var(--glass-strong);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.tl-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* the age under the pointer */
+.tl-tip-at {
+  margin-left: auto;
+  padding-left: var(--s-4);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.tl-tip-swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--tip-color, transparent);
+}
+
+.tl-tip[data-kind='milestone'] .tl-tip-swatch {
+  border-radius: 50%;
+}
+
+.tl-tip[data-kind='extinction'] .tl-tip-swatch,
+.tl-tip[data-kind='crisis'] .tl-tip-swatch {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+
+.tl-tip[data-kind='crisis'] .tl-tip-swatch {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--tip-color, var(--text-2));
+}
+
+.tl-tip-title {
+  margin-top: 3px;
+  font-size: var(--fs-h3);
+  color: var(--text-1);
+}
+
+.tl-tip-meta {
+  margin-top: 2px;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.tl-tip-body {
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  color: var(--text-2);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.tl-tip-foot {
+  margin-top: var(--s-2);
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrub readout: just the age and the period */
+.tl-tip[data-kind='scrub'] {
+  padding: 6px var(--s-3) var(--s-2);
+  text-align: center;
+}
+
+.tl-tip[data-kind='scrub'] .tl-tip-title {
+  margin-top: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Button hint: label + key */
+.tl-tip[data-kind='hint'] {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: calc(100vw - 16px);
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.tl-tip[data-kind='hint'] .tl-tip-body {
+  display: block;
+  margin: 0;
+  color: var(--text-1);
+}
+
+.tl-tip-keys {
+  display: flex;
+  gap: var(--s-1);
+}
+
+/* ========================================================================== */
+/* Responsive                                                                 */
+/* ========================================================================== */
+
+/* Never overflow: Controls._fitTransport adds these one at a time until the row fits —
+   drop the running time, drop the long-form age, close up the spacing, drop restart. */
+.tl-transport.fit-1 .tl-elapsed,
+.tl-transport.fit-2 .tl-age-long,
+.tl-transport.fit-4 .tl-restart {
+  display: none;
+}
+
+.tl-transport.fit-3 {
+  gap: var(--s-1);
+}
+
+.tl-transport.fit-3 .tl-play {
+  margin: 0 2px;
+}
+
+.tl-transport.fit-3 #speed-select {
+  padding: 0 22px 0 var(--s-2);
+}
+
+.tl-transport.fit-3 .tl-speed-select::after {
+  right: 9px;
+}
+
+.tl-transport.fit-3 .tl-age-now {
+  font-size: 20px;
+}
+
+/* Phones, narrow tablets and short landscape screens: events, periods, playhead and transport only */
+@media (max-width: 720px), (max-height: 480px) {
+  #timeline {
+    --tl-eon-h: 0px;
+    --tl-band-gap: 0px;
+    padding: var(--s-2) var(--s-3);
+  }
+
+  .tl-eons,
+  .tl-elabel,
+  .tl-climate,
+  .tl-caption,
+  .tl-age-long {
+    display: none;
+  }
+
+  .tl-plabel {
+    font-size: var(--fs-small);
+  }
+
+  .tl-playhead {
+    bottom: -2px;
+  }
+
+  .tl-transport {
+    gap: var(--s-2);
+  }
+
+  .tl-readout {
+    align-self: center;
+    padding-bottom: 0;
+  }
+
+  .tl-age-now {
+    min-width: 0;
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  .tl-speed {
+    display: none;
+  }
+
+  .tl-speed-select {
+    display: inline-flex;
+  }
+}
+
+/* Touch: 44px hit areas without growing the row */
+@media (pointer: coarse) {
+  .tl-btn::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+  }
+
+  .tl-play::after {
+    inset: -3px;
+  }
+
+  #speed-select {
+    min-height: 40px;
+  }
+}
+
+/* Forced colours (high contrast): the track is a chart, so it keeps its data colours and label
+   inks; the chosen speed needs an outline because its fill is gone. */
+@media (forced-colors: active) {
+  .tl-track,
+  .tl-key,
+  .tl-tip-swatch {
+    forced-color-adjust: none;
+  }
+
+  .tl-speed .seg-btn.active {
+    outline: 2px solid ButtonText;
+    outline-offset: -2px;
+  }
+}
+
+/* Motion safety: no transitions on the playhead, markers or tooltip, and a still ring instead
+   of the pulse — under the OS setting and under the viewer's override (<html data-motion>). */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .tl-tip,
+  :root:not([data-motion='full']) .tl-grip,
+  :root:not([data-motion='full']) .tl-ring,
+  :root:not([data-motion='full']) .tl-mark,
+  :root:not([data-motion='full']) .tl-mark::before,
+  :root:not([data-motion='full']) .tl-btn {
+    transition: none;
+  }
+
+  :root:not([data-motion='full']) .tl-mark.is-active::after {
+    animation: none;
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+[data-motion='reduced'] .tl-tip,
+[data-motion='reduced'] .tl-grip,
+[data-motion='reduced'] .tl-ring,
+[data-motion='reduced'] .tl-mark,
+[data-motion='reduced'] .tl-mark::before,
+[data-motion='reduced'] .tl-btn {
+  transition: none;
+}
+
+[data-motion='reduced'] .tl-mark.is-active::after {
+  animation: none;
+  transform: scale(1.1);
+  opacity: 0.8;
+}

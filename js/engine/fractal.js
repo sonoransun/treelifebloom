@@ -1,66 +1,101 @@
-// Deterministic fractal subdivision for polygon coastlines.
-// Uses midpoint displacement with coordinate-based hashing for jitter-free animation.
+// Deterministic fractal detail for coastlines (midpoint displacement).
+//
+// The wiggles are keyed on a seed + the index of the edge + the position inside that edge — never
+// on coordinates — so a coast keeps exactly the same detail while its polygon drifts, rotates or
+// morphs. (Hashing coordinates, as this module once did, re-rolled every wiggle on every frame of
+// motion and made coastlines "boil".)
+//
+// The continental engine (js/engine/interpolator.js) applies this once, when the deep-time
+// outlines are loaded, and hands out polygons that are already render-ready; such vertex arrays
+// carry a non-enumerable `renderReady` flag and pass through fractalSubdivide() untouched, so a
+// renderer may still call it on every polygon without multiplying vertices.
 
 import { RENDER } from '../config.js';
 
-function hashCoords(x1, y1, x2, y2) {
-  let h = ((x1 * 73856093) ^ (y1 * 19349663) ^ (x2 * 83492791) ^ (y2 * 67867979)) | 0;
-  return ((h & 0x7fffffff) % 10000) / 5000 - 1; // range [-1, 1]
+const READY = 'renderReady';
+const ROUGHNESS = 0.6;       // amplitude falloff per level (0.5 = smooth bulges, 0.7 = craggy)
+const SEAM_EPS = 1e-6;
+
+/** Flag a vertex array as "dense enough to draw as is". Returns the same array. */
+export function markRenderReady(vertices) {
+  if (vertices && !vertices[READY]) Object.defineProperty(vertices, READY, { value: true });
+  return vertices;
 }
 
-function subdivideEdge(ax, ay, bx, by, depth, amplitude) {
-  if (depth === 0) return [[bx, by]];
+export function isRenderReady(vertices) {
+  return !!(vertices && vertices[READY]);
+}
 
-  const mx = (ax + bx) / 2;
-  const my = (ay + by) / 2;
+/** 32-bit integer mix of (h, k). */
+function mix(h, k) {
+  h = (h ^ Math.imul(k + 0x9e3779b9, 0x85ebca6b)) | 0;
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+  return (h ^ (h >>> 16)) | 0;
+}
 
-  // Perpendicular direction
-  const dx = bx - ax;
+/** hash → [-1, 1] */
+function unit(h) {
+  return ((h >>> 0) / 0xffffffff) * 2 - 1;
+}
+
+/** Stable integer seed from a string (polygon id) and an optional number. */
+export function seedFrom(text, salt = 0) {
+  let h = mix(0x1234567, salt | 0);
+  for (let i = 0; i < text.length; i++) h = mix(h, text.charCodeAt(i));
+  return h;
+}
+
+// An edge that lies on the map frame (lat ±90 or lon ±180) closes a polygon; it is not a coast.
+function onSeam(ax, ay, bx, by) {
+  return (Math.abs(Math.abs(ay) - 90) < SEAM_EPS && Math.abs(ay - by) < SEAM_EPS)
+    || (Math.abs(Math.abs(ax) - 180) < SEAM_EPS && Math.abs(ax - bx) < SEAM_EPS);
+}
+
+function subdivide(out, ax, ay, bx, by, depth, amplitude, key) {
+  if (depth <= 0) return;
+  // work in true degrees of arc: longitudes shrink with latitude
+  const k = Math.max(0.2, Math.cos(((ay + by) / 2) * (Math.PI / 180)));
+  const dx = (bx - ax) * k;
   const dy = by - ay;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-8) return [[bx, by]];
-
-  const px = -dy / len;
-  const py = dx / len;
-
-  // Deterministic displacement from coordinate hash
-  const displacement = hashCoords(
-    Math.round(ax * 100), Math.round(ay * 100),
-    Math.round(bx * 100), Math.round(by * 100)
-  ) * amplitude * len;
-
-  // Latitude correction: scale longitude displacement by cos(latitude)
-  const avgLat = my * (Math.PI / 180);
-  const cosLat = Math.max(0.3, Math.cos(avgLat));
-
-  const nx = mx + px * displacement / cosLat;
-  const ny = my + py * displacement;
-
-  const nextAmp = amplitude * 0.5;
-  const left = subdivideEdge(ax, ay, nx, ny, depth - 1, nextAmp);
-  const right = subdivideEdge(nx, ny, bx, by, depth - 1, nextAmp);
-
-  return [...left, ...right];
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-9) return;
+  const d = unit(key) * amplitude * len;
+  const mx = (ax + bx) / 2 + ((-dy / len) * d) / k;
+  const my = Math.max(-90, Math.min(90, (ay + by) / 2 + (dx / len) * d));
+  subdivide(out, ax, ay, mx, my, depth - 1, amplitude * ROUGHNESS, mix(key, 1));
+  out.push([mx, my]);
+  subdivide(out, mx, my, bx, by, depth - 1, amplitude * ROUGHNESS, mix(key, 2));
 }
 
+/**
+ * Add coastline detail to a closed outline.
+ * @param {Array<[number, number]>} vertices  [[lon, lat], ...]. Every edge is taken the short way
+ *   round, so an outline may cross the antimeridian (… 170, -175 … or … 170, 185 …) or circle a pole.
+ * @param {number} depth      subdivision levels; each level doubles the vertex count
+ * @param {number} amplitude  first-level displacement as a fraction of the edge length
+ * @param {number} seed       integer; the same seed always gives the same coast
+ * @returns a new array — or `vertices` itself when it is already render-ready or too short. New
+ *   points continue the longitude of the vertex before them (they may lie slightly beyond ±180).
+ */
 export function fractalSubdivide(
   vertices,
   depth = RENDER.fractalDepth,
-  amplitude = RENDER.fractalAmplitude
+  amplitude = RENDER.fractalAmplitude,
+  seed = 0,
 ) {
-  if (!vertices || vertices.length < 3) return vertices;
+  if (!vertices || vertices.length < 3 || depth <= 0 || isRenderReady(vertices)) return vertices;
 
-  const result = [];
-  for (let i = 0; i < vertices.length; i++) {
-    const [ax, ay] = vertices[i];
-    const [bx, by] = vertices[(i + 1) % vertices.length];
-    result.push([ax, ay]);
-    const subdivided = subdivideEdge(ax, ay, bx, by, depth, amplitude);
-    // subdivideEdge returns points up to and including B; skip B since it's the next vertex's start
-    for (let j = 0; j < subdivided.length - 1; j++) {
-      result.push(subdivided[j]);
-    }
+  const n = vertices.length;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    out.push([a[0], a[1]]);
+    if (onSeam(a[0], a[1], b[0], b[1])) continue;
+    let bx = b[0];
+    if (bx - a[0] > 180) bx -= 360; else if (bx - a[0] < -180) bx += 360;
+    subdivide(out, a[0], a[1], bx, b[1], depth, amplitude, mix(seed | 0, i));
   }
-
-  return result;
+  return out;
 }

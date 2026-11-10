@@ -1,0 +1,1144 @@
+/* Life & planet panel (js/ui/sidebar.js, js/ui/sparkline.js)
+ *
+ * The shell of #sidebar (grid slot, drawer / bottom sheet on narrow screens) lives in styles.css;
+ * this file styles everything inside it. Class prefix: sb-.
+ *
+ *   .sb-top       tabs (Now | Index) and, on narrow screens, the close button
+ *   .sb-now       Now tab: .sb-scroll (vitals → dominant life) + .sb-events pinned underneath
+ *   .sb-index     Index tab: search field + grouped list
+ */
+
+#sidebar {
+  --sb-gutter: 0px;           /* width of a space-taking scrollbar, measured in JS */
+  /* The panel's own width and height drive the layout variants at the end of this file (its
+     size never depends on its content: a fixed grid track, or the drawer / sheet box). */
+  container: sidebar / size;
+}
+
+/* Side gutters. Declared on the panel's children (not the root) so the container query at the
+   end of this file can tighten them for the narrow column. */
+.sb-top,
+.sb-panel {
+  --sb-pad: var(--s-4);
+  --sb-pad-end: calc(var(--sb-pad) - var(--sb-gutter));
+}
+
+/* Author display rules below would otherwise defeat the hidden attribute. */
+#sidebar [hidden] {
+  display: none !important;
+}
+
+.sb-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sb-glyph {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.sb-glyph svg {
+  display: block;
+}
+
+/* Quiet text button ("Show all", "Jump to first life", "Clear the search") */
+.sb-link {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-line);
+  text-underline-offset: 3px;
+  transition: color var(--dur-1) var(--ease);
+}
+
+.sb-link:hover {
+  color: var(--accent-strong);
+  text-decoration-color: currentColor;
+}
+
+/* Thin meter: abundance of a lineage, share of a group */
+.sb-meter {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+
+.sb-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--c, var(--text-3));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-2) linear;
+}
+
+/* ========================================================================== */
+/* Tabs                                                                       */
+/* ========================================================================== */
+
+.sb-top {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--sb-pad) var(--s-1);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-2) var(--ease);
+}
+
+.sb-top.is-scrolled {
+  border-bottom-color: var(--line);
+}
+
+.sb-tabs {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.sb-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.sb-tab-count {
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.sb-tab.active .sb-tab-count {
+  color: var(--text-2); /* --text-3 falls under 4.5:1 on the raised active segment */
+}
+
+.sb-close {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.sb-close:hover {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+
+.sb-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sb-scroll,
+.sb-index-scroll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* ========================================================================== */
+/* Planet vitals                                                              */
+/* ========================================================================== */
+
+/* 4px on top: room for the focus ring of the first row of cards inside the scroll area */
+.sb-vitals {
+  padding: var(--s-1) var(--sb-pad-end) 0 var(--sb-pad);
+}
+
+.sb-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+/* Every line has a fixed height, so a card never changes size as its numbers change. */
+.sb-vital {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 7px 12px 1px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  background: var(--bg-2);
+  transition: border-color var(--dur-1) var(--ease);
+}
+
+.sb-vital:hover,
+.sb-vital:focus-visible {
+  border-color: var(--line-strong);
+}
+
+.sb-vital-label {
+  height: 13px;
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+.sb-vital-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  height: 24px;
+  white-space: nowrap;
+}
+
+.sb-vital-num {
+  font-size: 22px;
+  line-height: 24px;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.sb-vital-num.is-long {
+  font-size: 18px;
+}
+
+.sb-vital-unit {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.sb-vital-compare {
+  height: 16px;
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.sb-vital-compare b {
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* The sparkline insets its plot by the dot radius on every side: the negative side margins line
+   the curve's ends up with the text above, and the inset doubles as the gap around the chart
+   (SPARK_HEIGHT in sidebar.js). */
+.sb-vital-spark {
+  height: 26px;
+  margin: 1px -4px 0;
+  cursor: crosshair; /* point to read a moment, click to travel there */
+}
+
+.sparkline {
+  display: block;
+}
+
+/* State words under the grid; the hovered / focused card's explanation takes their place. */
+.sb-vitals-foot {
+  position: relative;
+  height: 34px;
+  margin: 8px 2px 9px;
+}
+
+.sb-states {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  transition: opacity var(--dur-2) var(--ease);
+}
+
+.sb-state {
+  flex: none;
+}
+
+/* Last resort for a climate name longer than any in use today: it gives way with an ellipsis. */
+.sb-state:first-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.sb-state:first-child .sb-state-value > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-state dt {
+  height: 14px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+.sb-state-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+/* Five-step activity meter beside the tectonics word */
+.sb-pips {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 10px;
+}
+
+.sb-pips i {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--line-strong);
+}
+
+.sb-pips i:nth-child(1) { height: 4px; }
+.sb-pips i:nth-child(2) { height: 5.5px; }
+.sb-pips i:nth-child(3) { height: 7px; }
+.sb-pips i:nth-child(4) { height: 8.5px; }
+.sb-pips i:nth-child(5) { height: 10px; }
+
+.sb-pips[data-level='1'] i:nth-child(-n + 1),
+.sb-pips[data-level='2'] i:nth-child(-n + 2),
+.sb-pips[data-level='3'] i:nth-child(-n + 3),
+.sb-pips[data-level='4'] i:nth-child(-n + 4),
+.sb-pips[data-level='5'] i:nth-child(-n + 5) {
+  background: var(--text-2);
+}
+
+.sb-vitals-hint {
+  position: absolute;
+  inset: 0;
+  font-size: var(--fs-small);
+  line-height: 17px;
+  color: var(--text-2);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-2) var(--ease);
+}
+
+.sb-vitals-foot.is-hinting .sb-states {
+  opacity: 0;
+}
+
+.sb-vitals-foot.is-hinting .sb-vitals-hint {
+  opacity: 1;
+}
+
+/* ========================================================================== */
+/* Dominant life: header + share bar                                          */
+/* ========================================================================== */
+
+.sb-life-sentinel {
+  height: 0;
+}
+
+/* Sticks to whichever edge it would otherwise scroll past: to the top while the list is being
+   read, to the bottom on short screens where the list starts below the fold. */
+.sb-life-head {
+  position: sticky;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 9px var(--sb-pad-end) 6px var(--sb-pad);
+  border-top: 1px solid var(--line);
+  background: var(--bg-1);
+  transition: box-shadow var(--dur-2) var(--ease);
+}
+
+.sb-life-head.is-pinned-top {
+  border-top-color: transparent;
+  box-shadow: 0 1px 0 var(--line), 0 10px 14px -10px rgba(0, 0, 0, 0.7);
+}
+
+.sb-life-head.is-pinned-bottom {
+  cursor: pointer;
+  box-shadow: 0 -10px 14px -10px rgba(0, 0, 0, 0.7);
+}
+
+.sb-life-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.sb-life-title h2 {
+  flex: 1;
+  font-size: var(--fs-lead);
+  white-space: nowrap;
+}
+
+.sb-life-count {
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.sb-life-jump {
+  display: none;
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--bg-2);
+  color: var(--text-2);
+}
+
+.sb-life-head.is-pinned-bottom .sb-life-jump {
+  display: inline-flex;
+}
+
+/* Who rules now — one segment per life group, 2px of surface between neighbours */
+.sb-share {
+  display: flex;
+  height: 10px;
+  margin-top: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.sb-share.is-empty {
+  background: var(--bg-3);
+}
+
+.sb-share-track {
+  flex: 1;
+  display: flex;
+  margin-right: -2px; /* the last segment's trailing gap falls outside the clip */
+}
+
+.sb-share-seg {
+  flex: 0 1 0px;
+  min-width: 0;
+  margin-right: 2px;
+  border-radius: 1.5px;
+  background: var(--c);
+  transition: flex-grow var(--dur-3) var(--ease), margin-right var(--dur-3) var(--ease);
+}
+
+.sb-share-seg.is-zero {
+  margin-right: 0;
+}
+
+/* Legend = the two leading groups; pressing it opens the table of all eight. */
+.sb-share-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 1px var(--sb-pad-end) 3px var(--sb-pad);
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  text-align: left;
+}
+
+/* Always two lines tall, so the list below does not move when a second group first appears. */
+.sb-share-keys {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  display: grid;
+  align-content: start;
+}
+
+.sb-share-key,
+.sb-share-row {
+  display: grid;
+  align-items: center;
+  column-gap: var(--s-2);
+  min-height: 20px;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+
+.sb-share-key {
+  grid-template-columns: 12px minmax(0, 1fr) 34px;
+}
+
+.sb-share-row {
+  grid-template-columns: 12px minmax(0, 1fr) 44px 34px;
+}
+
+.sb-share-name {
+  min-width: 0;
+}
+
+/* Second legend line while one group has the planet to itself */
+.sb-share-key.is-alone {
+  color: var(--text-3);
+}
+
+.sb-share-key.is-alone .sb-glyph {
+  visibility: hidden;
+}
+
+.sb-share-pct {
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sb-share-all {
+  flex: 1;
+  line-height: 20px;
+  color: var(--text-3);
+}
+
+.sb-share-legend[aria-expanded='true'] .sb-share-keys,
+.sb-share-legend[aria-expanded='false'] .sb-share-all {
+  display: none;
+}
+
+.sb-share-legend:hover {
+  background: var(--bg-2);
+}
+
+.sb-share-legend .sb-icon {
+  color: var(--text-3);
+}
+
+.sb-share-legend:hover .sb-icon {
+  color: var(--text-1);
+}
+
+.sb-share-legend .sb-icon,
+.sb-group-toggle .sb-icon {
+  transition: transform var(--dur-2) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.sb-share-legend[aria-expanded='true'] .sb-icon {
+  transform: rotate(180deg);
+}
+
+/* The same shares as a table: glyph, name, meter, share — in the order of the bar's segments. */
+.sb-share-table {
+  list-style: none;
+  padding: 0 var(--sb-pad-end) 6px var(--sb-pad);
+}
+
+.sb-share-row.is-zero,
+.sb-share-row.is-zero .sb-share-pct {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.sb-share-row.is-zero .sb-glyph {
+  opacity: 0.45;
+}
+
+/* ========================================================================== */
+/* Dominant life: the ranked list                                             */
+/* ========================================================================== */
+
+.sb-life-body {
+  padding-bottom: var(--s-2);
+}
+
+.sb-life-wrap {
+  position: relative;
+}
+
+.sb-life-list,
+.sb-life-ghosts {
+  list-style: none;
+}
+
+/* Rows that dropped out of the ranking fade away here, on top of the rows closing the gap. */
+.sb-life-ghosts {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+/* Opaque rows: while two rows trade places, the one in front hides the one behind. */
+.sb-life-item {
+  position: relative;
+  background: var(--bg-1);
+}
+
+.sb-life-item.is-leaving {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.sb-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  width: 100%;
+  padding: 7px var(--sb-pad-end) 8px var(--sb-pad);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.sb-row > .sb-glyph {
+  margin-top: 2px;
+}
+
+.sb-row-main {
+  display: grid;
+  min-width: 0;
+}
+
+.sb-row-top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.sb-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--text-1);
+}
+
+.sb-row-status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-small);
+  line-height: 18px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.sb-row-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  margin-top: 1px;
+  overflow: hidden;
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--text-3);
+}
+
+.sb-row .sb-meter {
+  margin-top: 5px;
+}
+
+.sb-row:hover,
+.sb-life-item.is-active .sb-row {
+  background: var(--bg-2);
+}
+
+.sb-row:hover .sb-meter,
+.sb-life-item.is-active .sb-meter {
+  background: var(--bg-4);
+}
+
+/* The lineage under the pointer anywhere in the app, or open in the dialog */
+.sb-life-item.is-active .sb-row::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--accent);
+}
+
+.sb-row:focus-visible,
+.sb-entry:focus-visible,
+.sb-group-toggle:focus-visible,
+.sb-share-legend:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--r-2);
+}
+
+/* Trend: a small triangle, up or down (shape, not colour, carries the direction) */
+.sb-trend {
+  display: none;
+  width: 0;
+  height: 0;
+  border-right: 4px solid transparent;
+  border-left: 4px solid transparent;
+}
+
+.sb-life-item[data-trend='up'] .sb-trend {
+  display: block;
+  border-bottom: 6px solid var(--text-2);
+}
+
+.sb-life-item[data-trend='down'] .sb-trend {
+  display: block;
+  border-top: 6px solid var(--text-2);
+}
+
+.sb-new {
+  display: none;
+  align-items: center;
+  height: 16px;
+  padding: 0 6px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: var(--fs-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 14px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sb-life-item.is-new .sb-new {
+  display: inline-flex;
+}
+
+.sb-life-item.is-new .sb-level,
+.sb-life-item.is-new .sb-trend {
+  display: none;
+}
+
+.sb-life-empty,
+.sb-index-empty {
+  padding: var(--s-5) var(--sb-pad) var(--s-5);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-3);
+}
+
+.sb-life-empty-title {
+  margin-bottom: var(--s-1);
+  font-size: var(--fs-h3);
+  color: var(--text-2);
+}
+
+.sb-life-empty .sb-link,
+.sb-index-empty .sb-link {
+  margin-top: var(--s-2);
+}
+
+.sb-life-more {
+  display: block;
+  margin: var(--s-1) var(--sb-pad) var(--s-2) calc(var(--sb-pad) + 24px);
+}
+
+/* ========================================================================== */
+/* Just arrived / just lost                                                   */
+/* ========================================================================== */
+
+.sb-events {
+  flex: none;
+  display: grid;
+  gap: 2px;
+  padding: 7px var(--sb-pad) 8px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-2);
+}
+
+.sb-events-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  column-gap: var(--s-2);
+  align-items: start;
+}
+
+.sb-events-row > .kicker {
+  line-height: 20px;
+}
+
+/* Arrivals keep to one line, losses to two (a mass extinction names more of its victims);
+   whatever does not fit is clipped by whole lines and counted in "+N". */
+.sb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 12px;
+  max-height: 20px;
+  overflow: hidden;
+}
+
+.sb-events-lost .sb-chips {
+  max-height: 40px;
+}
+
+.sb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-1);
+  background: none;
+  color: var(--text-1);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  transition: opacity 1.5s linear;
+  animation: sb-chip-in var(--dur-3) var(--ease);
+}
+
+@keyframes sb-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.sb-chip:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sb-chip.is-fading {
+  opacity: 0;
+}
+
+.sb-events-lost .sb-chip {
+  color: var(--text-2);
+}
+
+.sb-dagger {
+  width: 12px;
+  height: 12px;
+  color: var(--text-3);
+}
+
+.sb-chips-more {
+  font-size: var(--fs-small);
+  line-height: 20px;
+  color: var(--text-3);
+}
+
+/* ========================================================================== */
+/* Index                                                                      */
+/* ========================================================================== */
+
+.sb-index-top {
+  flex: none;
+  padding: 2px var(--sb-pad) 10px;
+}
+
+.sb-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 34px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--text-3);
+  transition: border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+}
+
+.sb-search:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.sb-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  font-size: var(--fs-body);
+  color: var(--text-1);
+}
+
+.sb-search input::placeholder {
+  color: var(--text-3);
+  opacity: 1;
+}
+
+/* The native "clear" control, redrawn in the panel's ink */
+.sb-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-left: var(--s-2);
+  background: var(--text-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 4l8 8M12 4l-8 8' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  cursor: pointer;
+}
+
+.sb-search input::-webkit-search-cancel-button:hover {
+  background: var(--text-1);
+}
+
+.sb-index-meta {
+  margin: var(--s-2) 2px 0;
+  font-size: var(--fs-small);
+  color: var(--text-3);
+}
+
+.sb-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-1);
+}
+
+.sb-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: 34px;
+  padding: 0 var(--sb-pad-end) 0 var(--sb-pad);
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-align: left;
+  transition: color var(--dur-1) var(--ease);
+}
+
+.sb-group-toggle:hover {
+  color: var(--text-1);
+}
+
+.sb-group-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-group-count {
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.sb-group-toggle .sb-icon {
+  color: var(--text-3);
+}
+
+.sb-group-toggle[aria-expanded='false'] .sb-icon {
+  transform: rotate(-90deg);
+}
+
+.sb-group-list {
+  list-style: none;
+  padding-bottom: var(--s-2);
+}
+
+.sb-entry {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'glyph name  tag'
+    '.     sci   range';
+  column-gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 6px var(--sb-pad-end) 6px var(--sb-pad);
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  transition: background var(--dur-1) var(--ease);
+}
+
+.sb-entry:hover {
+  background: var(--bg-2);
+}
+
+.sb-entry > .sb-glyph {
+  grid-area: glyph;
+  align-self: center;
+}
+
+.sb-entry-name {
+  grid-area: name;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 18px;
+  color: var(--text-2);
+}
+
+.sb-entry.is-alive .sb-entry-name {
+  color: var(--text-1);
+}
+
+/* "alive" at the playhead: the accent dot is the same "now" as the sparkline playheads */
+.sb-alive {
+  grid-area: tag;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-small);
+  line-height: 18px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.sb-alive::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sb-entry-sci {
+  grid-area: sci;
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--text-3);
+}
+
+/* The part of a name that matched the search */
+.sb-mark {
+  background: none;
+  color: var(--accent-strong);
+}
+
+.sb-entry-range {
+  grid-area: range;
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+/* ========================================================================== */
+/* Narrow panel (292px column, the drawer) and the phone bottom sheet          */
+/* ========================================================================== */
+
+@container sidebar (max-width: 300px) {
+  .sb-top,
+  .sb-panel {
+    --sb-pad: var(--s-3);
+  }
+
+  .sb-vitals-grid {
+    gap: 6px;
+  }
+
+  .sb-vital {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .sb-vital-compare {
+    letter-spacing: -0.01em;
+  }
+
+  .sb-vital-num {
+    font-size: 20px;
+  }
+
+  .sb-vital-num.is-long {
+    font-size: 18px;
+  }
+
+  /* No room for the activity meter beside three state words */
+  .sb-pips {
+    display: none;
+  }
+
+  .sb-states {
+    gap: 6px;
+  }
+}
+
+/* Short panel (small laptops, landscape tablets): the cards give up their sparklines so that
+   the first rows of the life list stay in view without scrolling. */
+@container sidebar (max-height: 589px) {
+  .sb-vital {
+    padding-bottom: 6px;
+  }
+
+  .sb-vital-spark {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .sb-close {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  /* Bottom sheet: a grab handle above the tabs */
+  .sb-top {
+    padding-top: 18px;
+  }
+
+  .sb-top::before {
+    content: '';
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+}
+
+/* High-contrast / forced-colours mode repaints backgrounds: keep the data marks' own colours
+   (every one of them also has a text label beside it). */
+@media (forced-colors: active) {
+  .sb-share-seg,
+  .sb-meter-fill,
+  .sb-pips i,
+  .sb-alive::before,
+  .sb-glyph svg {
+    forced-color-adjust: none;
+  }
+}
+
+/* Capture stills that keep the panel (body.capture-mode-with-sidebar) show it as a plain column:
+   no drawer close button or bottom-sheet grab handle. */
+body.capture-mode .sb-close {
+  display: none !important;
+}
+
+body.capture-mode .sb-top::before {
+  content: none !important;
+}

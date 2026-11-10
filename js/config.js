@@ -1,107 +1,166 @@
-// Application-wide constants
+// Application-wide constants: every tunable lives here.
+
+// ---------------------------------------------------------------------------------------------
+// Life groups — the colour system for species markers, sidebar rows, the legend and Tree branches.
+//
+// Eight hue families in phylogenetic order, one per broad branch of life. In THIS order the eight
+// family hues pass the dataviz palette validator on every app surface (dark mode: lightness band,
+// chroma floor, colour-vision-deficiency separation of neighbours ≥ 8, normal-vision separation of
+// neighbours ≥ 15, contrast ≥ 3:1) — so stacked bars, legends and neighbouring tree branches,
+// which all follow this order, stay tellable apart. Do not reorder or re-colour without re-running
+// the validator.
+//
+// On a map any two markers can sit side by side, and no eight hues are pairwise safe for every
+// kind of colour vision, so colour is never the only cue: every family also has its own marker
+// `glyph`, and species are named on hover, in the sidebar and in the legend.
+//
+// Categories inside a family share the hue and differ by lightness. `category` on a species entry
+// must be one of the category ids below.
+// ---------------------------------------------------------------------------------------------
+export const LIFE_GROUPS = [
+  {
+    id: 'microbes', label: 'Microbes', color: '#9085e9', glyph: 'dot',
+    blurb: 'Single-celled life: bacteria, archaea and protists',
+    categories: [
+      { id: 'bacteria', label: 'Bacteria', color: '#9085e9' },
+      { id: 'archaea', label: 'Archaea', color: '#b6aef2' },
+      { id: 'protist', label: 'Protists & early eukaryotes', color: '#7566dd' },
+    ],
+  },
+  {
+    id: 'plants', label: 'Plants, algae & fungi', color: '#008300', glyph: 'leaf',
+    blurb: 'Seaweeds to forests — and the fungi that made soil with them',
+    categories: [
+      { id: 'alga', label: 'Algae', color: '#4fae4f' },
+      { id: 'plant', label: 'Land plants', color: '#008300' },
+      { id: 'fungus', label: 'Fungi & lichens', color: '#86c686' },
+    ],
+  },
+  {
+    id: 'invertebrates', label: 'Invertebrates', color: '#d55181', glyph: 'star',
+    blurb: 'Sponges, corals, worms, molluscs, echinoderms and enigmatic early animals',
+    categories: [
+      { id: 'invertebrate', label: 'Soft-bodied & shelly animals', color: '#d55181' },
+      { id: 'mollusk', label: 'Molluscs', color: '#e792b0' },
+    ],
+  },
+  {
+    id: 'arthropods', label: 'Arthropods', color: '#c98500', glyph: 'hex',
+    blurb: 'Jointed-legged animals: trilobites, sea scorpions, insects',
+    categories: [
+      { id: 'arthropod', label: 'Arthropods', color: '#c98500' },
+    ],
+  },
+  {
+    id: 'fishes', label: 'Fishes', color: '#199e70', glyph: 'oval',
+    blurb: 'Backboned animals of the water, from jawless swimmers to sharks',
+    categories: [
+      { id: 'fish', label: 'Fishes & early chordates', color: '#199e70' },
+    ],
+  },
+  {
+    id: 'reptiles', label: 'Amphibians, reptiles & birds', color: '#d95926', glyph: 'triangle',
+    blurb: 'From the first walkers on land to dinosaurs and their living heirs, the birds',
+    categories: [
+      { id: 'amphibian', label: 'Amphibians & early tetrapods', color: '#a8431a' },
+      { id: 'reptile', label: 'Reptiles', color: '#c04e1f' },
+      { id: 'marine_reptile', label: 'Marine reptiles', color: '#cf6a41' },
+      { id: 'dinosaur', label: 'Dinosaurs', color: '#d95926' },
+      { id: 'pterosaur', label: 'Pterosaurs', color: '#ec8f68' },
+      { id: 'bird', label: 'Birds', color: '#f5b99d' },
+    ],
+  },
+  {
+    id: 'mammals', label: 'Synapsids & mammals', color: '#3987e5', glyph: 'square',
+    blurb: 'The synapsid line — sail-backs, proto-mammals and mammals',
+    categories: [
+      { id: 'synapsid', label: 'Early synapsids', color: '#2b6cc0' },
+      { id: 'mammal', label: 'Mammals', color: '#3987e5' },
+    ],
+  },
+  {
+    id: 'primates', label: 'Primates & humans', color: '#e66767', glyph: 'ring',
+    blurb: 'Our own twig of the tree',
+    categories: [
+      { id: 'primate', label: 'Primates', color: '#e66767' },
+      { id: 'hominin', label: 'Hominins', color: '#f6a5a5' },
+    ],
+  },
+];
+
+// Flat lookups derived from LIFE_GROUPS. Null-prototype objects, so ids such as 'constructor' or
+// 'toString' are simply unknown categories instead of Object.prototype members.
+const kingdom = Object.create(null);
+const categoryInfo = Object.create(null);
+for (const group of LIFE_GROUPS) {
+  for (const cat of group.categories) {
+    kingdom[cat.id] = cat.color;
+    categoryInfo[cat.id] = { ...cat, group };
+  }
+}
+// Legacy category ids still accepted so older data keeps rendering; new entries must not use them.
+const LEGACY_CATEGORY_ALIASES = { prokaryote: 'bacteria', eukaryote: 'protist', event: 'protist' };
+for (const [legacy, target] of Object.entries(LEGACY_CATEGORY_ALIASES)) {
+  kingdom[legacy] = kingdom[target];
+  categoryInfo[legacy] = categoryInfo[target];
+}
+
+// The neutral fallback: every unknown category shares this one group (so grouping by the group
+// object keeps them together), and each unknown id always gets the same record.
+const OTHER_GROUP = { id: 'other', label: 'Other', color: '#9aa3b5', glyph: 'dot', categories: [] };
+const fallbackInfo = new Map();
+
+/** { id, label, color, group: {id, label, color, glyph, ...} } for a category id (or a neutral fallback). */
+export function getCategoryInfo(categoryId) {
+  const known = categoryInfo[categoryId];
+  if (known) return known;
+  let info = fallbackInfo.get(categoryId);
+  if (!info) {
+    info = { id: categoryId, label: categoryId, color: OTHER_GROUP.color, group: OTHER_GROUP };
+    fallbackInfo.set(categoryId, info);
+  }
+  return info;
+}
 
 export const COLORS = {
   ocean: '#062a4a',
   oceanDeep: '#041628',
   land: '#8B7355',
   landStroke: '#c9a86c',
-  background: '#0a0e1a',
-  text: '#e0e0e0',
-  textMuted: '#888',
+  background: '#070b14',
+  text: '#f1ece1',
+  textMuted: '#7f8aa3',
   extinctionFlash: '#ff2222',
   gridLine: 'rgba(255, 255, 255, 0.08)',
 
-  // Plate boundary colors by type
+  // Plate boundary colours by type
   boundary: {
-    divergent: '#ff6644',
-    convergent: '#4488ff',
-    transform: '#aacc44',
+    divergent: '#ff7a52',
+    convergent: '#5a9bff',
+    transform: '#b6d44a',
   },
 
-  // Clade colors for species markers/sidebar. Keyed on taxonomy.classOrPhylum
-  // (plus kingdom/domain fallbacks — see util/taxonomy.js::cladeColor).
-  clade: {
-    // Microbes
-    Bacteria:          '#00cccc',
-    Cyanobacteria:     '#00c0a8',
-    Archaea:           '#00aaaa',
-    Methanobacteria:   '#00aaaa',
+  // category id → colour (derived from LIFE_GROUPS)
+  kingdom,
+};
 
-    // Stem / protist eukaryotes
-    Eukaryota:         '#7fbbbb',
-
-    // Kingdom-level fallbacks
-    Plantae:           '#44bb44',
-    Fungi:             '#aa66bb',
-    Animalia:          '#888899',
-
-    // Algae & plant clades
-    Rhodophyta:        '#cc4477',
-    Ascomycota:        '#aa66bb',
-    Embryophyta:       '#44bb44',
-
-    // Basal animals
-    Porifera:          '#778877',
-    Cnidaria:          '#55aa99',
-
-    // Lophotrochozoa
-    Mollusca:          '#668888',
-    Brachiopoda:       '#669090',
-    Annelida:          '#6a7e80',
-    Priapulida:        '#7e8f92',
-
-    // Ecdysozoa
-    Arthropoda:        '#cc8844',
-
-    // Deuterostomes (non-chordate)
-    Echinodermata:     '#bbaa55',
-    Hemichordata:      '#9999aa',
-
-    // Ediacaran / Cambrian stem animals without a modern phylum
-    'Metazoa-stem':    '#558888',
-
-    // Fish-grade chordates — all share the blue family
-    Chordata:          '#5aa0d8',
-    Agnatha:           '#4488cc',
-    Pteraspidomorphi:  '#4488cc',
-    Conodonta:         '#3a7ab8',
-    Placodermi:        '#3568a0',
-    Acanthodii:        '#4488cc',
-    Chondrichthyes:    '#4488cc',
-    Actinopterygii:    '#4488cc',
-    Sarcopterygii:     '#3f78b6',
-
-    // Tetrapod grades & clades
-    Amphibia:          '#668844',
-    Reptilia:          '#996633',
-    Synapsida:         '#aa7744',
-    Dinosauria:        '#b88844',
-    Pterosauria:       '#7a6040',
-    Aves:              '#ccaa33',
-    Mammalia:          '#dd8833',
-  },
-
-  // Narrower overrides consulted before classOrPhylum. Lets us keep the
-  // "apes are visibly special" color cue near the end of the timeline without
-  // bloating the classOrPhylum palette.
-  cladeOverride: {
-    // order-level
-    Primates:          '#cc4444',
-    // family-level
-    Hominidae:         '#ee3333',
-  },
+// Typography for canvas renderers (mirrors the CSS custom properties in css/styles.css).
+export const FONTS = {
+  display: "'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Cambria, Georgia, serif",
+  ui: "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
 };
 
 export const TIMING = {
-  startTimeMa: 4000,       // animation starts at 4 billion years ago
-  endTimeMa: 0,            // ends at present
-  baseSpeedMaPerSec: 15,   // base rate: 15 million years per real second
+  startTimeMa: 4540,            // the story starts with the formation of the Earth
+  endTimeMa: 0,                 // …and ends at the present
+  baseSpeedMaPerSec: 15,        // base rate before a period's temporalWeight is applied
   minSpeed: 0.25,
   maxSpeed: 4,
-  extinctionSlowdown: 0.3, // speed multiplier during extinction events
-  extinctionPauseSeconds: 2, // hard pause when entering an extinction so the overlay can be read
-  sidebarUpdateIntervalMs: 80, // throttle sidebar DOM updates
-  legendUpdateIntervalMs: 500, // throttle legend-tree rebuild (less time-critical than sidebar)
+  extinctionSlowdown: 0.3,      // speed multiplier while crossing a mass-extinction window
+  extinctionPauseSeconds: 6,    // hold on the leading edge of a mass extinction (skippable)
+  extinctionAftermathSeconds: 3, // visual fade-out after the window has passed
+  nudgeSeconds: 2,              // arrow keys step this many seconds of 1× playback
+  sidebarUpdateIntervalMs: 100, // throttle for DOM-heavy panels
 };
 
 export const RENDER = {
@@ -118,111 +177,26 @@ export const RENDER = {
 
   // 3D specific
   globeRadius: 1,
-  continentElevation: 1.05,
-  continentSideColor: '#6b5234',
-  markerElevation: 1.135,
-  markerTerrainClearance: 0.012, // gap kept above the (possibly exaggerated) terrain so markers never bury
+  continentElevation: 1.025,
+  continentSideColor: '#3d2e1a',
+  markerElevation: 1.035,
   starCount: 2000,
   autoRotateSpeed: 0.3,
-
-  // Terrain relief (always-on). Drop terrainSubdivLevels to 2 if perf < 60fps.
-  terrainSubdivLevels: 3,
-  terrainBaseAmplitude: 0.075,
-  terrainProtoAmplitude: 0.14,
-  terrainBaseFreq: 5.0,
-  terrainProtoFreq: 9.0,
-  terrainBaseOctaves: 4,
-  terrainProtoOctaves: 5,
-  terrainProtoJaggedness: 0.6,
-  terrainProtoStartMa: 1000,
-  terrainProtoFullMa: 3000,
-  terrainHotTintColor: '#a83820',
-  terrainSnowColor: '#e8e8ec',
-  terrainHighlandColor: '#5a4530',
-  terrainLowlandColor: '#3d4a2e',
-  terrainCoastTaper: 0.3,
-
-  // Plate boundary 3D (toggle-gated). Heights in sphere-radius units.
-  boundaryRidgeWidthDeg: 1.8,
-  boundaryConvergentApex: 1.18,
-  boundaryConvergentBaseColor: '#5d6f9a',
-  boundaryConvergentApexColor: '#c4d4e8',
-  // Divergent: twin raised ridges (lip) with a glowing axial canyon floor
-  // between them. Both above ocean so they're visible above the opaque sea.
-  boundaryDivergentTrench: 1.04,
-  boundaryDivergentLip: 1.10,
-  boundaryDivergentInnerColor: '#ff4422',
-  boundaryDivergentLipColor: '#3a4658',
-  boundaryTransformUpper: 1.04,
-  boundaryTransformLower: 0.98,
-  boundaryTransformUpperColor: '#9aac6a',
-  boundaryTransformLowerColor: '#5a6438',
-
-  // 2D terrain hillshade (always-on). Reuses terrain* config above and the
-  // terrainProfileForAge ramp so the 2D map and 3D globe show consistent peaks.
-  view2dHillshadeSpacing: 14,
-  view2dHillshadeBlobRadius: 11,
-  view2dHillshadeAlpha: 0.34,
-  view2dHighlandThreshold: 0.20,
-  view2dHighlandBlobRadius: 7,
-  view2dHighlandAlpha: 0.66,
-  view2dSnowThreshold: 0.48,
-  view2dSnowBlobRadius: 4.5,
-  view2dSnowAlpha: 0.92,
-  view2dHotPeakColor: '#ff5530',
-
-  // 2D plate boundaries (toggle-gated). Layered strokes for "astronomical" contrast.
-  view2dBoundaryGlow: 6,
-  view2dBoundaryAlpha: 1.0,
-  view2dConvergentShadowWidth: 9,
-  view2dConvergentBaseWidth: 6,
-  view2dConvergentSnowWidth: 2.0,
-  view2dConvergentToothSize: 11,
-  view2dConvergentToothSpacing: 55,
-  view2dDivergentRailOffset: 3.5,
-  view2dDivergentRailWidth: 3,
-  view2dDivergentCoreWidth: 2.0,
-  view2dTransformRailWidth: 4,
-  view2dTransformRailOffset: 4,
-
-  // --- Perf: geometry rebuild gating (see views/view3d.js dirty-check) ---
-  // While playing, 3D continent/marker/boundary geometry rebuilds at most once
-  // per this interval (renderer still draws every frame). 0 = rebuild every frame.
-  terrain3dRebuildIntervalMs: 40,
-  // 2D offscreen continent-layer cache (fills + hillshade + stroke baked once
-  // per time step, blitted under the pan/zoom transform). Disable if compositing
-  // artifacts appear.
-  view2dLayerCacheEnabled: true,
-
-  // --- 2D visual polish ---
-  view2dContinentShadowColor: 'rgba(2, 8, 18, 0.45)',
-  view2dContinentShadowBlur: 10,
-  view2dContinentShadowOffset: 3,
-  view2dVignetteAlpha: 0.16,       // edge darkening; 0 disables
-  speciesMarkerMinAlpha: 0.55,     // marker body alpha lerps minAlpha→0.92 by abundance
-
-  // --- 3D ocean response (previously hard-coded in view3d.js) ---
-  oceanShininess: 110,
-  oceanSpecular: '#bbddff',
 };
 
+// Mirrors the grid in css/styles.css (--toolbar-h, --sidebar-w); the timeline footer sizes itself
+// (about 131px on desktop, 107px on phones).
 export const LAYOUT = {
-  sidebarWidth: 280,
-  toolbarHeight: 48,
-  controlsHeight: 96,
-};
-
-// "Explore the History of Life" panel (js/ui/historyExplorer.js).
-export const EXPLORER = {
-  maxSpeciesChips: 6,        // species first-appearance chips shown before "+N more"
-  mobileBreakpointPx: 900,   // ≤ this: panel is full-screen and closes after a jump
+  sidebarWidth: 328,
+  toolbarHeight: 52,
 };
 
 // Atmospheric visual response (haze, sky tint).
-// Modern Earth: ~15 °C, ~280 ppm CO₂, ~21% O₂. Deviations drive overlay color.
+// Modern Earth: ~15 °C, ~280 ppm CO₂ (pre-industrial), ~21% O₂. Deviations drive overlay colour.
 export const ATMOSPHERE = {
   modernTempC: 15,
   modernCo2Ppm: 280,
+  modernO2Pct: 21,
   hazeMaxAlpha: 0.45,
   hotColor: '#c66020',          // sepia/burnt orange — hot greenhouse
   coldColor: '#88aaff',         // pale blue — icehouse
@@ -233,11 +207,8 @@ export const ATMOSPHERE = {
   shellOpacityMin: 0.12,
   shellOpacityMax: 0.45,
   // Day/night terminator (3D)
-  ambientLow: 0.22,             // dimmer ambient lets terminator show
+  ambientLow: 0.22,
   rimLightStrength: 0.18,
-  // Fresnel rim sharpness response to haze: uPower = basePower - haze.alpha * gain,
-  // so a thick (high-CO₂/hot) atmosphere reads as a denser, wider rim.
-  fresnelPowerHazeGain: 0.8,
 };
 
 // Polar glaciation rendering.
@@ -245,7 +216,6 @@ export const GLACIATION = {
   capColor: '#f0f8ff',
   capEdgeColor: '#dfe8ff',
   // Latitude (degrees from pole) at which the cap edge sits, given temperature.
-  // tempC = -5 → cap reaches ~equator (lat radius 80); tempC = 25 → no caps.
   coldThresholdC: 0,
   warmThresholdC: 22,
   maxCapLatRadius: 70,
@@ -264,21 +234,4 @@ export const RENDER_EXTRA = {
     { lat:  90, color: '#c8d4dc' },
   ],
   latitudeBlend: 0.55, // how strongly to lean toward latitude palette vs. continent.color
-
-  // Procedural biome texturing (js/util/biome.js): era + climate + latitude + elevation
-  // drive a vegetation/desert/tundra/rock surface color, mottled by relief noise.
-  biome: {
-    enabled: true,
-    rock: '#8a7a5e',    // barren land (pre-vegetation / arid base)
-    desert: '#c9a86a',  // arid subtropics (sand)
-    grass: '#869a4e',   // temperate grassland (olive)
-    forest: '#3f6b34',  // lush tropical/temperate forest
-    boreal: '#4a6750',  // cool high-latitude conifer (green-grey)
-    tundra: '#9aa090',  // sub-polar tundra fringe (grey-green)
-    desertLatCenter: 25, // latitude of the subtropical desert belt
-    desertLatWidth: 14,  // half-width of the desert belt (degrees)
-    vegStartMa: 470,     // land plants (bryophytes) — greening begins
-    vegForestMa: 385,    // first forests — greening reaches majority cover
-    blend: 0.8,          // how strongly biome replaces the latitude/base color
-  },
 };

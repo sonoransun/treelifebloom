@@ -1,16 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { getPeriodAtTime } from '../js/data/timeline.js';
 import {
-  getPeriodAtTime,
-  timeMaToFraction,
-  fractionToTimeMa,
-  TOTAL_WEIGHTED_TIME,
-} from '../js/data/timeline.js';
+  totalScreenSeconds,
+  maToFraction,
+  fractionToMa,
+  maToScreenSeconds,
+  screenSecondsToMa,
+} from '../js/engine/timeScale.js';
 import { TIMING } from '../js/config.js';
 
-test('TOTAL_WEIGHTED_TIME is a positive finite number', () => {
-  assert.ok(Number.isFinite(TOTAL_WEIGHTED_TIME));
-  assert.ok(TOTAL_WEIGHTED_TIME > 0);
+test('the play-through length is a positive finite number of seconds', () => {
+  const total = totalScreenSeconds();
+  assert.ok(Number.isFinite(total));
+  assert.ok(total > 0);
 });
 
 test('getPeriodAtTime returns a named period across the timeline', () => {
@@ -26,20 +29,25 @@ test('present (0 Ma) and 4000 Ma resolve to different periods', () => {
   assert.notEqual(getPeriodAtTime(0).period, getPeriodAtTime(4000).period);
 });
 
-test('timeMaToFraction / fractionToTimeMa round-trip', () => {
-  for (const t of [0, 250, 1000, 2500, 4000]) {
-    const back = fractionToTimeMa(timeMaToFraction(t));
-    assert.ok(Math.abs(back - t) < 1, `round-trip ${t} -> ${back}`);
+test('maToFraction / fractionToMa round-trip', () => {
+  for (const t of [0, 0.0117, 2.58, 66, 250, 1000, 2500, 4000]) {
+    const back = fractionToMa(maToFraction(t));
+    assert.ok(Math.abs(back - t) <= Math.max(1e-6, t * 1e-9), `round-trip ${t} -> ${back}`);
   }
 });
 
-test('fraction is monotonic in time and within [0,1]', () => {
-  const f0 = timeMaToFraction(0);
-  const fMid = timeMaToFraction(2000);
-  const f4000 = timeMaToFraction(4000);
-  for (const f of [f0, fMid, f4000]) {
-    assert.ok(f >= 0 && f <= 1, `fraction ${f} out of range`);
+test('maToScreenSeconds / screenSecondsToMa round-trip', () => {
+  for (const t of [0, 1, 66, 541, 3000]) {
+    const back = screenSecondsToMa(maToScreenSeconds(t));
+    assert.ok(Math.abs(back - t) <= Math.max(1e-6, t * 1e-9), `round-trip ${t} -> ${back}`);
   }
-  // Larger Ma (further past) => larger fraction (the scrubber inverts this for display).
-  assert.ok(f4000 > fMid && fMid > f0);
+});
+
+test('fraction runs from 0 at the start of the story to 1 at the present', () => {
+  assert.equal(maToFraction(TIMING.startTimeMa), 0);
+  assert.equal(maToFraction(TIMING.endTimeMa), 1);
+  const f4000 = maToFraction(4000), fMid = maToFraction(2000), f0 = maToFraction(0);
+  for (const f of [f4000, fMid, f0]) assert.ok(f >= 0 && f <= 1, `fraction ${f} out of range`);
+  // Larger Ma (further past) => smaller fraction: the timeline reads left = past, right = present.
+  assert.ok(f4000 < fMid && fMid < f0);
 });

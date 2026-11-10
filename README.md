@@ -17,14 +17,14 @@ An interactive animated visualization of Earth's evolutionary history spanning 4
       <sub><b>Cambrian Explosion</b> — 540 → 480 Ma · <a href="docs/sequences/cambrian.md">walkthrough</a></sub>
     </td>
     <td align="center">
-      <video src="assets/animations/09-kpg.webm" autoplay loop muted playsinline width="320">
-        <img src="assets/animations/09-kpg.gif" alt="K-Pg asteroid impact" width="320">
+      <video src="assets/animations/08-kpg.webm" autoplay loop muted playsinline width="320">
+        <img src="assets/animations/08-kpg.gif" alt="K-Pg asteroid impact" width="320">
       </video><br/>
       <sub><b>K-Pg Asteroid Impact</b> — 67 → 64 Ma · <a href="docs/sequences/kpg.md">walkthrough</a></sub>
     </td>
     <td align="center">
-      <video src="assets/animations/10-pleistocene.webm" autoplay loop muted playsinline width="320">
-        <img src="assets/animations/10-pleistocene.gif" alt="Ice Age & megafauna" width="320">
+      <video src="assets/animations/09-pleistocene.webm" autoplay loop muted playsinline width="320">
+        <img src="assets/animations/09-pleistocene.gif" alt="Ice Age & megafauna" width="320">
       </video><br/>
       <sub><b>Ice Age & Megafauna</b> — 2.5 → 0.012 Ma · <a href="docs/sequences/pleistocene.md">walkthrough</a></sub>
     </td>
@@ -44,15 +44,9 @@ python3 -m http.server 8080
 
 Then open <http://localhost:8080> in a modern browser. A full play-through at 1× takes about **4 minutes 27 seconds**.
 
-A small unit-test suite covers the pure engine/util modules and needs no dependencies (uses Node's built-in runner):
-
-```bash
-node --test test/   # or: npm test
-```
-
 ## Featured sequences
 
-Eleven moments worth pausing on, each with a dedicated walkthrough.
+Ten moments worth pausing on, each with a dedicated walkthrough.
 
 | # | Time (Ma) | Sequence | What to watch |
 |---|-----------|----------|---------------|
@@ -63,24 +57,9 @@ Eleven moments worth pausing on, each with a dedicated walkthrough.
 | 5 | 410 → 360 | [First Forests (Devonian)](docs/sequences/forests.md) | Land turns green, fish crawl out, O₂ surges |
 | 6 | 256 → 250 | [End-Permian "Great Dying"](docs/sequences/permian.md) | 96% of species lost; clock pauses on the overlay |
 | 7 | 200 → 145 | [Jurassic Dinosaurs](docs/sequences/jurassic.md) | Pangaea splits, peak dinosaur diversity |
-| 8 | 165 → 65 | [Feathered Dinosaurs & Dawn of Birds](docs/sequences/feathered.md) | Tianyulong, Yi qi, Yutyrannus, Wulong, Asteriornis — much of it discovered post-2010 |
-| 9 | 67 → 64 | [K-Pg Asteroid Impact](docs/sequences/kpg.md) | Asteroid streak across the sky, dinosaurs vanish |
-| 10 | 2.5 → 0.012 | [Ice Age & Megafauna](docs/sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves dominate |
-| 11 | 6 → 0 | [Hominin Emergence](docs/sequences/hominin.md) | Sahelanthropus → Australopithecus → erectus → Neanderthal/Denisovan/naledi/sapiens |
-
-<p align="center">
-  <a href="docs/sequences/hadean.md"><img src="assets/screenshots/01-hadean.png" alt="Hadean" width="128"></a>
-  <a href="docs/sequences/goe.md"><img src="assets/screenshots/02-goe.png" alt="Great Oxygenation Event" width="128"></a>
-  <a href="docs/sequences/snowball.md"><img src="assets/screenshots/03-snowball.png" alt="Snowball Earth" width="128"></a>
-  <a href="docs/sequences/cambrian.md"><img src="assets/screenshots/04-cambrian.png" alt="Cambrian Explosion" width="128"></a>
-  <a href="docs/sequences/forests.md"><img src="assets/screenshots/05-forests.png" alt="First Forests" width="128"></a>
-  <a href="docs/sequences/permian.md"><img src="assets/screenshots/06-permian.png" alt="End-Permian" width="128"></a>
-  <a href="docs/sequences/jurassic.md"><img src="assets/screenshots/07-jurassic.png" alt="Jurassic" width="128"></a>
-  <a href="docs/sequences/feathered.md"><img src="assets/screenshots/08-feathered.png" alt="Feathered Dinosaurs (poster TBD — regenerate via capture pipeline)" width="128"></a>
-  <a href="docs/sequences/kpg.md"><img src="assets/screenshots/09-kpg.png" alt="K-Pg" width="128"></a>
-  <a href="docs/sequences/pleistocene.md"><img src="assets/screenshots/10-pleistocene.png" alt="Pleistocene" width="128"></a>
-  <a href="docs/sequences/hominin.md"><img src="assets/screenshots/11-hominin.png" alt="Hominin" width="128"></a>
-</p>
+| 8 | 67 → 64 | [K-Pg Asteroid Impact](docs/sequences/kpg.md) | Asteroid streak across the sky, dinosaurs vanish |
+| 9 | 2.5 → 0.012 | [Ice Age & Megafauna](docs/sequences/pleistocene.md) | Ice caps advance, mammoths and dire wolves dominate |
+| 10 | 6 → 0 | [Hominin Emergence](docs/sequences/hominin.md) | Ardipithecus → Homo erectus → Neanderthal → sapiens |
 
 The full index lives in **[docs/notable-sequences.md](docs/notable-sequences.md)**.
 
@@ -107,39 +86,13 @@ Twelve historically reconstructed continental configurations morph smoothly acro
 
 Coastlines are rendered with **deterministic fractal subdivision** plus **smooth Bézier interpolation** — the fractal detail stays consistent across frames, while quadratic curves through midpoints make the shorelines flow rather than zig-zag. A subtle NW-lit highlight + SE shadow inside each continent gives a hint of relief without any heightmap data.
 
-Land surfaces are painted with **procedurally-generated biome textures** keyed to era and climate: the continents are barren rock until plants colonize the land (~470 Ma), green up as forests spread (~385 Ma), and show arid subtropical deserts, lush tropics, and sub-polar tundra near the ice — all driven by the same temperature / O₂ / CO₂ / glaciation curves that feed the rest of the visualization, mottled by the terrain noise. The 2D map and 3D globe share one biome model (`js/util/biome.js`).
-
 ### Species & evolution
 
-**155 species** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens* — including a recent batch of post-2010 paleontological discoveries (Patagotitan, Yi qi, the "Wonderchicken" Asteriornis, Homo naledi, Cambroraster, Ourasphaira, and many more).
+**119 species and major events** are tracked across geological time, each with an **abundance profile** that rises and falls over millions of years. The sidebar ranks the most dominant life forms at any given moment, from Archean prokaryotes to *Homo sapiens*.
 
-Every species carries a full Linnaean lineage — domain → kingdom → class/phylum → order → family → genus → species — and that lineage drives the whole UI:
+Categories span the tree of life: prokaryotes, bacteria, eukaryotes, plants, invertebrates, arthropods, fish, amphibians, reptiles, synapsids, mammals, birds, primates, and hominins. Five milestone events are also tracked (Great Oxygenation Event, Snowball Earth, Cambrian Explosion, Mammalian Radiation, Agriculture & Civilization).
 
-- **Marker color** is derived from `taxonomy.classOrPhylum` with order/family-level overrides, not from a flat category label, so convergent forms (e.g. pterosaurs and plesiosaurs) stay visually distinct.
-- **Species modal** shows the full 7-rank ladder with the entry's own rank highlighted.
-- **Hover popup** shows a compact `Eukarya › Animalia › Mammalia › Primates › Hominidae › Homo › sapiens` breadcrumb.
-- **Legend panel** turns into a live tree of currently-alive species grouped by domain → kingdom → class/phylum.
-- **Close relatives** in the modal are scored by shared-rank depth (genus > family > order > … > domain), so Homo sapiens surfaces Homo erectus and Neanderthals first, and a pterosaur no longer lists living lizards as "relatives".
-
-Species appear as pulsing color-coded markers at their geographic origins — each with a soft radial halo, and a rim ring on mammals and birds resolved to order level or deeper. **Click any species in the sidebar** (or in the legend tree) to open a detail modal that pauses the animation and lists its closest evolutionary relatives.
-
-<details>
-<summary><b>How the color lookup works</b></summary>
-
-```mermaid
-flowchart LR
-    sp[species entry] --> F{family<br/>override?}
-    F -->|Hominidae| red[#ee3333]
-    F -->|miss| O{order<br/>override?}
-    O -->|Primates| rb[#cc4444]
-    O -->|miss| CP{classOrPhylum<br/>in palette?}
-    CP -->|Mammalia, Aves,<br/>Dinosauria, Arthropoda,<br/>Embryophyta, …| cladeColor[clade color]
-    CP -->|miss| KD[kingdom / domain<br/>fallback]
-```
-
-Override entries live in `COLORS.cladeOverride`; clade entries in `COLORS.clade`. Both in `js/config.js`.
-
-</details>
+Species appear as pulsing color-coded markers at their geographic origins — each with a soft radial halo, and a rim ring on "advanced" clades (mammals, primates, hominins, birds). **Click any species in the sidebar** to open a detail modal that pauses the animation and lists its closest evolutionary relatives in the dataset.
 
 ### Mass extinctions
 
@@ -161,20 +114,6 @@ When an extinction begins:
 - The K-Pg event additionally renders a **bright diagonal asteroid streak** across the canvas during its first 18% of progress.
 - The 3D ocean tints toward a muted version of the event color.
 - The viewport shakes proportional to severity, and after the pause playback resumes at 30% speed for the rest of the event window.
-
-```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> Normal
-    Normal: Normal<br/>playback
-    Paused: 2 s hard<br/>pause
-    Slowed: 0.30×<br/>playback
-    Normal --> Paused: enters<br/>extinction<br/>window
-    Paused --> Slowed: 2 s timer
-    Slowed --> Normal: leaves<br/>window
-```
-
-See [docs/architecture.md](docs/architecture.md#extinction-auto-pause-state-machine) for the full state machine including manual overrides and scrub behavior.
 
 ### Tectonic plate boundaries
 
@@ -202,42 +141,19 @@ Temperature, O₂, and CO₂ readouts include sparklines tracking the curve arou
 
 ### Temporal compression
 
-Not all geological time gets the same screen time. Each period in `js/data/timeline.js` has a `temporalWeight` that scales how slowly the clock advances — billions of years of single-celled stability pass quickly, while diversification bursts linger. The `clock.tick(delta)` multiplies the raw delta by the current period's weight before advancing `currentTimeMa`.
+Not all geological time gets the same screen time. Each period in `js/data/timeline.js` has a `temporalWeight` that scales how slowly the clock advances — billions of years of single-celled stability pass quickly, while diversification bursts linger.
 
-All 26 periods, sorted by weight (low = flies by, high = lingers):
-
-| Period | Window (Ma) | Weight | Bar |
-|---|---|--:|---|
-| Hadean | 4540 → 4000 | 0.10 | ▏ |
-| Eoarchean | 4000 → 3600 | 0.20 | ▎ |
-| Paleoarchean | 3600 → 3200 | 0.30 | ▍ |
-| Mesoarchean | 3200 → 2800 | 0.20 | ▎ |
-| Neoarchean | 2800 → 2500 | 0.35 | ▍ |
-| Paleoproterozoic (GOE) | 2500 → 1600 | 0.45 | ▌ |
-| Mesoproterozoic | 1600 → 1000 | 0.35 | ▍ |
-| Cryogenian | 1000 → 720 | 0.45 | ▌ |
-| Cryogenian-Snowball | 720 → 635 | 1.00 | █ |
-| Ediacaran | 635 → 538.8 | 2.50 | ██▌ |
-| Cambrian | 538.8 → 485.4 | 5.50 | █████▌ |
-| Ordovician | 485.4 → 443.8 | 4.00 | ████ |
-| Silurian | 443.8 → 419.2 | 3.50 | ███▌ |
-| Devonian | 419.2 → 358.9 | 5.00 | █████ |
-| Carboniferous | 358.9 → 298.9 | 4.00 | ████ |
-| Permian | 298.9 → 251.9 | 3.20 | ███▏ |
-| Triassic | 251.9 → 201.4 | 4.00 | ████ |
-| Jurassic | 201.4 → 145 | 5.50 | █████▌ |
-| Cretaceous | 145 → 66 | 5.50 | █████▌ |
-| Paleocene | 66 → 56 | 3.00 | ███ |
-| Eocene | 56 → 34 | 4.50 | ████▌ |
-| Oligocene | 34 → 23 | 3.00 | ███ |
-| Miocene | 23 → 5.333 | 6.00 | ██████ |
-| Pliocene | 5.333 → 2.58 | 5.00 | █████ |
-| **Pleistocene** | 2.58 → 0.0117 | **10.00** | ██████████ |
-| Holocene | 0.0117 → 0 | 5.00 | █████ |
+| Period | Weight | On-screen time |
+|---|---|---|
+| Hadean | 0.10 | flies by in seconds |
+| Paleoproterozoic (GOE) | 0.45 | breathing room for the oxygen flip |
+| Cambrian | 5.50 | the explosion gets ~20 s |
+| Cretaceous | 5.50 | dinosaurs play out for ~30 s |
+| Pleistocene | 10.00 | climax of the play-through |
 
 Total play-through at 1× speed: ~**4 min 27 s**. The speed selector ranges 0.25× → 4×.
 
-Each Big Five extinction adds a **2-second hard pause on entry** plus a 0.30× slowdown for the rest of the window, compounded onto the period weight.
+Each Big Five extinction adds a **2-second hard pause on entry** plus a 0.3× slowdown for the rest of the window, compounded onto the period weight.
 
 ### Views
 
@@ -263,16 +179,10 @@ Both views share the same timeline state — switching preserves time and playba
 | **Restart** · **R** | Return to 4 billion years ago |
 | **Plates** · **P** | Toggle plate-boundary overlay |
 | **2D Map** / **3D Globe** | Switch between flat map and globe views |
-| **Relief slider** (3D) | Exaggerate globe terrain relief, 0.5× → 3× |
-| **History** · **H** | Open the History of Life explorer — 13 narrative chapters with jump links to every milestone, mass extinction, and species first appearance |
-| **Click the era strip** | Jump straight to the start of any geological period |
-| **Share** | Copy a link that reopens the current time, view, plates & relief |
-| **Help** · **?** | Show the keyboard & controls cheat-sheet |
 | **Click a sidebar species** | Open detail modal with close evolutionary relatives (auto-pauses) |
 | **Hover a species marker or sidebar item** | Show quick-info popup |
-| **Drag / scroll / pinch** | Pan & zoom the 2D map or rotate & zoom the 3D globe (touch supported) |
 
-The colored era strip above the scrubber shows geological periods at a glance, using standard ICS colors. Playback speed, view, relief, plate overlay, and legend visibility persist across reloads, and the URL stays shareable. The visualization honors your OS **reduce-motion** setting (no auto-rotation or marker pulsing).
+The colored era strip above the scrubber shows geological periods at a glance, using standard ICS colors.
 
 ## Architecture
 
@@ -326,7 +236,7 @@ gantt
 
 ## Documentation
 
-- **[docs/notable-sequences.md](docs/notable-sequences.md)** — index of the 11 featured sequences with thumbnails
+- **[docs/notable-sequences.md](docs/notable-sequences.md)** — index of the 10 featured sequences with thumbnails
 - **[docs/architecture.md](docs/architecture.md)** — module map, render pipeline, capture pipeline
 - **[docs/data-sources.md](docs/data-sources.md)** — paleo data references for continents, atmosphere, extinctions
 - **[docs/capture.md](docs/capture.md)** — how to regenerate the embedded screenshots and animated clips

@@ -1,90 +1,53 @@
-// Chapters data layer — span coverage, bucketing rule, and link derivation.
+// Chapters data layer: span coverage, the boundary rule, and the extinction hand-offs.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-  rawChapters,
-  chapters,
-  chapterIndexAtTime,
-  chapterAtTime,
-  deriveChapterLinks,
-} from '../js/data/chapters.js';
-import { milestones } from '../js/data/milestones.js';
+import { chapters, getChapterAt } from '../js/data/chapters.js';
 import { extinctions } from '../js/data/extinctions.js';
-import { species } from '../js/data/species.js';
 import { TIMING } from '../js/config.js';
 
-test('spans are contiguous and cover exactly the playable window', () => {
-  assert.equal(rawChapters[0].spanStartMa, TIMING.startTimeMa);
-  assert.equal(rawChapters[rawChapters.length - 1].spanEndMa, TIMING.endTimeMa);
-  for (let i = 1; i < rawChapters.length; i++) {
+test('chapters are contiguous and cover exactly the playable window', () => {
+  assert.equal(chapters[0].startMa, TIMING.startTimeMa);
+  assert.equal(chapters[chapters.length - 1].endMa, TIMING.endTimeMa);
+  for (let i = 1; i < chapters.length; i++) {
     assert.equal(
-      rawChapters[i].spanStartMa,
-      rawChapters[i - 1].spanEndMa,
-      `gap/overlap between ${rawChapters[i - 1].id} and ${rawChapters[i].id}`
+      chapters[i].startMa,
+      chapters[i - 1].endMa,
+      `gap/overlap between ${chapters[i - 1].id} and ${chapters[i].id}`
     );
+    assert.ok(chapters[i].startMa < chapters[i - 1].startMa, `${chapters[i].id} is not younger`);
   }
 });
 
-test('every jump target lies within its own span', () => {
-  for (const ch of rawChapters) {
-    assert.ok(
-      ch.timeMa <= ch.spanStartMa && ch.timeMa >= ch.spanEndMa,
-      `${ch.id}: timeMa ${ch.timeMa} outside [${ch.spanEndMa}, ${ch.spanStartMa}]`
-    );
-  }
-});
-
-test('chapterIndexAtTime boundary pins (young-edge-inclusive)', () => {
-  assert.equal(chapterAtTime(4000).id, 'world-of-microbes');
-  // Boundary events land in the chapter they END.
-  assert.equal(chapterAtTime(251.9).id, 'coal-and-protomammals');
-  assert.equal(chapterAtTime(201.4).id, 'triassic-rebirth');
-  assert.equal(chapterAtTime(66).id, 'reign-of-dinosaurs');
-  assert.equal(chapterAtTime(0.012).id, 'human-story');
-  assert.equal(chapterAtTime(0).id, 'human-story');
-});
-
-test('the jump target of each chapter resolves back to that chapter', () => {
-  for (let i = 0; i < chapters.length; i++) {
-    assert.equal(chapterIndexAtTime(chapters[i].timeMa), i, chapters[i].id);
-  }
-});
-
-test('derivation partitions every milestone, extinction, and species exactly once', () => {
-  const sum = (key) => chapters.reduce((n, ch) => n + ch[key].length, 0);
-  assert.equal(sum('milestones'), milestones.length);
-  assert.equal(sum('extinctions'), extinctions.length);
-  assert.equal(sum('speciesFirstSeen'), species.length);
-});
-
-test('signature events land in the expected chapters', () => {
-  const byId = new Map(chapters.map((ch) => [ch.id, ch]));
-  const has = (chId, key, id) => byId.get(chId)[key].some((x) => x.id === id);
-
-  assert.ok(has('reign-of-dinosaurs', 'extinctions', 'end-cretaceous'), 'K-Pg ends the dinosaur chapter');
-  assert.ok(has('coal-and-protomammals', 'extinctions', 'end-permian'), 'Great Dying ends the coal chapter');
-  assert.ok(has('oxygen-revolution', 'milestones', 'great_oxygenation'));
-  assert.ok(has('cambrian-explosion', 'milestones', 'cambrian_explosion'));
-  assert.ok(has('snowball-earth', 'milestones', 'sturtian_snowball'));
-  assert.ok(has('human-story', 'milestones', 'agriculture'));
-});
-
-test('every derived chapter has an accent color and a narrative', () => {
+test('ids are unique; titles and blurbs are within their length limits', () => {
+  assert.equal(new Set(chapters.map((c) => c.id)).size, chapters.length);
   for (const ch of chapters) {
-    assert.match(ch.color, /^#[0-9a-fA-F]{6}$/, `${ch.id} color`);
-    assert.ok(ch.narrative && ch.narrative.length > 80, `${ch.id} narrative`);
+    assert.ok(ch.title.length > 0 && ch.title.length <= 32, `${ch.id} title`);
+    assert.ok(ch.blurb.length > 0 && ch.blurb.length <= 110, `${ch.id} blurb`);
+    if (ch.view !== undefined) assert.ok(['map', 'globe', 'tree'].includes(ch.view), `${ch.id} view`);
   }
 });
 
-test('deriveChapterLinks is pure — re-deriving matches and does not mutate input', () => {
-  const snapshot = JSON.stringify(rawChapters);
-  const again = deriveChapterLinks(rawChapters, { milestones, extinctions, species });
-  assert.equal(JSON.stringify(rawChapters), snapshot, 'rawChapters mutated');
-  assert.equal(again.length, chapters.length);
-  for (let i = 0; i < again.length; i++) {
-    assert.equal(again[i].color, chapters[i].color);
-    assert.equal(again[i].milestones.length, chapters[i].milestones.length);
+test('getChapterAt: a boundary belongs to the chapter that starts there', () => {
+  for (const ch of chapters) assert.equal(getChapterAt(ch.startMa).id, ch.id);
+  assert.equal(getChapterAt(0).id, chapters[chapters.length - 1].id);
+  assert.equal(getChapterAt(TIMING.startTimeMa + 10).id, chapters[0].id);
+});
+
+test('a chapter never ends in the middle of a mass extinction window', () => {
+  for (const e of extinctions) {
+    const from = e.timeMa + e.durationMa / 2, to = e.timeMa - e.durationMa / 2;
+    for (const ch of chapters) {
+      assert.ok(!(ch.endMa < from && ch.endMa > to), `${ch.id} ends inside ${e.id}`);
+    }
   }
+});
+
+test('signature moments land in the expected chapters', () => {
+  assert.equal(getChapterAt(4000).id, 'first_life');
+  assert.equal(getChapterAt(520).id, 'cambrian');
+  assert.equal(getChapterAt(252).id, 'pangaea');        // the Great Dying ends the Permian chapter
+  assert.equal(getChapterAt(66.1).id, 'cretaceous');    // the asteroid ends the dinosaurs' chapter
+  assert.equal(getChapterAt(0.005).id, 'human_planet');
 });

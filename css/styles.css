@@ -1,1858 +1,1073 @@
-/* Life's Tree Blooms — Main Stylesheet
-   Design language: "deep-time observatory instrument" — near-black blue space
-   backdrop, glass panels floating over the living canvas, a serif display face
-   (Fraunces) for era/species names, and a monospaced instrument face
-   (IBM Plex Mono) for every numeric/time readout. Red is reserved for
-   extinction. All raw values live in the :root tokens below. */
+/* Life's Tree Blooms — core stylesheet.
+ *
+ * This file owns the design tokens, the reset, the app grid, the toolbar, shared primitives
+ * (buttons, chips, glass panels, type helpers), responsive behaviour and capture mode.
+ * Component styles live beside it:
+ *   timeline.css   footer timeline + transport          (js/ui/controls.js)
+ *   sidebar.css    planet vitals + life list             (js/ui/sidebar.js, sparkline.js)
+ *   overlays.css   context card, milestone toast, extinction card, intro/finale
+ *   dialogs.css    species popup + dialog, legend, chapters, help
+ */
 
-/* ===== Design tokens ===== */
+/* ========================================================================== */
+/* Design tokens                                                              */
+/* ========================================================================== */
 
 :root {
   color-scheme: dark;
 
-  /* surfaces */
-  --color-bg: #0a0e1a;
-  --color-surface: #111628;
-  --color-surface-sunken: #0d1220;
-  --color-surface-raised: #0f1628;
-  --color-inset: #1a1e30;
-  --color-inset-deep: #1a2040;
-  --color-overlay: rgba(15, 22, 40, 0.92);
-  --color-overlay-soft: rgba(15, 22, 40, 0.85);
-  --color-overlay-solid: rgba(15, 22, 40, 0.95);
-  --color-glass: rgba(13, 19, 36, 0.68);
-  --color-scrim: rgba(4, 8, 20, 0.6);
+  /* Surfaces — deep-space ink, lifting toward blue as they rise */
+  --bg-0: #070b14;
+  --bg-1: #0b111e;
+  --bg-2: #111a2b;
+  --bg-3: #19243a;
+  --bg-4: #223150;
+  --line: #1f2a42;
+  --line-strong: #2d3b5a;
+  --line-soft: rgba(255, 255, 255, 0.07);
 
-  /* lines */
-  --color-border: #1e2540;
-  --color-border-strong: #2a3050;
-  --color-hairline: rgba(122, 150, 210, 0.16);
-  --color-glass-edge: rgba(136, 170, 204, 0.18);
+  /* Ink */
+  --text-1: #f1ece1;   /* primary — a warm paper white */
+  --text-2: #b9c2d6;   /* secondary */
+  --text-3: #8591ab;   /* muted — ≥ 4.5:1 on --bg-0 to --bg-3 (not on --bg-4; .glass re-points it) */
+  --text-3-glass: #aab4c9; /* muted on .glass — ≥ 4.5:1 even with ice-white map behind the glass */
+  --text-4: #5c6781;   /* decorative only (rules, disabled) */
 
-  /* text */
-  --color-text: #e0e0e0;
-  --color-text-2: #c8d4e8;
-  --color-text-heading: #b8c4e0;
-  --color-text-muted: #99a;
-  --color-text-dim: #98a2c0;   /* italic scientific names (was #778) */
-  --color-text-faint: #8a93b0; /* readable small text (was #666/#667) */
-  --color-text-micro: #7c87a8; /* uppercase micro-labels (was #667) */
+  /* Accent — warm "bloom" amber; one accent family for the whole chrome */
+  --accent: #f2b84b;
+  --accent-strong: #ffd27a;
+  --accent-ink: #1b1305;
+  --accent-soft: rgba(242, 184, 75, 0.14);
+  --accent-line: rgba(242, 184, 75, 0.45);
+  --accent-edge: rgba(242, 184, 75, 0.55);   /* edge of a pressed control: ≥ 3:1 on the chrome */
+  --accent-select: rgba(242, 184, 75, 0.4);  /* text selection */
+  --cool: #6fb1ff;
+  --danger: #ff6b5e;
+  --good: #5bd08a;
 
-  /* accent + status */
-  --color-accent: #5588cc;
-  --color-accent-bright: #66aaff;
-  --color-accent-soft: #88aacc;
-  --color-danger: #ff4444;
-  --color-success: #6fdc8c;
+  /* Glass panels that float over the visualization */
+  --glass: rgba(9, 14, 26, 0.78);
+  --glass-strong: rgba(9, 14, 26, 0.93);
+  --glass-line: rgba(255, 255, 255, 0.09);
+  --glass-blur: blur(12px) saturate(1.25);
 
-  /* type */
-  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-  --fs-2xs: 10px;
-  --fs-xs: 11px;
-  --fs-sm: 12px;
-  --fs-md: 13px;
-  --fs-base: 14px;
-  --fs-lg: 16px;
-  --fs-xl: 18px;
-  --fs-2xl: 28px;
+  /* Type — system stacks only (no web-font downloads) */
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Cambria, Georgia, serif;
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --fs-micro: 11px;    /* uppercase kickers only */
+  --fs-small: 12px;
+  --fs-body: 13px;
+  --fs-lead: 15px;
+  --fs-h3: 18px;
+  --fs-h2: 24px;
+  --fs-h1: 34px;
+  --fs-hero: 52px;
 
-  /* radii */
-  --radius-xs: 3px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-pill: 12px;
+  /* Space (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
 
-  /* shadows */
-  --shadow-panel: 0 6px 24px rgba(0, 0, 0, 0.5);
-  --shadow-popup: 0 6px 24px rgba(0, 0, 0, 0.6);
-  --shadow-modal: 0 18px 60px rgba(0, 0, 0, 0.75);
-  --shadow-help: 0 12px 40px rgba(0, 0, 0, 0.5);
+  /* Shape & elevation */
+  --r-1: 4px;
+  --r-2: 8px;
+  --r-3: 12px;
+  --r-pill: 999px;
+  --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 10px 34px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 24px 80px rgba(0, 0, 0, 0.7);
 
-  /* layout (mirrors js/config.js LAYOUT) */
-  --toolbar-h: 48px;
-  --controls-h: 96px;
-  --sidebar-w: 280px;
+  /* Layout (mirrored in LAYOUT, js/config.js) */
+  --toolbar-h: 52px;
+  --sidebar-w: 328px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-1: 120ms;
+  --dur-2: 240ms;
+  --dur-3: 480ms;
+
+  /* Stacking order */
+  --z-viz-ui: 5;
+  --z-toast: 6;
+  --z-event: 7;
+  --z-panel: 8;        /* legend / chapters, and the narrow-screen drawer */
+  --z-notice: 9;       /* the status pill stays readable over cards and panels */
+  --z-chrome: 10;
+  --z-drawer: 20;      /* above the chrome (the shell's own drawer sits in the grid, at --z-panel) */
+  --z-popup: 100;
+  --z-dialog: 110;
+  --z-intro: 120;
 }
 
-* {
+/* ========================================================================== */
+/* Reset & base                                                               */
+/* ========================================================================== */
+
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html,
 body {
-  font-family: var(--font-ui);
-  background: var(--color-bg);
-  color: var(--color-text);
-  overflow: hidden;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
+  height: 100%;
 }
 
-/* ===== Layout Grid ===== */
+body {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: 1.45;
+  background: var(--bg-0);
+  color: var(--text-1);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus {
+  outline: none;
+}
+
+/* The ring keeps the element's own shape (outlines follow border-radius). A full-width row
+   inside an overflow: hidden container should use outline-offset: -2px so it is not clipped. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Over the planet the amber ring needs a dark backing (amber on ice or desert is under 2:1).
+   Zero specificity: a component's own box-shadow wins. */
+:where(body:not(.capture-mode) #viz-container) :focus-visible {
+  box-shadow: 0 0 0 6px var(--bg-0);
+}
+
+::selection {
+  background: var(--accent-select);
+  color: var(--text-1);
+}
+
+/* Thin, quiet scrollbars for every scrolling panel. While scrollbar-width / scrollbar-color are
+   set, current Chromium and Firefox ignore ::-webkit-scrollbar rules: components should style
+   their scrollbars with these two properties. The ::-webkit block is Safari's fallback. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-4) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--text-4);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ========================================================================== */
+/* Shared primitives                                                          */
+/* ========================================================================== */
+
+.hidden {
+  display: none !important;
+}
+
+/* The primitives below set display, which would otherwise beat the hidden attribute. */
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: fixed;
+  top: -60px;
+  left: var(--s-3);
+  z-index: 1000;
+  padding: var(--s-2) var(--s-4);
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--r-2);
+  font-weight: 600;
+  text-decoration: none;
+  transition: top var(--dur-1) var(--ease);
+}
+
+.skip-link:focus {
+  top: var(--s-3);
+}
+
+/* Small uppercase label above a value or title */
+.kicker {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Serif display type for titles, period names, big numbers */
+.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.12;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.sci {
+  font-style: italic;
+}
+
+/* Floating panel over the visualization. Its muted ink is lifted: whatever the map shows behind
+   the glass (ice, desert, magma), --text-3 inside stays ≥ 4.5:1. */
+.glass {
+  --text-3: var(--text-3-glass);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-2);
+}
+
+/* Buttons ------------------------------------------------------------------ */
+/* Hover styles only where a pointer can hover: on touch a tapped control would keep them. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 34px;
+  padding: 0 var(--s-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease), transform var(--dur-1) var(--ease);
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--bg-3);
+    border-color: var(--text-4);
+  }
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+@media (hover: hover) {
+  .btn-ghost:hover {
+    background: var(--bg-3);
+    border-color: transparent;
+    color: var(--text-1);
+  }
+}
+
+/* Toolbar chips (toggle buttons) */
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+
+@media (hover: hover) {
+  .chip-btn:hover {
+    color: var(--text-1);
+    border-color: var(--line-strong);
+    background: var(--bg-2);
+  }
+}
+
+.chip-btn.active,
+.chip-btn[aria-pressed='true'],
+.chip-btn[aria-expanded='true'] {
+  color: var(--accent-strong);
+  border-color: var(--accent-edge);
+  background: var(--accent-soft);
+}
+
+.icon-btn {
+  min-width: 30px;
+  padding: 0;
+  font-size: var(--fs-lead);
+}
+
+/* Segmented control (view switch) */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+}
+
+.seg-btn {
+  min-height: 26px;
+  padding: 0 var(--s-3);
+  border: none;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text-3);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+@media (hover: hover) {
+  .seg-btn:hover {
+    color: var(--text-1);
+  }
+}
+
+/* The selected segment: a lighter fill, primary ink and a ring that reaches 3:1 on its own */
+.seg-btn.active,
+.seg-btn[aria-pressed='true'] {
+  background: var(--bg-4);
+  color: var(--text-1);
+  box-shadow: inset 0 0 0 1px var(--text-3);
+}
+
+/* Disabled controls look and feel inert. Placed after every hover / pressed rule above (same
+   specificity). aria-disabled keeps a control focusable, so focus is not lost when it greys out. */
+.btn:disabled,
+.btn[aria-disabled='true'],
+.chip-btn:disabled,
+.chip-btn[aria-disabled='true'],
+.seg-btn:disabled,
+.seg-btn[aria-disabled='true'] {
+  color: var(--text-4);
+  border-color: var(--line);
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+/* Small inline tag ("extant", "new", category names) */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 1px var(--s-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 6px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-1);
+  background: var(--bg-2);
+  font: 600 var(--fs-small) / 1.5 var(--font-ui);
+  color: var(--text-1);
+  text-align: center;
+}
+
+/* ========================================================================== */
+/* App grid                                                                   */
+/* ========================================================================== */
 
 #app {
   display: grid;
-  grid-template-rows: var(--toolbar-h) 1fr var(--controls-h);
-  grid-template-columns: 1fr var(--sidebar-w);
+  grid-template-rows: var(--toolbar-h) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-w);
   grid-template-areas:
-    "toolbar  toolbar"
-    "viz      sidebar"
-    "controls controls";
+    'toolbar  toolbar'
+    'viz      sidebar'
+    'timeline timeline';
   height: 100vh;
   height: 100dvh;
   width: 100vw;
+  /* Nothing may scroll the app sideways — not a focused control, not the closed drawer waiting
+     beyond the edge (clip, unlike hidden, cannot be scrolled programmatically either). */
+  overflow: hidden;
+  overflow: clip;
 }
 
-/* ===== Toolbar ===== */
+/* ========================================================================== */
+/* Toolbar                                                                    */
+/* ========================================================================== */
 
 #toolbar {
   grid-area: toolbar;
+  position: relative; /* anchors the phone menu */
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 calc(16px + env(safe-area-inset-right)) 0 calc(16px + env(safe-area-inset-left));
-  background: linear-gradient(180deg, #141b33 0%, #101527 100%);
-  border-bottom: 1px solid var(--color-hairline);
-  z-index: 10;
+  gap: var(--s-3);
+  padding: 0 var(--s-4);
+  background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+  border-bottom: 1px solid var(--line);
+  z-index: var(--z-chrome);
+  min-width: 0;
 }
+
+/* The open phone menu may hang over the timeline on a short screen */
+#toolbar.is-menu-open {
+  z-index: calc(var(--z-chrome) + 1);
+}
+
+#brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text-1);
+  text-decoration: none;
+  flex-shrink: 0;
+  border-radius: var(--r-2);
+}
+
+.brand-mark {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.brand-mark .bloom-a { fill: #e66767; }
+.brand-mark .bloom-b { fill: #3987e5; }
+.brand-mark .bloom-c { fill: var(--accent); }
 
 #app-title {
   font-family: var(--font-display);
-  font-size: clamp(13px, 0.9vw + 9px, 17px);
+  font-size: var(--fs-h3);
   font-weight: 600;
   letter-spacing: 0.01em;
-  color: #d3def3;
   white-space: nowrap;
 }
 
 #era-badge {
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  background: #333;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
-  transition: background-color 0.5s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: 3px var(--s-3) 3px var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg-1);
+  font-size: var(--fs-small);
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-#era-name {
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+#era-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-4);
+  flex-shrink: 0;
+  transition: background-color var(--dur-3) ease;
 }
 
-.layer-toggle {
-  margin-left: auto;
-  display: flex;
-  gap: 2px;
-  background: var(--color-inset);
-  border-radius: var(--radius-md);
-  padding: 2px;
+/* When the badge is squeezed the path gives way first, then the name ends in an ellipsis. */
+#era-path {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.view-toggle {
-  display: flex;
-  gap: 2px;
-  background: var(--color-inset);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-.toggle-btn {
-  padding: 4px 12px;
-  font-size: var(--fs-sm);
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: #888;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.toggle-btn.active {
-  background: linear-gradient(180deg, #2e3a63, #27304f);
-  color: #dbe6ff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.toggle-btn:hover:not(.active) {
-  color: #c4cfe8;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-/* Mobile-only sidebar drawer toggle (shown ≤768px). */
-#btn-sidebar {
+#era-path:empty {
   display: none;
 }
 
-/* Relief exaggeration slider (3D only). Range thumb/track mirror #scrubber. */
-.relief-control {
-  display: flex;
+#era-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+.toolbar-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-group {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: var(--fs-sm);
-  color: #888;
+  gap: var(--s-1);
+  flex-shrink: 0;
 }
 
-.relief-control label {
-  white-space: nowrap;
+/* Map layers and panels: inline in the bar; the drop-down under #btn-more on phones */
+#toolbar-more {
+  display: contents;
 }
 
-#elevation-value {
-  min-width: 34px;
-  color: var(--color-text-heading);
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-#elevation-slider {
-  width: 90px;
-  height: 6px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--color-inset-deep);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-}
-
-#elevation-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
+.more-mark {
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  background: #7fb1ec;
-  cursor: pointer;
-  border: 2px solid var(--color-bg);
+  fill: currentColor;
 }
 
-#elevation-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #7fb1ec;
-  cursor: pointer;
-  border: 2px solid var(--color-bg);
+.only-narrow,
+.only-phone {
+  display: none;
 }
 
-/* ===== Visualization Container ===== */
+/* ========================================================================== */
+/* Visualization container                                                    */
+/* ========================================================================== */
 
 #viz-container {
   grid-area: viz;
   position: relative;
   overflow: hidden;
-  background: #061e38;
+  background: radial-gradient(120% 90% at 50% 45%, #0b1322 0%, var(--bg-0) 70%);
+  min-height: 0;
+  min-width: 0;
 }
 
-#canvas2d {
+#viz-stage {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+#canvas2d,
+#canvas-tree {
   display: block;
   width: 100%;
   height: 100%;
+  touch-action: none;
+}
+
+#canvas-tree {
+  display: none;
 }
 
 #globe-container {
   display: none;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 #globe-container canvas {
   display: block;
 }
 
-/* Time overlay */
-#time-overlay {
+/* Status pill (inside the always-rendered #view-notice-region live region). Long hints wrap
+   instead of running off a phone screen. */
+#view-notice {
   position: absolute;
-  bottom: 12px;
-  left: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  pointer-events: none;
-}
-
-#time-period-label {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: clamp(16px, 2.4vw, 22px);
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-#time-ma-label {
-  font-family: var(--font-mono);
-  font-size: clamp(11px, 1.4vw, 13px);
-  color: rgba(255, 255, 255, 0.55);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-/* Extinction overlay */
-#extinction-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 5;
-  transition: opacity 0.3s ease;
-}
-
-#extinction-overlay.hidden {
-  opacity: 0;
-}
-
-#extinction-overlay.active {
-  opacity: 1;
-  background: radial-gradient(ellipse at center, rgba(180, 0, 0, 0.15) 0%, rgba(100, 0, 0, 0.3) 100%);
-}
-
-#extinction-text {
-  font-family: var(--font-display);
-  font-size: clamp(20px, 4.5vw, 30px);
-  font-weight: 700;
-  color: var(--color-danger);
-  text-shadow: 0 0 20px rgba(255, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.8);
-  text-align: center;
-  padding: 0 20px;
-}
-
-#extinction-subtext {
-  font-size: clamp(12px, 2vw, 16px);
-  color: rgba(255, 150, 150, 0.9);
-  margin-top: 8px;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-}
-
-/* Milestone overlay — top-center toast */
-#milestone-overlay {
-  position: absolute;
-  top: 14px;
   left: 50%;
+  bottom: var(--s-4);
   transform: translateX(-50%);
-  max-width: 540px;
-  padding: 12px 18px;
-  background: var(--color-overlay-soft);
-  border: 1px solid var(--color-glass-edge);
-  border-left: 3px solid var(--color-accent-soft);
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  z-index: 6;
-  box-shadow: var(--shadow-panel);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-#milestone-overlay.hidden {
-  opacity: 0;
-  transform: translate(-50%, -10px);
-}
-
-#milestone-overlay.active {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
-#milestone-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-accent-soft);
-  letter-spacing: 0.3px;
-  margin-bottom: 4px;
-}
-
-#milestone-body {
-  font-size: var(--fs-sm);
-  color: var(--color-text-2);
-  line-height: 1.45;
-}
-
-/* ===== Legend panel ===== */
-#legend-panel {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  width: 220px;
-  max-height: calc(100% - 36px);
-  overflow-y: auto;
-  padding: 12px 14px;
-  background: var(--color-overlay);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  z-index: 8;
-  transition: opacity 0.2s ease;
-  box-shadow: var(--shadow-panel);
-}
-
-#legend-panel.hidden {
-  display: none;
-}
-
-.legend-section {
-  margin-bottom: 10px;
-}
-
-.legend-section:last-child {
-  margin-bottom: 0;
-}
-
-.legend-title {
-  font-size: var(--fs-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--color-text-faint);
-  margin-bottom: 6px;
-  font-weight: 600;
-}
-
-.legend-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 0;
-  font-size: var(--fs-xs);
-  color: var(--color-text-2);
-}
-
-.legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.legend-line {
-  width: 22px;
-  height: 2px;
-  flex-shrink: 0;
-}
-
-.legend-line-divergent {
-  background-image: repeating-linear-gradient(to right, currentColor 0 6px, transparent 6px 10px);
-}
-
-.legend-line-transform {
-  background-image: repeating-linear-gradient(to right, currentColor 0 3px, transparent 3px 6px);
-}
-
-.legend-tip {
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  line-height: 1.4;
-  padding: 2px 0;
-}
-
-.legend-tip.hidden { display: none; }
-
-/* --- Legend tree-of-life --- */
-.legend-tree {
-  font-size: var(--fs-xs);
-  color: var(--color-text-2);
-}
-.legend-tree details {
-  margin-left: 4px;
-}
-.legend-tree > details {
-  margin-left: 0;
-}
-.legend-tree summary {
-  cursor: pointer;
-  padding: 2px 0;
-  list-style: none;
-  user-select: none;
-  font-weight: 600;
-  color: var(--color-text-2);
-}
-.legend-tree summary::-webkit-details-marker { display: none; }
-.legend-tree summary::before {
-  content: '▸';
-  display: inline-block;
-  width: 11px;
-  color: var(--color-text-micro);
-  transition: transform 0.12s ease;
-  font-size: 9px;
-}
-.legend-tree details[open] > summary::before {
-  transform: rotate(90deg);
-}
-.legend-tree-domain > summary { font-size: var(--fs-xs); color: #a9b8d0; }
-.legend-tree-kingdom > summary { font-size: var(--fs-xs); color: #a9b8d0; padding-left: 4px; }
-.legend-tree-kingdom { padding-left: 10px; border-left: 1px solid #1f2540; }
-.legend-tree-class > summary { font-size: var(--fs-2xs); color: #8898b8; font-weight: 500; padding-left: 4px; }
-.legend-tree-class { padding-left: 10px; border-left: 1px solid #1f2540; }
-.legend-tree-leaf {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 2px 4px 2px 16px;
-  cursor: pointer;
-  border-radius: var(--radius-xs);
-  font-weight: 400;
-  color: var(--color-text-2);
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-.legend-tree-leaf:hover {
-  background: rgba(255, 255, 255, 0.05);
-  transform: translateX(2px);
-}
-.legend-tree-leaf-name {
-  font-size: var(--fs-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ===== Species popup ===== */
-/* NOTE: only border-left here — js/ui/speciesPopup.js sets style.borderColor
-   for the clade accent, which colors every border edge it finds. */
-#species-popup {
-  position: fixed;
-  max-width: 280px;
-  padding: 10px 14px;
-  background: var(--color-overlay-solid);
-  border-left: 3px solid var(--color-accent-soft);
-  border-radius: var(--radius-md);
-  z-index: 100;
-  pointer-events: none;
-  box-shadow: var(--shadow-popup);
-  transition: opacity 0.15s ease;
-}
-
-#species-popup.hidden {
-  opacity: 0;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--s-4));
+  padding: var(--s-2) var(--s-4);
+  border-radius: 18px; /* half the one-line height: a pill on one line, soft corners on two */
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-line);
+  color: var(--text-2);
+  font-size: var(--fs-small);
+  text-align: center;
+  box-shadow: var(--shadow-1);
+  z-index: var(--z-notice);
   pointer-events: none;
 }
 
-#species-popup-title {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-accent-soft);
-  margin-bottom: 2px;
-}
-
-#species-popup-sci {
-  font-family: var(--font-display);
-  font-size: var(--fs-xs);
-  font-style: italic;
-  color: var(--color-text-dim);
-  margin-bottom: 4px;
-}
-
-#species-popup-meta {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 6px;
-  font-variant-numeric: tabular-nums;
-}
-
-#species-popup-lineage {
-  font-size: var(--fs-2xs);
-  color: var(--color-text-dim);
-  margin-bottom: 5px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-#species-popup-lineage .self {
-  font-weight: 700;
-}
-#species-popup-lineage .sep {
-  color: #556;
-  margin: 0 4px;
-}
-
-#species-popup-body {
-  font-size: var(--fs-sm);
-  color: var(--color-text-2);
-  line-height: 1.45;
-}
-
-/* ===== Species modal (click a sidebar entry to open) ===== */
-/* Stays opaque (no glass): it is the subject of the capture-pipeline modal
-   showcases and needs crisp screenshots. */
-#species-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  z-index: 101;
-  opacity: 1;
-  transition: opacity 0.18s ease;
-}
-
-#species-modal-backdrop.hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#species-modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(1);
-  width: min(480px, 92vw);
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 20px 24px 22px;
-  background: var(--color-surface-raised);
-  border-left: 3px solid var(--color-accent-soft);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
-  z-index: 102;
-  opacity: 1;
-  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-#species-modal.hidden {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.97);
-  pointer-events: none;
-}
-
-#species-modal-close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 8px;
-}
-
-#species-modal-close:hover {
-  color: #e0e8f5;
-}
-
-#species-modal-title {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-accent-soft);
-  margin: 0 0 4px;
-}
-
-#species-modal-sci {
-  font-family: var(--font-display);
-  font-size: var(--fs-md);
-  font-style: italic;
-  color: var(--color-text-dim);
-  margin-bottom: 6px;
-}
-
-#species-modal-meta {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-#species-modal-lineage {
-  list-style: none;
-  margin: 0 0 14px;
-  padding: 2px 0 2px 8px;
-  border-left: 1px solid var(--color-border-strong);
-}
-#species-modal-lineage li {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 3px 8px 3px 10px;
-  position: relative;
-  border-radius: var(--radius-xs);
-}
-#species-modal-lineage li::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 50%;
-  width: 6px; height: 1px;
-  background: var(--color-border-strong);
-}
-#species-modal-lineage .rank-label {
-  flex: 0 0 90px;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--color-text-micro);
-  font-weight: 600;
-}
-#species-modal-lineage .rank-value {
-  font-size: var(--fs-md);
-  color: var(--color-text-2);
-  font-variant-numeric: tabular-nums;
-}
-#species-modal-lineage li.self {
-  background: rgba(255, 255, 255, 0.045);
-}
-#species-modal-lineage li.self .rank-value {
-  font-weight: 700;
-}
-
-#species-modal-body {
-  font-size: var(--fs-md);
-  color: var(--color-text-2);
-  line-height: 1.55;
-  margin: 0 0 16px;
-}
-
-.species-modal-section {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--color-text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  margin: 8px 0 8px;
-}
-
-#species-modal-relatives {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.species-modal-relative {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.species-modal-relative:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.species-modal-relative-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.species-modal-relative-name {
-  font-size: var(--fs-md);
-  color: var(--color-text-2);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.species-modal-relative-live {
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #6cc080;
-  padding: 1px 5px;
-  border: 1px solid rgba(108, 192, 128, 0.4);
-  border-radius: var(--radius-xs);
-}
-
-.species-modal-relative-range {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.species-modal-empty {
-  font-size: var(--fs-sm);
-  color: var(--color-text-faint);
-  font-style: italic;
-  padding: 4px 10px;
-}
-
-/* ===== Sidebar ===== */
+/* ========================================================================== */
+/* Sidebar & timeline shells (contents styled in sidebar.css / timeline.css)  */
+/* ========================================================================== */
 
 #sidebar {
   grid-area: sidebar;
-  background: var(--color-surface-sunken);
-  border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
+  min-height: 0;
   overflow: hidden;
+  background: var(--bg-1);
+  border-left: 1px solid var(--line);
 }
 
-/* Scrim behind the mobile sidebar drawer (JS only opens it ≤768px). */
-#sidebar-scrim {
-  position: fixed;
-  left: 0;
-  right: 0;
-  top: var(--toolbar-h);
-  bottom: var(--controls-h);
-  background: var(--color-scrim);
-  z-index: 19;
-}
-
-#sidebar-scrim.hidden {
-  display: none;
-}
-
-/* Atmosphere panel */
-#atmosphere-panel {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  background: var(--color-surface-raised);
-}
-
-.atmo-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-}
-
-.atmo-label {
-  font-size: var(--fs-2xs);
-  font-weight: 600;
-  color: var(--color-text-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.atmo-value {
-  font-family: var(--font-mono);
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--color-text-2);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.sidebar-header {
-  padding: 12px 16px 8px;
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-
-.sidebar-header h2 {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--color-text-heading);
-}
-
-#species-count {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-faint);
-}
-
-#species-list {
-  list-style: none;
-  flex: 1;
-  overflow-y: auto;
-  padding: 4px 0;
-}
-
-/* Species list items */
-.species-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 16px;
-  transition: all 0.4s ease;
-  border-left: 3px solid transparent;
-}
-
-.species-item:hover {
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.species-item.entering {
-  animation: slideIn 0.4s ease forwards;
-}
-
-.species-item.exiting {
-  animation: slideOut 0.4s ease forwards;
-}
-
-.species-item.highlight {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.species-item.extinction-exit {
-  animation: extinctionFade 0.6s ease forwards;
-}
-
-@keyframes slideIn {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes slideOut {
-  from { opacity: 1; transform: translateX(0); }
-  to { opacity: 0; transform: translateX(-30px); max-height: 0; padding: 0 16px; }
-}
-
-@keyframes extinctionFade {
-  0% { opacity: 1; background: transparent; }
-  30% { background: rgba(255, 50, 50, 0.2); }
-  100% { opacity: 0; transform: translateX(-20px); max-height: 0; padding: 0 16px; }
-}
-
-.species-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.species-info {
-  flex: 1;
+#timeline {
+  grid-area: timeline;
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  border-top: 1px solid var(--line);
+  z-index: var(--z-chrome);
   min-width: 0;
 }
 
-.species-name {
-  display: block;
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: #d0d0d0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.species-desc {
-  display: block;
-  font-size: var(--fs-xs);
-  color: var(--color-text-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.species-item {
-  cursor: pointer;
-}
-
-.sparkline-wrap {
-  margin-top: 2px;
-  line-height: 0;
-}
-
-.sparkline-canvas {
-  display: block;
-  opacity: 0.85;
-}
-
-#atmosphere-panel {
-  flex-wrap: wrap;
-}
-
-.abundance-bar-container {
-  width: 40px;
-  height: 4px;
-  background: var(--color-inset);
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.abundance-bar {
-  height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-/* ===== Timeline Controls ===== */
-
-#timeline-controls {
-  grid-area: controls;
-  background: linear-gradient(0deg, #141b33 0%, #101527 100%);
-  border-top: 1px solid var(--color-hairline);
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-#era-strip {
-  position: relative;
-  height: 12px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
-}
-
-/* Playhead — tracks --scrub-pos set by Controls.updateDisplay(). */
-#era-strip::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--scrub-pos, 0%);
-  width: 2px;
-  margin-left: -1px;
-  background: #fff;
-  box-shadow: 0 0 6px rgba(160, 200, 255, 0.9);
-  pointer-events: none;
-}
-
-.era-segment {
-  height: 100%;
-  cursor: pointer;
-  transition: opacity 0.3s;
-}
-
-.era-segment:hover {
-  opacity: 0.8;
-}
-
-.scrubber-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.time-label-end {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-faint);
-  white-space: nowrap;
-}
-
-#scrubber {
-  flex: 1;
-  height: 6px;
-  -webkit-appearance: none;
-  appearance: none;
-  /* progress fill up to the playhead, inset track beyond it */
-  background: linear-gradient(to right, var(--color-accent) var(--scrub-pos, 0%), var(--color-inset-deep) 0);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-}
-
-#scrubber::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #7fb1ec;
-  cursor: pointer;
-  border: 2px solid var(--color-bg);
-  transition: box-shadow 0.15s ease;
-}
-
-#scrubber::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #7fb1ec;
-  cursor: pointer;
-  border: 2px solid var(--color-bg);
-  transition: box-shadow 0.15s ease;
-}
-
-#scrubber:hover::-webkit-slider-thumb {
-  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.22);
-}
-
-#scrubber:hover::-moz-range-thumb {
-  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.22);
-}
-
-.transport-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.transport-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-inset-deep);
-  color: var(--color-text-heading);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, transform 0.1s ease;
-}
-
-.transport-btn:hover {
-  background: #2a3060;
-}
-
-.transport-btn:active {
-  transform: scale(0.93);
-}
-
-.transport-btn.playing {
-  background: #2a4060;
-  color: var(--color-accent-bright);
-  box-shadow: 0 0 0 1px rgba(102, 170, 255, 0.35), 0 0 12px rgba(102, 170, 255, 0.25);
-}
-
-#speed-select {
-  padding: 4px 24px 4px 8px;
-  background-color: var(--color-inset-deep);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%237c87a8' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  -webkit-appearance: none;
-  appearance: none;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-heading);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-  cursor: pointer;
-}
-
-#current-time-display {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--color-text-heading);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ===== History of Life explorer panel ===== */
-
-#history-backdrop {
+.noscript {
   position: fixed;
   inset: 0;
-  background: var(--color-scrim);
-  z-index: 29;
-}
-
-#history-backdrop.hidden {
-  display: none;
-}
-
-#history-panel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: min(460px, 46vw);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  background: rgba(13, 18, 36, 0.96);
-  border-right: 1px solid var(--color-glass-edge);
-  box-shadow: 12px 0 40px rgba(0, 0, 0, 0.45);
-  visibility: visible;
-  transform: translateX(0);
-  /* visibility is NOT transitioned in the open state, so the panel is
-     focusable the instant it opens (open() focuses the close button). */
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-#history-panel.hidden {
-  transform: translateX(-103%);
-  visibility: hidden;
-  /* Delay the hide until the slide-out finishes. */
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s;
-}
-
-#history-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 10px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-#history-title {
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  color: #dce6f8;
-}
-
-#history-close {
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  padding: 4px 8px;
-}
-
-#history-close:hover {
-  color: #e0e8f5;
-}
-
-#history-hint {
-  padding: 8px 18px;
-  font-size: var(--fs-xs);
-  color: var(--color-text-faint);
-  border-bottom: 1px solid var(--color-border);
-}
-
-#history-chapters {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 12px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.history-chapter {
-  position: relative;
-  border-left: 4px solid var(--ch-accent, var(--color-accent-soft));
-  border-radius: 0 var(--radius-md) var(--radius-md) 0;
-  background: rgba(255, 255, 255, 0.025);
-  padding: 10px 12px 11px 14px;
-  transition: background 0.2s ease, box-shadow 0.3s ease;
-}
-
-.history-chapter.current {
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 1px rgba(136, 170, 204, 0.22), 0 0 18px rgba(80, 130, 210, 0.12);
-}
-
-.history-now {
-  display: none;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--ch-accent, var(--color-accent-soft));
-  border: 1px solid currentColor;
-  border-radius: var(--radius-pill);
-  padding: 1px 7px;
-  white-space: nowrap;
-}
-
-.history-chapter.current .history-now {
-  display: inline-block;
-}
-
-.history-chapter-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.history-chapter-jump {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  padding: 0;
-  color: inherit;
-}
-
-.history-chapter-title {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ch-accent, var(--color-text-2));
-}
-
-.history-chapter-range {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-faint);
-  white-space: nowrap;
-}
-
-.history-play-btn {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--color-inset-deep);
-  color: var(--color-text-heading);
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s, transform 0.1s ease;
-}
-
-.history-play-btn:hover {
-  background: #2a3060;
-  color: var(--color-accent-bright);
-}
-
-.history-play-btn:active {
-  transform: scale(0.93);
-}
-
-.history-chapter-body {
-  font-size: var(--fs-sm);
-  line-height: 1.55;
-  color: #c0cce2;
-  margin: 6px 0 8px;
-}
-
-.history-links {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 0 0 6px;
-  padding: 0;
-}
-
-.history-link {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  width: 100%;
-  background: none;
-  border: none;
-  color: #aebbd6;
-  font-size: var(--fs-sm);
-  padding: 3px 6px;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  text-align: left;
-}
-
-.history-link:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #dbe5f6;
-}
-
-.history-link-kind {
-  flex: 0 0 58px;
-  font-size: 9px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--color-text-faint);
-}
-
-.history-link-extinction .history-link-kind {
-  color: #d86a5a;
-}
-
-.history-link-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-severity {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: #ff8866;
-}
-
-.history-link-ma {
-  margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  color: var(--color-text-faint);
-  white-space: nowrap;
-}
-
-.history-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.history-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  font-size: var(--fs-xs);
-  color: #c2cee6;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(136, 170, 204, 0.14);
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.history-chip:hover {
-  background: rgba(255, 255, 255, 0.09);
-}
-
-.history-chip .history-link-ma {
-  margin-left: 2px;
-}
-
-.history-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.history-more {
-  width: 100%;
-}
-
-.history-more summary {
-  cursor: pointer;
-  font-size: var(--fs-2xs);
-  color: var(--color-text-faint);
-  padding: 3px 4px;
-  list-style: none;
-  user-select: none;
-}
-
-.history-more summary::-webkit-details-marker {
-  display: none;
-}
-
-.history-more summary:hover {
-  color: var(--color-text-2);
-}
-
-.history-more .history-chips {
-  margin-top: 5px;
-}
-
-/* ===== Toolbar additions: action group ===== */
-.action-group {
-  display: flex;
-  gap: 2px;
-  background: var(--color-inset);
-  border-radius: var(--radius-md);
-  padding: 2px;
-}
-
-#btn-share.copied {
-  color: var(--color-success);
-}
-
-/* ===== Keyboard / controls help overlay ===== */
-#help-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(4, 8, 20, 0.72);
-}
-
-#help-overlay.hidden {
-  display: none;
-}
-
-#help-panel {
-  position: relative;
-  max-width: 440px;
-  width: calc(100% - 48px);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border-strong);
-  border-radius: 10px;
-  padding: 20px 24px;
-  color: #c8d2ec;
-  box-shadow: var(--shadow-help);
-}
-
-#help-panel h3 {
-  font-family: var(--font-display);
-  margin: 0 0 12px;
-  font-size: 17px;
-  color: #e0e8ff;
-}
-
-#help-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: grid;
-  gap: 8px;
-  font-size: var(--fs-md);
-}
-
-#help-list kbd {
-  display: inline-block;
-  min-width: 18px;
-  padding: 1px 6px;
-  margin-right: 6px;
-  background: #20284a;
-  border: 1px solid #38426e;
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
+  place-items: center;
+  padding: var(--s-6);
+  background: var(--bg-0);
+  font-family: var(--font-display);
+  font-size: var(--fs-h3);
   text-align: center;
-  color: #d8e0ff;
+  z-index: 1000;
 }
 
-#help-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  background: none;
-  border: none;
-  color: #8892b8;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-}
+/* ========================================================================== */
+/* Responsive                                                                 */
+/* ========================================================================== */
+/* The toolbar fits at every width without scrolling:                        */
+/*   > 960px  everything, with the era badge (its path above 1180px)         */
+/*   ≤ 960px  the badge yields (the context card names the period)           */
+/*   ≤ 900px  the sidebar becomes a drawer, opened by the "Life" button      */
+/*   ≤ 860px  the wordmark is visually hidden (still the page's <h1>)        */
+/*   ≤ 720px  layers and panels fold into the #btn-more drop-down            */
+/*   ≤ 380px  tighter spacing, down to 320px                                 */
 
-#help-close:hover {
-  color: #d0d8f0;
-}
-
-/* ===== Glass treatment (floating panels only; opaque fallbacks above) =====
-   Never on #species-modal (capture showcase subject) or #extinction-overlay
-   (full-viewport blur over an animating canvas tanks FPS). */
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  #legend-panel,
-  #milestone-overlay,
-  #species-popup,
-  #help-panel,
-  #history-panel {
-    background: var(--color-glass);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    backdrop-filter: blur(14px) saturate(140%);
-  }
-}
-
-/* ===== Scrollbars (scroll containers) ===== */
-#species-list,
-#legend-panel,
-#species-modal,
-#history-chapters,
-#toolbar {
-  scrollbar-width: thin;
-  scrollbar-color: #2e3a63 transparent;
-}
-
-#species-list::-webkit-scrollbar,
-#legend-panel::-webkit-scrollbar,
-#species-modal::-webkit-scrollbar,
-#history-chapters::-webkit-scrollbar {
-  width: 8px;
-}
-
-#species-list::-webkit-scrollbar-track,
-#legend-panel::-webkit-scrollbar-track,
-#species-modal::-webkit-scrollbar-track,
-#history-chapters::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#species-list::-webkit-scrollbar-thumb,
-#legend-panel::-webkit-scrollbar-thumb,
-#species-modal::-webkit-scrollbar-thumb,
-#history-chapters::-webkit-scrollbar-thumb {
-  background: #2e3a63;
-  border-radius: var(--radius-sm);
-}
-
-#species-list::-webkit-scrollbar-thumb:hover,
-#legend-panel::-webkit-scrollbar-thumb:hover,
-#species-modal::-webkit-scrollbar-thumb:hover,
-#history-chapters::-webkit-scrollbar-thumb:hover {
-  background: #3c4a7a;
-}
-
-/* ===== Focus visibility (keyboard navigation) ===== */
-:focus-visible {
-  outline: 2px solid var(--color-accent-bright);
-  outline-offset: 2px;
-}
-
-/* Range inputs: ring on the thumb, not the track. */
-#scrubber:focus-visible,
-#elevation-slider:focus-visible {
-  outline: none;
-}
-
-#scrubber:focus-visible::-webkit-slider-thumb,
-#elevation-slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.35);
-}
-
-#scrubber:focus-visible::-moz-range-thumb,
-#elevation-slider:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 5px rgba(102, 170, 255, 0.35);
-}
-
-/* ===== Responsive ===== */
-
-@media (max-width: 1200px) {
+@media (max-width: 1180px) {
   :root {
-    --sidebar-w: 248px;
+    --sidebar-w: 292px;
   }
 
-  #toolbar {
-    gap: 10px;
-  }
-}
-
-/* History panel goes full-screen between toolbar and footer. Breakpoint
-   mirrors EXPLORER.mobileBreakpointPx in js/config.js. */
-@media (min-width: 901px) {
-  #history-backdrop {
-    display: none !important;
-  }
-}
-
-@media (max-width: 900px) {
-  #history-panel {
-    position: fixed;
-    top: var(--toolbar-h);
-    left: 0;
-    right: 0;
-    bottom: var(--controls-h);
-    width: auto;
-    border-right: none;
-  }
-}
-
-@media (max-width: 768px) {
-  #app {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "toolbar"
-      "viz"
-      "controls";
-  }
-
-  #toolbar {
-    padding: 0 10px;
-    gap: 8px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  #toolbar::-webkit-scrollbar {
+  #era-path {
     display: none;
   }
+}
 
-  #btn-sidebar {
-    display: flex;
+@media (max-width: 960px) {
+  #era-badge {
+    display: none;
+  }
+}
+
+/* Tablet & phone: the sidebar becomes a drawer toggled from the toolbar */
+@media (max-width: 900px) {
+  #toolbar {
+    gap: var(--s-2);
   }
 
+  .toolbar-spacer {
+    min-width: var(--s-1);
+  }
+
+  #app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'toolbar'
+      'viz'
+      'timeline';
+  }
+
+  .only-narrow {
+    display: inline-flex;
+  }
+
+  /* The drawer shares the visualization's grid cell, so the toolbar and the timeline stay in
+     view and usable while it is open. Closed, it waits beyond the right edge (#app clips it) and
+     is hidden once it has slid out; js/ui/sidebar.js also makes it inert. */
   #sidebar {
-    position: fixed;
-    right: calc(-1 * var(--sidebar-w));
-    top: var(--toolbar-h);
-    bottom: var(--controls-h);
-    width: var(--sidebar-w);
-    z-index: 20;
+    grid-area: viz;
+    justify-self: end;
+    position: relative;
+    z-index: var(--z-panel);
+    width: min(var(--sidebar-w), 88vw);
+    box-shadow: var(--shadow-3);
+    transform: translateX(105%);
     visibility: hidden;
-    /* Hide is delayed until the slide-out ends; show flips instantly so the
-       drawer contents are focusable as soon as it opens. */
-    transition: right 0.3s ease, visibility 0s linear 0.3s;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+    transition: transform var(--dur-2) var(--ease), visibility 0s linear var(--dur-2);
   }
 
   #sidebar.open {
-    right: 0;
-    visibility: visible;
-    transition: right 0.3s ease;
-  }
-
-  #legend-panel {
-    width: min(220px, 58vw);
-    max-height: 42%;
-  }
-
-  #milestone-overlay {
-    max-width: min(540px, calc(100vw - 24px));
-  }
-}
-
-@media (max-width: 480px) {
-  :root {
-    --controls-h: 88px;
-  }
-
-  #era-badge,
-  .time-label-end {
-    display: none;
-  }
-
-  .toggle-btn {
-    font-size: var(--fs-xs);
-    padding: 3px 8px;
-  }
-
-  /* Species modal becomes a bottom sheet. */
-  #species-modal {
-    top: auto;
-    bottom: 0;
-    left: 0;
-    right: 0;
     transform: none;
-    width: 100%;
-    max-height: 78vh;
-    max-height: 78dvh;
-    border-radius: 14px 14px 0 0;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+}
+
+@media (max-width: 860px) {
+  /* The wordmark yields its room to the controls; it stays the page's <h1> and names the link. */
+  #app-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Phones */
+@media (max-width: 720px) {
+  /* The drawer becomes a bottom sheet rising from the timeline's top edge; the top of the map
+     stays in view and the transport below it stays usable. */
+  #sidebar {
+    justify-self: stretch;
+    align-self: end;
+    width: auto;
+    height: min(88%, 640px);
     border-left: none;
-    border-top: 3px solid var(--color-accent-soft);
+    border-top: 1px solid var(--line-strong);
+    border-radius: var(--r-3) var(--r-3) 0 0;
+    transform: translateY(105%);
   }
 
-  #species-modal.hidden {
-    transform: translateY(12px);
+  #toolbar {
+    padding: 0 var(--s-2);
   }
 
-  #help-panel {
-    width: calc(100% - 24px);
+  .only-phone {
+    display: inline-flex;
+  }
+
+  .chip-btn:not(.icon-btn) {
+    padding: 0 var(--s-2);
+  }
+
+  /* The layer and panel toggles fold into a drop-down under #btn-more (js/ui/toolbar.js): a
+     disclosure, not an ARIA menu — the same buttons in the same tab order, restyled as rows. */
+  #toolbar-more {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--s-1));
+    right: var(--s-2);
+    flex-direction: column;
+    gap: var(--s-2);
+    width: max-content;
+    min-width: 216px;
+    max-width: calc(100vw - 2 * var(--s-2));
+    max-height: calc(100dvh - var(--toolbar-h) - var(--s-4));
+    overflow-y: auto;
+    padding: var(--s-2);
+    background: var(--glass-strong);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-3);
+    box-shadow: var(--shadow-2);
+  }
+
+  #toolbar-more.is-open {
+    display: flex;
+  }
+
+  #toolbar-more .toolbar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+  }
+
+  #toolbar-more .toolbar-group + .toolbar-group {
+    padding-top: var(--s-2);
+    border-top: 1px solid var(--glass-line);
+  }
+
+  /* Each group's aria-label doubles as its visible heading; the empty alt text keeps screen
+     readers from hearing it twice (browsers without that syntax use the first declaration). */
+  #toolbar-more .toolbar-group::before {
+    content: attr(aria-label);
+    content: attr(aria-label) / '';
+    padding: 2px var(--s-2) var(--s-1);
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+
+  #toolbar-more .chip-btn {
+    justify-content: flex-start;
+    gap: var(--s-3);
+    min-height: 40px;
+    padding: 0 var(--s-2);
+    border-color: transparent;
+    border-radius: var(--r-2);
+    background: transparent;
+    color: var(--text-1);
+    font-size: var(--fs-body);
+  }
+
+  #toolbar-more .chip-btn:focus-visible {
+    outline-offset: -2px;
+  }
+
+  /* Layer rows end in a switch: a grey knob on the left when off, an amber track when on. */
+  #toolbar-more .chip-btn[aria-pressed]::before {
+    content: '';
+    order: 1;
+    flex: none;
+    width: 30px;
+    height: 18px;
+    margin-left: auto;
+    border-radius: var(--r-pill);
+    background: radial-gradient(circle at 9px 50%, var(--text-3) 5px, transparent 5.5px) var(--bg-3);
+    box-shadow: inset 0 0 0 1px var(--line-strong);
+  }
+
+  #toolbar-more .chip-btn[aria-pressed='true'] {
+    border-color: transparent;
+    background: transparent;
+    color: var(--text-1);
+  }
+
+  #toolbar-more .chip-btn[aria-pressed='true']::before {
+    background: radial-gradient(circle at 21px 50%, var(--accent-ink) 5px, transparent 5.5px) var(--accent);
+    box-shadow: none;
+  }
+
+  /* Chapters / Legend while their panel is open */
+  #toolbar-more .chip-btn[aria-expanded='true'] {
+    border-color: transparent;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  #toolbar-more .chip-btn[aria-disabled='true'] {
+    color: var(--text-4);
+  }
+
+  #toolbar-more .chip-btn[aria-disabled='true']::before {
+    opacity: 0.45;
   }
 }
 
-@media (max-height: 500px) and (orientation: landscape) {
+@media (max-width: 720px) and (hover: hover) {
+  #toolbar-more .chip-btn:not([aria-disabled='true']):hover {
+    background: var(--bg-3);
+  }
+}
+
+/* The narrowest phones (down to 320px) */
+@media (max-width: 380px) {
+  #toolbar {
+    gap: var(--s-1);
+  }
+
+  .toolbar-spacer {
+    min-width: 0;
+  }
+
+  #toolbar .seg-btn {
+    padding: 0 var(--s-2);
+  }
+}
+
+/* Short screens (landscape phones): a slimmer toolbar gives the visualization a little more */
+@media (max-height: 480px) {
   :root {
-    --toolbar-h: 40px;
-    --controls-h: 64px;
-  }
-
-  #timeline-controls {
-    padding: 4px 12px calc(4px + env(safe-area-inset-bottom));
-    gap: 4px;
-  }
-
-  #era-strip {
-    height: 6px;
-  }
-
-  .transport-btn {
-    width: 28px;
-    height: 28px;
-  }
-
-  #time-overlay {
-    bottom: 8px;
+    --toolbar-h: 44px;
   }
 }
 
+/* Touch: hit areas at least 44px tall (46px segments, 50px chips) without growing the bar */
 @media (pointer: coarse) {
-  .transport-btn {
-    width: 44px;
-    height: 44px;
+  #brand,
+  #toolbar .chip-btn,
+  #toolbar .seg-btn {
+    position: relative;
   }
 
-  .toggle-btn {
-    min-height: 38px;
+  #brand::after,
+  #toolbar .chip-btn::after,
+  #toolbar .seg-btn::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+  }
+}
+
+/* Rows of the phone menu are tall enough already, and must not reach into their neighbours. */
+@media (pointer: coarse) and (max-width: 720px) {
+  #toolbar-more .chip-btn::after {
+    content: none;
+  }
+}
+
+/* Forced colours (Windows high contrast) repaint fills and drop shadows: selected, pressed and
+   disabled states need system colours of their own to stay visible. */
+@media (forced-colors: active) {
+  .seg-btn.active,
+  .seg-btn[aria-pressed='true'],
+  .chip-btn.active,
+  .chip-btn[aria-pressed='true'],
+  .chip-btn[aria-expanded='true'],
+  #toolbar-more .chip-btn[aria-pressed='true'],
+  #toolbar-more .chip-btn[aria-expanded='true'] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+    box-shadow: none;
   }
 
-  #scrubber,
-  #elevation-slider {
-    height: 10px;
+  .btn:disabled,
+  .btn[aria-disabled='true'],
+  .chip-btn:disabled,
+  .chip-btn[aria-disabled='true'],
+  .seg-btn:disabled,
+  .seg-btn[aria-disabled='true'],
+  #toolbar-more .chip-btn[aria-disabled='true'] {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: GrayText;
+    border-color: GrayText;
   }
 
-  #scrubber::-webkit-slider-thumb,
-  #elevation-slider::-webkit-slider-thumb {
-    width: 20px;
-    height: 20px;
+  /* The swatch is the period's colour: data, not decoration */
+  #era-swatch {
+    forced-color-adjust: none;
   }
+}
 
-  #scrubber::-moz-range-thumb,
-  #elevation-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
-  }
+/* ========================================================================== */
+/* Motion safety                                                              */
+/* ========================================================================== */
 
-  .species-item {
-    padding: 10px 16px;
-  }
-
-  .legend-tree-leaf {
-    padding-top: 6px;
-    padding-bottom: 6px;
-  }
-
-  /* Hover-only artifact — tap goes straight to the modal. */
-  #species-popup {
-    display: none !important;
-  }
+/* js/main.js mirrors the effective preference (OS setting, or the viewer's override in Help)
+   to <html data-motion="reduced|full">; canvas and JS-driven motion read frame.reducedMotion. */
+[data-motion='reduced'] *,
+[data-motion='reduced'] *::before,
+[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* ========================================================================== */
 /* Capture mode — activated via ?capture=1 (see js/capture.js).               */
-/* Hides chrome so external screen-recording scripts get a clean frame.       */
-/* The species modal stays visible: it is the subject of the modal showcases  */
-/* (scripts/capture/capture.js opens it via window.__capture).                */
+/* Hides chrome so the Playwright pipeline gets a clean frame.                */
+/*   panel=clean    viz only                                                  */
+/*   panel=sidebar  keep the life & planet panel                              */
+/*   panel=clock    keep the context card                                     */
+/*   panel=full     keep both                                                 */
+/* The kept roots keep their own display type, and .hidden still hides them. */
 /* ========================================================================== */
 
 body.capture-mode #toolbar,
-body.capture-mode #timeline-controls,
-body.capture-mode #sidebar,
-body.capture-mode #sidebar-scrim,
-body.capture-mode #legend-panel,
-body.capture-mode #time-overlay,
+body.capture-mode #timeline,
+body.capture-mode:not(.capture-mode-with-sidebar) #sidebar,
+body.capture-mode:not(.capture-show-legend) #legend-panel,
+body.capture-mode:not(.capture-show-chapters) #chapters-panel,
+body.capture-mode:not(.capture-mode-with-clock) #context-card,
+body.capture-mode #view-notice,
 body.capture-mode #species-popup,
-body.capture-mode #history-panel,
-body.capture-mode #history-backdrop {
+body.capture-mode #intro-root,
+body.capture-mode:not(.capture-show-help) #help-root,
+body.capture-mode .skip-link {
   display: none !important;
 }
 
+/* A headless run never moves a pointer: keep focus rings out of the stills. */
+body.capture-mode :focus-visible {
+  outline: none;
+}
+
 body.capture-mode #app {
-  grid-template-rows: 1fr;
-  grid-template-columns: 1fr;
-  grid-template-areas: "viz";
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'viz';
 }
 
-body.capture-mode #viz-container {
-  grid-area: viz;
-}
-
-/* Variant: keep the species sidebar visible (sequences highlighting life). */
+/* The panel as a plain full-height column at any width: none of the drawer / sheet geometry. */
 body.capture-mode.capture-mode-with-sidebar #sidebar {
-  display: flex !important;
+  grid-area: sidebar;
+  position: static;
+  justify-self: stretch;
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  transform: none;
+  visibility: visible;
+  transition: none;
+  border-top: none;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
 }
+
 body.capture-mode.capture-mode-with-sidebar #app {
-  grid-template-columns: 1fr var(--sidebar-w);
-  grid-template-areas: "viz sidebar";
-}
-
-/* Variant: keep the time/period overlay visible. */
-body.capture-mode.capture-mode-with-clock #time-overlay {
-  display: block !important;
-}
-
-/* ===== Reduced-motion: calm all transitions/animations on request =====
-   Durations are forced to ~0 (rather than animation: none) so JS that relies
-   on animationend/transitionend — e.g. the sidebar's exit-animation cleanup —
-   still fires. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  grid-template-columns: minmax(0, 1fr) var(--sidebar-w);
+  grid-template-areas: 'viz sidebar';
 }

@@ -2,12 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Life's Tree Blooms!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Life's Tree Blooms — an animated journey through 4.54 billion years of Earth history: drifting continents, changing climate, mass extinctions and the growing tree of life.">
+  <meta name="theme-color" content="#070b14">
+  <title>Life's Tree Blooms — 4.5 billion years of life on Earth</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b14'/%3E%3Cg fill='none' stroke='%23f2b84b' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M16 27V15'/%3E%3Cpath d='M16 19c-4-1-6-4-6-7'/%3E%3Cpath d='M16 17c4-1 6-4 6-8'/%3E%3C/g%3E%3Ccircle cx='10' cy='11' r='2.4' fill='%23e66767'/%3E%3Ccircle cx='22' cy='8' r='2.4' fill='%233987e5'/%3E%3Ccircle cx='16' cy='12' r='2.6' fill='%23f2b84b'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/styles.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/timeline.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/overlays.css">
+  <link rel="stylesheet" href="css/dialogs.css">
+  <link rel="stylesheet" href="css/map.css">
+  <link rel="stylesheet" href="css/globe.css">
+  <link rel="stylesheet" href="css/tree.css">
   <script type="importmap">
   {
     "imports": {
@@ -18,169 +25,118 @@
   </script>
 </head>
 <body>
-  <div id="app">
-    <!-- Toolbar -->
+  <a class="skip-link" href="#timeline">Skip to timeline controls</a>
+
+  <div id="app" data-view="map">
+    <!-- Toolbar (js/ui/toolbar.js). It fits at every width: below 860px the title is visually
+         hidden, and on phones the layer and panel toggles fold into the #btn-more menu. -->
     <header id="toolbar">
-      <h1 id="app-title">Life's Tree Blooms!</h1>
-      <div id="era-badge">
+      <a id="brand" href="./" title="Life's Tree Blooms — back to the beginning">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M16 28V15"/>
+            <path d="M16 20c-4.2-1-6.4-4.2-6.4-7.6"/>
+            <path d="M16 17.5c4.2-1 6.4-4.4 6.4-8.6"/>
+          </g>
+          <circle class="bloom bloom-a" cx="9.6" cy="11.4" r="2.5"/>
+          <circle class="bloom bloom-b" cx="22.4" cy="8" r="2.5"/>
+          <circle class="bloom bloom-c" cx="16" cy="12.2" r="2.8"/>
+        </svg>
+        <h1 id="app-title">Life's Tree Blooms</h1>
+      </a>
+
+      <div id="era-badge" aria-hidden="true">
+        <span id="era-swatch"></span>
+        <span id="era-path"></span>
         <span id="era-name">Hadean</span>
       </div>
-      <button id="btn-history" class="toggle-btn" title="Explore the history of life (H)" aria-label="Explore the history of life" aria-controls="history-panel" aria-expanded="false">History</button>
-      <div class="layer-toggle">
-        <button id="btn-plates" class="toggle-btn active" title="Toggle Plate Boundaries" aria-label="Toggle plate boundaries" aria-pressed="true">Plates</button>
-        <button id="btn-legend" class="toggle-btn active" title="Toggle Legend" aria-label="Toggle legend" aria-controls="legend-panel" aria-expanded="true">Legend</button>
+
+      <!-- Narrow screens only: opens the life & planet panel as a drawer / bottom sheet -->
+      <button id="btn-sidebar" class="chip-btn only-narrow" type="button" aria-expanded="false" aria-controls="sidebar" title="Planet vitals and dominant life">Life</button>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="toolbar-group segmented" role="group" aria-label="View">
+        <button id="btn-view-map" class="seg-btn active" type="button" aria-pressed="true" title="World map (1)">Map</button>
+        <button id="btn-view-globe" class="seg-btn" type="button" aria-pressed="false" title="3D globe (2)">Globe</button>
+        <button id="btn-view-tree" class="seg-btn" type="button" aria-pressed="false" title="Tree of life (3)">Tree</button>
       </div>
-      <div class="relief-control" id="relief-control" style="display:none">
-        <label for="elevation-slider" title="Globe terrain relief exaggeration">Relief</label>
-        <input type="range" id="elevation-slider" min="0.5" max="3" step="0.1" value="1" aria-label="Globe terrain relief exaggeration">
-        <span id="elevation-value">1.0×</span>
+
+      <!-- Phones only: shows #toolbar-more as a drop-down menu -->
+      <button id="btn-more" class="chip-btn icon-btn only-phone" type="button" aria-expanded="false" aria-controls="toolbar-more" aria-label="Map layers, chapters and legend" title="Layers, chapters &amp; legend">
+        <svg class="more-mark" viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="4" cy="10" r="1.8"/>
+          <circle cx="10" cy="10" r="1.8"/>
+          <circle cx="16" cy="10" r="1.8"/>
+        </svg>
+      </button>
+
+      <!-- Inline in the bar; the drop-down under #btn-more on phones -->
+      <div id="toolbar-more">
+        <div class="toolbar-group" role="group" aria-label="Map layers">
+          <button id="btn-plates" class="chip-btn" type="button" aria-pressed="false" title="Plate boundaries (P)">Plates</button>
+          <button id="btn-labels" class="chip-btn active" type="button" aria-pressed="true" title="Place names and events (L)">Labels</button>
+        </div>
+
+        <div class="toolbar-group" role="group" aria-label="Panels">
+          <button id="btn-chapters" class="chip-btn" type="button" aria-expanded="false" aria-controls="chapters-panel" title="Jump to a chapter (C)">Chapters</button>
+          <button id="btn-legend" class="chip-btn" type="button" aria-expanded="false" aria-controls="legend-panel" title="Legend (G)">Legend</button>
+        </div>
       </div>
-      <div class="view-toggle">
-        <button id="btn-2d" class="toggle-btn active" title="2D Map View" aria-label="2D map view" aria-pressed="true">2D Map</button>
-        <button id="btn-3d" class="toggle-btn" title="3D Globe View" aria-label="3D globe view" aria-pressed="false">3D Globe</button>
-      </div>
-      <div class="action-group">
-        <button id="btn-share" class="toggle-btn" title="Copy a shareable link to this moment" aria-label="Copy shareable link">Share</button>
-        <button id="btn-help" class="toggle-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
-      </div>
-      <button id="btn-sidebar" class="toggle-btn" title="Toggle the life panel" aria-label="Toggle life panel" aria-controls="sidebar" aria-expanded="false">Life</button>
+
+      <button id="btn-help" class="chip-btn icon-btn" type="button" aria-haspopup="dialog" aria-label="Help, shortcuts and about the data" title="Help &amp; about (?)">?</button>
     </header>
 
-    <!-- Main visualization area -->
+    <!-- Visualization area -->
     <main id="viz-container">
-      <canvas id="canvas2d" role="img" aria-label="Animated 2D map of Earth's continents, species, and climate at the selected time"></canvas>
-      <div id="globe-container"></div>
-
-      <!-- Extinction overlay (DOM element over both views) -->
-      <div id="extinction-overlay" class="hidden" role="status" aria-live="polite">
-        <div id="extinction-text"></div>
-        <div id="extinction-subtext"></div>
+      <!-- The stage holds the renderers and is the only thing that shakes during extinctions. -->
+      <div id="viz-stage">
+        <canvas id="canvas2d" role="img" aria-label="World map of the current moment in Earth history"></canvas>
+        <div id="globe-container" role="img" aria-label="Globe of the current moment in Earth history"></div>
+        <canvas id="canvas-tree" role="img" aria-label="Tree of life grown up to the current moment"></canvas>
       </div>
 
-      <!-- Milestone callout (top-center, lighter than extinction) -->
-      <div id="milestone-overlay" class="hidden" aria-live="polite">
-        <div id="milestone-title"></div>
-        <div id="milestone-body"></div>
-      </div>
+      <!-- "Where and when am I" card (js/ui/contextCard.js) -->
+      <section id="context-card" aria-label="Current moment"></section>
 
-      <!-- Legend panel (top-left, toggled) -->
-      <div id="legend-panel"></div>
+      <!-- Milestone toast (js/ui/milestoneOverlay.js) -->
+      <div id="milestone-overlay" class="hidden"></div>
 
-      <!-- Species popup (anchored near cursor) -->
-      <div id="species-popup" class="hidden">
-        <div id="species-popup-title"></div>
-        <div id="species-popup-sci"></div>
-        <div id="species-popup-lineage"></div>
-        <div id="species-popup-meta"></div>
-        <div id="species-popup-body"></div>
-      </div>
+      <!-- Mass-extinction card (js/ui/extinctionOverlay.js) -->
+      <div id="extinction-overlay" class="hidden"></div>
 
-      <!-- Species modal (centered; pauses animation) -->
-      <div id="species-modal-backdrop" class="hidden"></div>
-      <div id="species-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="species-modal-title">
-        <button id="species-modal-close" aria-label="Close">&times;</button>
-        <h3 id="species-modal-title"></h3>
-        <div id="species-modal-sci"></div>
-        <div id="species-modal-meta"></div>
-        <ol id="species-modal-lineage" aria-label="Taxonomic lineage"></ol>
-        <p id="species-modal-body"></p>
-        <h4 class="species-modal-section">Close relatives</h4>
-        <ul id="species-modal-relatives"></ul>
-      </div>
+      <!-- Legend (js/ui/legend.js) and chapters menu (js/ui/chapters.js) -->
+      <div id="legend-panel" class="hidden" role="region" aria-label="Legend"></div>
+      <div id="chapters-panel" class="hidden" role="region" aria-label="Chapters"></div>
 
-      <!-- History of Life explorer (left-docked; chapters built by js/ui/historyExplorer.js) -->
-      <div id="history-backdrop" class="hidden"></div>
-      <aside id="history-panel" class="hidden" aria-labelledby="history-title">
-        <header id="history-head">
-          <h3 id="history-title">Explore the History of Life</h3>
-          <button id="history-close" aria-label="Close">&times;</button>
-        </header>
-        <p id="history-hint">Jumps pause the clock — press <strong>Space</strong> or ▶ to resume.</p>
-        <div id="history-chapters"></div>
-      </aside>
-
-      <!-- Time label overlay -->
-      <div id="time-overlay">
-        <span id="time-period-label">Hadean</span>
-        <span id="time-ma-label">4,000 Ma</span>
+      <!-- Transient notices: view loading, interaction hints (js/main.js). The live region wraps
+           the pill so it is already in the accessibility tree when the first text arrives. -->
+      <div id="view-notice-region" role="status">
+        <div id="view-notice" class="hidden"></div>
       </div>
     </main>
 
-    <!-- Species sidebar (off-canvas drawer ≤768px; scrim closes it) -->
-    <div id="sidebar-scrim" class="hidden"></div>
-    <aside id="sidebar">
-      <div id="atmosphere-panel">
-        <div class="atmo-row">
-          <span class="atmo-label">Temp</span>
-          <span class="atmo-value" id="atmo-temp">--</span>
-        </div>
-        <div class="atmo-row">
-          <span class="atmo-label">O<sub>2</sub></span>
-          <span class="atmo-value" id="atmo-o2">--</span>
-        </div>
-        <div class="atmo-row">
-          <span class="atmo-label">CO<sub>2</sub></span>
-          <span class="atmo-value" id="atmo-co2">--</span>
-        </div>
-        <div class="atmo-row">
-          <span class="atmo-label">Seismic</span>
-          <span class="atmo-value" id="atmo-seismic">--</span>
-        </div>
-        <div class="atmo-row">
-          <span class="atmo-label">Biodiv</span>
-          <span class="atmo-value" id="atmo-bio">--</span>
-        </div>
-      </div>
-      <div class="sidebar-header">
-        <h2>Dominant Life</h2>
-        <span id="species-count">0 species</span>
-      </div>
-      <ul id="species-list"></ul>
-    </aside>
+    <!-- Life & planet panel (js/ui/sidebar.js) -->
+    <aside id="sidebar" aria-label="Planet vitals and dominant life"></aside>
 
-    <!-- Timeline controls -->
-    <footer id="timeline-controls">
-      <div id="era-strip"></div>
-      <div class="scrubber-row">
-        <span class="time-label-end">4 Ga</span>
-        <input type="range" id="scrubber" min="0" max="1000" step="any" value="0" aria-label="Scrub through geological time (left = past, right = present)">
-        <span class="time-label-end">Now</span>
-      </div>
-      <div class="transport-row">
-        <button id="btn-play" class="transport-btn" title="Play/Pause" aria-label="Play or pause">&#9654;</button>
-        <button id="btn-restart" class="transport-btn" title="Restart" aria-label="Restart from 4 billion years ago">&#8634;</button>
-        <select id="speed-select" title="Playback Speed" aria-label="Playback speed">
-          <option value="0.25">0.25x</option>
-          <option value="0.5">0.5x</option>
-          <option value="1" selected>1x</option>
-          <option value="2">2x</option>
-          <option value="4">4x</option>
-        </select>
-        <span id="current-time-display">4,000 Ma</span>
-      </div>
-    </footer>
-
-    <!-- Keyboard & controls help (toggled with ? or the toolbar button) -->
-    <div id="help-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
-      <div id="help-panel">
-        <button id="help-close" aria-label="Close help">&times;</button>
-        <h3 id="help-title">Keyboard &amp; controls</h3>
-        <ul id="help-list">
-          <li><kbd>Space</kbd> Play / pause</li>
-          <li><kbd>&larr;</kbd> / <kbd>&rarr;</kbd> Step back / forward in time</li>
-          <li><kbd>R</kbd> Restart at 4 Ga</li>
-          <li><kbd>P</kbd> Toggle plate boundaries</li>
-          <li><kbd>H</kbd> Explore the history of life</li>
-          <li><kbd>?</kbd> Toggle this help</li>
-          <li><kbd>Esc</kbd> Close dialogs</li>
-          <li>2D map: drag to pan, scroll or pinch to zoom</li>
-          <li>3D globe: drag to rotate, scroll or pinch to zoom</li>
-          <li>Click a species (sidebar or legend) for details</li>
-          <li>Click the colored era strip to jump to a period</li>
-        </ul>
-      </div>
-    </div>
+    <!-- Timeline & transport (js/ui/controls.js) -->
+    <footer id="timeline" aria-label="Timeline"></footer>
   </div>
+
+  <!-- Hover card (js/ui/speciesPopup.js) -->
+  <div id="species-popup" class="hidden" role="tooltip"></div>
+  <!-- Species dialog (js/ui/speciesModal.js) -->
+  <div id="species-modal-root"></div>
+  <!-- Help / shortcuts / about-the-data dialog (js/ui/help.js) -->
+  <div id="help-root"></div>
+  <!-- Intro and finale cards (js/ui/intro.js) -->
+  <div id="intro-root"></div>
+  <!-- Polite announcements for screen readers (period changes, extinctions, milestones) -->
+  <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+  <noscript>
+    <p class="noscript">Life's Tree Blooms is an interactive visualization and needs JavaScript to run.</p>
+  </noscript>
 
   <script type="module" src="js/main.js"></script>
 </body>

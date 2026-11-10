@@ -1,0 +1,211 @@
+/* Globe view chrome (js/views/view3d.js): the name overlay and the camera HUD.
+ * The planet itself is WebGL; everything here is DOM the view creates.
+ */
+
+#globe-container {
+  position: relative;
+  overflow: hidden;
+}
+
+#globe-container canvas {
+  cursor: grab;
+}
+
+#globe-container.is-pointing canvas {
+  cursor: pointer;
+}
+
+#globe-container.is-dragging canvas {
+  cursor: grabbing;
+}
+
+/* ========================================================================== */
+/* Names — positioned every frame from projected coordinates                  */
+/* ========================================================================== */
+
+.globe-labels {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+.globe-label {
+  --halo: rgba(7, 11, 20, 0.85);
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: var(--fs-small);
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--text-1);
+  /* A dark halo keeps names legible over ice, magma and bright shelf seas alike. */
+  text-shadow:
+    0 0 2px var(--halo),
+    0 0 2px var(--halo),
+    0 1px 3px var(--halo),
+    1px 0 1px var(--halo),
+    -1px 0 1px var(--halo);
+}
+
+.globe-label--species.is-active {
+  color: var(--accent-strong);
+}
+
+.globe-label--species.is-new {
+  color: var(--accent-strong);
+}
+
+.globe-label--species.is-gone {
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+/* Water in italic serif, land in tracked capitals — told apart by typeface, as in an atlas. */
+.globe-label--ocean {
+  --halo: rgba(6, 18, 34, 0.55);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.35;
+  letter-spacing: 0.14em;
+  color: rgba(198, 226, 242, 0.62);
+}
+
+.globe-label--ocean.globe-label--s3 {
+  font-size: 17px;
+}
+
+.globe-label--ocean.globe-label--s1 {
+  font-size: 12px;
+}
+
+.globe-label--land {
+  --halo: rgba(10, 16, 22, 0.6);
+  font-size: 12px;
+  line-height: 1.35;
+  letter-spacing: 0.16em;
+  color: rgba(250, 244, 230, 0.84);
+}
+
+.globe-label--land.globe-label--s3 {
+  font-size: 13px;
+}
+
+.globe-label--land.globe-label--s1 {
+  font-size: var(--fs-micro);
+}
+
+/* The place a milestone happened (beside its pulsing ring). */
+.globe-label--site {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent-strong);
+}
+
+/* ========================================================================== */
+/* Camera HUD                                                                 */
+/* ========================================================================== */
+
+.globe-hud {
+  position: absolute;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: var(--z-viz-ui);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--s-1);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-1);
+}
+
+.globe-hud-btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-2);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.globe-hud-btn:hover:not(:disabled) {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+
+.globe-hud-btn:active:not(:disabled) {
+  background: var(--bg-4);
+}
+
+.globe-hud-btn:disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+
+.globe-hud-btn:focus-visible {
+  border-radius: 50%;
+}
+
+.globe-hud-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.globe-hud-rule {
+  width: 16px;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--glass-line);
+}
+
+/* Touch screens: larger targets (the gestures remain the primary way to steer). */
+@media (pointer: coarse) {
+  .globe-hud-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Phones: tuck the HUD closer to the corner (as the Map's). */
+@media (max-width: 720px) {
+  .globe-hud {
+    right: var(--s-2);
+    bottom: var(--s-2);
+  }
+}
+
+/* Short containers (phones in landscape): lay the HUD on its side. */
+@media (max-height: 520px) {
+  .globe-hud {
+    flex-direction: row;
+  }
+
+  .globe-hud-rule {
+    width: 1px;
+    height: 16px;
+    margin: 0 2px;
+  }
+}
+
+body.capture-mode .globe-hud {
+  display: none !important;
+}

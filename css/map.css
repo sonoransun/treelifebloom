@@ -1,0 +1,105 @@
+/* Map view chrome (js/views/view2d.js): zoom / reset HUD and any DOM the map view creates. */
+
+/* The map is a direct-manipulation surface: grab to pan (the view sets pointer / grabbing). */
+#canvas2d {
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Zoom in / zoom out / reset — bottom-right of the visualization, clear of the context card. */
+.map-hud {
+  position: absolute;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: var(--z-viz-ui);
+  display: flex;
+  flex-direction: column;
+  padding: 3px;
+  gap: 2px;
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-3);
+  box-shadow: var(--shadow-1);
+}
+
+.map-hud[hidden] {
+  display: none;
+}
+
+.map-hud-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--text-2);
+  transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+
+.map-hud-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.map-hud-btn:hover:not(:disabled) {
+  background: var(--bg-3);
+  color: var(--text-1);
+}
+
+.map-hud-btn:active:not(:disabled) {
+  background: var(--bg-4);
+}
+
+.map-hud-btn:disabled {
+  color: var(--text-4);
+  cursor: default;
+}
+
+/* The reset button sits apart from the zoom pair and lights up once the view has been moved. */
+.map-hud-reset {
+  margin-top: 2px;
+  box-shadow: 0 -1px 0 var(--line-soft);
+  border-radius: 0 0 var(--r-2) var(--r-2);
+}
+
+.map-hud-reset:not(:disabled) {
+  color: var(--accent);
+}
+
+/* Fingers need bigger targets. */
+@media (pointer: coarse) {
+  .map-hud-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .map-hud-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Phones: tuck the HUD closer to the corner. */
+@media (max-width: 720px) {
+  .map-hud {
+    right: var(--s-2);
+    bottom: var(--s-2);
+  }
+}
+
+/* The HUD belongs to the map: other views bring their own controls. */
+#app:not([data-view='map']) .map-hud {
+  display: none;
+}
+
+body.capture-mode .map-hud {
+  display: none !important;
+}
